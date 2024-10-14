@@ -1,46 +1,49 @@
-# Perform operations on groups of rows
+---
+sheet: Sheet
+---
+# Create a window over consecutive rows
 
-The window function creates a new column where each row contains of rows before and/or after the current row in the source column.
+Window functions enable computations that relate the current window to surrounding rows, like cumulative sum, rolling averages or lead/lag computations.
 
-Window functions enable computations that relate the current window to surrounding rows, for example:
-- cumulative sum
-- rolling averages
-- lead/lag computations
+{help.commands.addcol-window}
 
-## Window functions operation on columns
-
-Create a window for a column. The new column will contain the current row, and also any before or after rows specified when creating the window.
-
-- {help.command.addcol-window}
-
-To conserve memory and speed with large windows, one approach is to:
-1. add any expressions that operate on the window expression.
-2. Freeze the sheet [:keys]g'[/].
+With large window sizes, [:code]g'[/] (`freeze-sheet`) to calculate all cells and copy the entire sheet into a new source sheet, which will conserve CPU.
 
 ## Examples
 
-After creating a window, use a python expression to operate on it.
+   date        color  price
+   ----------  -----  -----
+   2024-09-01  R      30
+   2024-09-02  B      28
+   2024-09-03  R      100
+   2024-09-03  B      33
+   2024-09-03  B      99
 
-For example, given a windown column 'win', to create a moving average of the
-values in the window, add a new column with a python expression.
 
-```
-=sum(win)/len(win)
-```
+1. [:keys]#[/] (`type-int`) on the **price** column to type as int.
+2. [:keys]w[/] (`addcol-window`) on the **price** column, followed by `1 2`, to create a window consisting of 4 rows: 1 row before the current row, and 2 rows after.
+3. To create a moving average of the values in the window, add a new column with a python expression: [:keys]=[/] (`addcol-expr`)
+followed by `sum(price_window)/len(price_window)`
+
+date            color   price   price_window            sum(price_window)/len(price_window)
+----------      -----   -----   -------------------     -----------------------------------
+2024-09-01      R       38      [4] ; 38; 28; 100       41.5
+2024-09-02      B       28      [4] 38; 28; 100; 33     49.75
+2024-09-03      R       100     [4] 28; 100; 33; 99     65.0
+2024-09-03      B       33      [4] 100; 33; 99;        58.0
+2024-09-03      B       99      [4] 33; 99; ;           33.0
+
+
+## Workflows
 
 ### Create a cumulative sum 
 
-- set the before window size to >= the total number of rows in the table, and the after rows to 0.
-- add an expression of `sum(windows)` where `window` is the name of the window function column.
-
-### Compute rank 
-
-https://github.com/saulpw/visidata/discussions/2280#discussioncomment-8314593
+1. Set the before window size to the total number of rows in the table, and the after rows to 0. In the above example that would be `w 5 0` (`addcol-window`).
+2. Add an expression ([:keys]=[/] (`addcol-expr`) of `sum(window)` where `window` is the name of the window function column.
 
 ### Compute the change between rows
 
-1. Create a window function of size 1 before and 0 after
-2. Add a python expression. Assume the window function column is 'win', and the current (integer) column is named seconds:
-    `=win[1] - win[0] if len(win) > 1 else None`
-
+1. `w 1 0` on the `foo` column to create a window function of size 1 before and 0 after.
+2. Add a python expression. The window function column is 'foo_window':
+    `=foo_window[1] - foo_window[0] if len(foo_window) > 1 else None`
 
