@@ -114,6 +114,10 @@ def saveSheets(vd, givenpath, *vsheets, confirm_overwrite=True):
     if not vsheets: # blank tuple
         vd.warning('no sheets to save')
         return
+    if not givenpath.name:
+        vd.warning('no save path given')
+        return
+
     unloaded = [ vs for vs in vsheets if vs.rows is UNLOADED ]
     vd.sync(*vd.ensureLoaded(unloaded))
 
