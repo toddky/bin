@@ -1,5 +1,4 @@
 python-dateutil     # date type
-importlib_metadata>=3.6 # plugin groups backported for python <3.8
 
 # optional dependencies
 pandas>=1.5.3; python_version >= '3.11' # dta (Stata)
