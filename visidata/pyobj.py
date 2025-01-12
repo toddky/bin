@@ -3,7 +3,7 @@ import inspect
 import math
 import numbers
 
-from visidata import vd, asyncthread, ENTER, deduceType
+from visidata import vd, asyncthread, ENTER, deduceType, anytype
 from visidata import Sheet, Column, VisiData, ColumnItem, TableSheet, BaseSheet, Progress, ColumnAttr, SuspendCurses, TextSheet, setitem
 import visidata
 
@@ -46,14 +46,19 @@ def view(vd, obj):
     vd.run(PyobjSheet(getattr(obj, '__name__', ''), source=obj))
 
 
-
-def getPublicAttrs(obj):
-    'Return all public attributes (not methods or `_`-prefixed) on object.'
-    return [k for k in dir(obj) if not k.startswith('_') and not callable(getattr(obj, k))]
-
 def PyobjColumns(obj):
     'Return columns for each public attribute on an object.'
-    return [ColumnAttr(k, type=deduceType(getattr(obj, k))) for k in getPublicAttrs(obj)]
+    cols = []
+    for k in dir(obj):
+        coltype = anytype
+        try:
+            if k.startswith('_') or callable(getattr(obj, k)):
+                continue
+            coltype = deduceType(getattr(obj, k))
+        except AttributeError: #2631 attributes like formatted_help can raise AttributeError
+            pass
+        cols.append(ColumnAttr(k, type=coltype))
+    return cols
 
 def AttrColumns(attrnames):
     'Return column names for all elements of list `attrnames`.'
