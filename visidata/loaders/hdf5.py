@@ -1,4 +1,4 @@
-from visidata import VisiData, vd, Sheet, Path, Column, ItemColumn, BaseSheet
+from visidata import VisiData, vd, Sheet, Path, Column, ColumnItem, ItemColumn, BaseSheet, anytype
 
 @VisiData.api
 def open_h5(vd, p):
@@ -28,8 +28,8 @@ class Hdf5ObjSheet(Sheet):
         elif isinstance(source, h5py.Dataset):
             if len(source.shape) == 1:
                 if source.dtype.names:
-                    for i, colname in enumerate(source.dtype.names):
-                        self.addColumn(ItemColumn(colname, colname), index=i)
+                    for i, (colname, fmt, *_) in enumerate(source.dtype.descr):
+                        self.addColumn(ColumnItem(colname, i, type=_guess_type(fmt)))
                     yield from source  # copy
                 else:
                     self.addColumn(ItemColumn(source.name, 0))
@@ -59,5 +59,11 @@ class Hdf5ObjSheet(Sheet):
         if isinstance(row, numpy.ndarray):
             return NpySheet(None, npy=row)
 
+def _guess_type(fmt):
+    if 'i' in fmt or 'u' in fmt:
+        return int
+    elif 'f' in fmt:
+        return float
+    return anytype
 
 Hdf5ObjSheet.addCommand('A', 'dive-metadata', 'vd.push(SheetDict(cursorRow.name + "_attrs", source=cursorRow.attrs))', 'open metadata sheet for object referenced in current row')
