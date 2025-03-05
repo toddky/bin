@@ -1,4 +1,4 @@
-from visidata import VisiData, vd, Sheet, Path, Column, ColumnItem, ItemColumn, BaseSheet, anytype
+from visidata import VisiData, vd, Sheet, Path, Column, ItemColumn, BaseSheet, anytype
 
 @VisiData.api
 def open_h5(vd, p):
@@ -29,7 +29,7 @@ class Hdf5ObjSheet(Sheet):
             if len(source.shape) == 1:
                 if source.dtype.names:
                     for i, (colname, fmt, *_) in enumerate(source.dtype.descr):
-                        self.addColumn(ColumnItem(colname, i, type=_guess_type(fmt)))
+                        self.addColumn(ItemColumn(colname, i, type=_guess_type(fmt)))
                     yield from source  # copy
                 else:
                     self.addColumn(ItemColumn(source.name, 0))
