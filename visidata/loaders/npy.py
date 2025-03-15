@@ -30,7 +30,7 @@ class NpySheet(Sheet):
             elif 'M' in fmt:
                 self.addColumn(Column(name, type=date, getter=lambda c,r,i=i: str(r[i])))
                 continue
-            elif 'i' in fmt:
+            elif 'i' in fmt or 'u' in fmt:
                 t = int
             elif 'f' in fmt:
                 t = float
