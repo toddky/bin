@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: perl-calc
+# DESCRIPTION: Use Perl as a calculator!
+exec perl -n -e '$__ = eval(); print "$__\n";'
