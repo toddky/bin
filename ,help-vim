@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+print-header VIM
+cat <<-EOF
+EOF
+
+print-url 'https://vim.fandom.com/wiki/Power_of_g'
+
