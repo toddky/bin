@@ -35,3 +35,7 @@ print-url https://www.postgresql.org/docs/current/sql-explain.html
 print-url https://explain.dalibo.com/
 echo
 
+print-header 'Postgres'
+print-url https://mccue.dev/pages/3-11-25-life-altering-postgresql-patterns
+echo
+
