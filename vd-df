@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: vd-df
+# DESCRIPTION: Open df in vd
+df -h "$@" | jc --df | vd --df
