@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# USAGE: ls-brave-bookmarks
+# DESCRIPTION: TODO
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if is-macos; then
+	apps="$HOME/Library/Application Support"
+	bookmarks="$apps/BraveSoftware/Brave-Browser/Default/Bookmarks"
+	cat "$bookmarks" | jq -r '.roots.other.children | .[].url'
+fi
+
