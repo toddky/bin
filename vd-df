@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 # USAGE: vd-df
 # DESCRIPTION: Open df in vd
-df -h "$@" | jc --df | vd --df
+result="$(df-json)" || exit $?
+echo "$result" | vd -f json
