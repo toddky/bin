@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+# USAGE: df-json
+# DESCRIPTION: TODO
+
+import jc
+import json
+import subprocess
+
+stdout = subprocess.check_output(['df'], text=True)
+#print(json.dumps(jc.parse('df', stdout))); exit(0)
+
+info = []
+for disk in jc.parse('df', stdout):
+    new_disk = {}
+    new_disk['disk']         = disk['mounted_on']
+    new_disk['filesystem']   = disk['filesystem']
+    new_disk['available GB'] = disk['available'] // (1024**2)
+    new_disk['used GB']      = disk['used'] // (1024**2)
+    new_disk['used %']       = disk['use_percent']
+    info.append(new_disk)
+
+print(json.dumps(info))
+

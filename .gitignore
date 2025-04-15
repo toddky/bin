@@ -83,6 +83,8 @@
 !/vnc-*
 !/yabai-*
 
+!/*-json
+
 # git
 !/gitb
 !/gitc
