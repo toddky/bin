@@ -72,7 +72,21 @@ fi
 ((RETVAL)) && printf "\e[31m(exited $RETVAL)\e[0m\n"
 
 # Get execution time
-((start_ms)) && bash-prompt-time "$start_ms" "$current_ms"
+if ((start_ms)); then
+
+	# Get seconds
+	total_ms=$((current_ms - start_ms))
+	ms=$((total_ms % 1000))
+	total_s=$((total_ms / 1000))
+	time_str="$(printf "%d.%03ds" "$total_s" "$ms")"
+
+	# Get hours
+	if (( total_s >= 3600 )); then
+		h="$(($total_s/3600))"
+		time_str+="$(printf " (%d.%02d hours)" "$h" "$(((total_s%3600)*100/3600))")"
+	fi
+	printf "\x1b[38;5;8m[$(date +%T)] Finished in %s \e[0m\n" "$time_str"
+fi
 
 # Prompt
 prompt=''
