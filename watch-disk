@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# USAGE: watch-disk
+# DESCRIPTION: TODO
+
+dir="${1:-.}"
+
+while true; do
+	now="$(date +'%F %T')"
+	result="$(/usr/bin/time -f '%e' rm "$(TMPDIR="$dir" mktemp)" 2>&1)"
+	seconds="$(printf '%.0f' $result)"
+	((seconds > 1)) || continue
+	printf '%s %s\n' "$now" "$result"
+	sleep 1
+done
+

@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-# USAGE: test-disk
-# DESCRIPTION: Test how fast the disk is by creating a temp file
-export TIMEFORMAT="%E %U %S"
-time rm "$(TMPDIR=. mktemp)" 2>&1

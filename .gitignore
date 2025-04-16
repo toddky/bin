@@ -300,6 +300,7 @@
 !/viw
 !/wait-enter
 !/watch-inputs
+!/watch-disk
 !/wget-img
 !/xargsi
 !/xdg-config
