@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# USAGE: git-trace
+# DESCRIPTION: Trace git command
+
+# https://stackoverflow.com/questions/6178401/how-can-i-debug-git-git-shell-related-problems/56094711#56094711
+export GIT_TRACE2="$(mktemp -d)/git_trace.log"
+
+git "$@"
+print-info "$GIT_TRACE2"
+
