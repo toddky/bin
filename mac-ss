@@ -1,2 +1,5 @@
 #!/usr/bin/env bash
-exec mac-screencapture -c -i
+args=(-c -i)
+screenshot="$HOME/Desktop/Screenshot-$(date +%Y%m%d-%H%M%S).png"
+args+=("$screenshot")
+exec screencapture "${args[@]}"
