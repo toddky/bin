@@ -41,7 +41,7 @@ while read line; do
 
 	if [[ -v apps[$app] ]]; then
 		new_space="${apps[$app]}"
-	elif [[ "$app" == "Google Chrome" ]]; then
+	elif [[ "$app" == "Google Chrome" ]] || [[ "$app" == 'Brave Browser' ]]; then
 		chrome_space="$(sed -n 's/\([1-9]\):.*/\1/p' <<<"$title")"
 		if [[ -n "$chrome_space" ]]; then
 			new_space="$chrome_space"
@@ -51,11 +51,11 @@ while read line; do
 		fi
 	fi
 
-	#echo "id:$id space:$space app:$app title:$title"; continue
+	#echo "id:$id space:$space app:$app title:$title"
 	[[ "$space" == "$new_space" ]] && continue
 
 	#echo "Move ($id) $app '$title' from $space to $new_space"; continue
-	aerospace move-node-to-workspace --window-id "$id" "$new_space"
+	aerospace move-node-to-workspace --window-id "$id" "$new_space" &
 
 done < <(aerospace-ls-windows)
 
