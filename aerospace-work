@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# USAGE: aerospace-work
+# DESCRIPTION: TODO
+
+initial_id="$(aerospace list-windows --focused --format "%{window-id}")"
+
+# Map specifc apps to specific spaces
+declare -A apps
+
+num_displays="$(mac-display-count)"
+if ((num_displays == 3)); then
+	#apps['1Password']=1
+	apps['iTerm2']=4
+	apps['Gmail']=7
+	apps['Slack']=7
+	apps['Google Calendar']=7
+	apps['ChatGPT']=7
+	apps['Spotify']=8
+	apps['WhatsApp Web']=9
+else
+	#apps['1Password']=1
+	apps['iTerm2']=2
+	apps['Gmail']=3
+	apps['Slack']=3
+	apps['Google Calendar']=3
+	apps['ChatGPT']=3
+	apps['Spotify']=4
+	apps['WhatsApp Web']=4
+fi
+
+while read line; do
+	id="$(   jq -r '."window-id"'    <<<"$line")"
+	space="$(jq -r '."workspace"'    <<<"$line")"
+	app="$(  jq -r '."app-name"'     <<<"$line")"
+	title="$(jq -r '."window-title"' <<<"$line")"
+
+	[[ -z "$id" ]] && continue
+	#echo "id:$id space:$space app:$app title:$title"; continue
+
+	new_space='1'
+
+	if [[ -v apps[$app] ]]; then
+		new_space="${apps[$app]}"
+	elif [[ "$app" == "Google Chrome" ]]; then
+		chrome_space="$(sed -n 's/\([1-9]\):.*/\1/p' <<<"$title")"
+		if [[ -n "$chrome_space" ]]; then
+			new_space="$chrome_space"
+			if ((num_displays == 1 && new_space > 7)); then
+				new_space="$((new_space - 2))"
+			fi
+		fi
+	fi
+
+	#echo "id:$id space:$space app:$app title:$title"; continue
+	[[ "$space" == "$new_space" ]] && continue
+
+	#echo "Move ($id) $app '$title' from $space to $new_space"; continue
+	aerospace move-node-to-workspace --window-id "$id" "$new_space"
+
+done < <(aerospace-ls-windows)
+
