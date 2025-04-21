@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# USAGE: aerospace-ls-windows
+# DESCRIPTION: List all windows
+
+fields=()
+fields+=('window-id')
+fields+=('window-title')
+fields+=('app-name')
+fields+=('workspace')
+
+format=''
+for field in "${fields[@]}"; do
+	format+=" %{$field}"
+done
+
+exec aerospace list-windows --all --json --format "$format" | jq -c '.[]'
+
