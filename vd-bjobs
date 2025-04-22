@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# USAGE: vd-bjobs
+# DESCRIPTION: Open bjobs in vd
+
+fields=()
+
+fields+=('JOBID')
+#fields+=('JOBINDEX')
+fields+=('QUEUE')
+fields+=('JOB_GROUP')
+fields+=('STAT')
+fields+=('CRESREQ')
+fields+=('JOB_NAME')
+fields+=('EXEC_HOST')
+#fields+=('ASK_HOSTS')
+
+fields+=('RUNTIMELIMIT')
+fields+=('ESTIMATED_RUN_TIME')
+fields+=('PEND_TIME')
+fields+=('START_TIME')
+fields+=('SUBMIT_TIME')
+fields+=('FINISH_TIME')
+
+fields+=('USER')
+fields+=('PROJ')
+fields+=('JOB_NAME')
+fields+=('JOB_DESCRIPTION')
+fields+=('JOB_PRIORITY')
+fields+=('COMMAND')
+
+bjobs -json -o "${fields[*]}" "$@" \
+	| jq '.RECORDS' \
+	| vd -f json
+
