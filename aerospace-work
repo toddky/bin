@@ -2,11 +2,8 @@
 # USAGE: aerospace-work
 # DESCRIPTION: TODO
 
-initial_id="$(aerospace list-windows --focused --format "%{window-id}")"
-
 # Map specifc apps to specific spaces
 declare -A apps
-
 num_displays="$(mac-display-count)"
 if ((num_displays == 3)); then
 	#apps['1Password']=1
@@ -55,7 +52,6 @@ while read line; do
 	[[ "$space" == "$new_space" ]] && continue
 
 	#echo "Move ($id) $app '$title' from $space to $new_space"; continue
-	aerospace move-node-to-workspace --window-id "$id" "$new_space" &
-
+	aerospace-move-window-to-space "$id" "$new_space"
 done < <(aerospace-ls-windows)
 

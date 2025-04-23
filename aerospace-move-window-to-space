@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# USAGE: aerospace-move-window-to-space <ID> <SPACE>
+# DESCRIPTION: TODO
+
+window_id="${1:?}"
+dest_space="${2:?}"
+
+spaces=($(aerospace list-workspaces --all))
+if ! [[ " ${spaces[@]} " =~ " ${dest_space} " ]]; then
+	aerospace workspace "$workspace"
+fi
+
+aerospace move-node-to-workspace --window-id "$window_id" "$dest_space" </dev/null
+
