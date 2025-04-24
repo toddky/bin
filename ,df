@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# USAGE: ,df
+# DESCRIPTION: TODO
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+fields=()
+fields+=('source')
+fields+=('fstype')
+#fields+=('itotal')
+#fields+=('iused')
+#fields+=('iavail')
+#fields+=('ipcent')
+fields+=('size')
+fields+=('used')
+fields+=('avail')
+fields+=('pcent')
+#fields+=('file')
+fields+=('target')
+
+format=""
+for field in "${fields[@]}"; do
+	format+="$field,"
+done
+format="${format%,}"
+
+df --output="$format" --block-size=1G -H "$@"
+
