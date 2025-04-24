@@ -15,6 +15,7 @@ fields+=('JOB_NAME')
 fields+=('EXEC_HOST')
 #fields+=('ASK_HOSTS')
 
+fields+=('RUN_TIME')
 fields+=('MAX_MEM')
 fields+=('CPU_PEAK')
 fields+=('CPU_EFFICIENCY')
