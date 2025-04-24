@@ -5,6 +5,7 @@ jobid="$1"
 
 work="$(dirname "$LSF_ENVDIR")/work"
 site="$(basename "$(dirname "$LSF_ENVDIR")")"
+print-cmd grep -l "${jobid:?}" "$work/$site/logdir/lsb.events.???"
 matches="$(grep -l "${jobid:?}" "$work/$site/logdir"/lsb.events.???)"
 echo "$matches"
 events="$(grep -Eo '[0-9]+$' <<< "$matches" | sort -n)"
