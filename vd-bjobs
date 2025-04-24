@@ -7,6 +7,7 @@ fields=()
 fields+=('JOBID')
 #fields+=('JOBINDEX')
 fields+=('QUEUE')
+fields+=('USER')
 fields+=('JOB_GROUP')
 fields+=('STAT')
 fields+=('CRESREQ')
@@ -25,12 +26,14 @@ fields+=('START_TIME')
 fields+=('SUBMIT_TIME')
 fields+=('FINISH_TIME')
 
-fields+=('USER')
 fields+=('PROJ')
 fields+=('JOB_NAME')
 fields+=('JOB_DESCRIPTION')
 fields+=('JOB_PRIORITY')
+fields+=('EXEC_CWD')
 fields+=('COMMAND')
+
+#bjobs -json -o "${fields[*]}" "$@"; exit
 
 bjobs -json -o "${fields[*]}" "$@" \
 	| jq '.RECORDS' \
