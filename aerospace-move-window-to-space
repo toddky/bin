@@ -7,7 +7,7 @@ dest_space="${2:?}"
 
 spaces=($(aerospace list-workspaces --all))
 if ! [[ " ${spaces[@]} " =~ " ${dest_space} " ]]; then
-	aerospace workspace "$workspace"
+	aerospace workspace "$workspace" </dev/null
 fi
 
 aerospace move-node-to-workspace --window-id "$window_id" "$dest_space" </dev/null
