@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# USAGE: vd-bjobs
+# DESCRIPTION: Dump bjobs in JSON format
+
+import json
+import subprocess
+import sys
+import time
+
+def main():
+
+    fields = [
+        'JOBID',
+        #'JOBINDEX',
+        'QUEUE',
+        'USER',
+        'JOB_GROUP',
+        'STAT',
+        'CRESREQ',
+        'JOB_NAME',
+        'EXEC_HOST',
+        # 'ASK_HOSTS',
+
+        'RUN_TIME',
+        'MAX_MEM',
+        'CPU_PEAK',
+        'CPU_EFFICIENCY',
+        'RUNTIMELIMIT',
+        'ESTIMATED_RUN_TIME',
+        'PEND_TIME',
+        'START_TIME',
+        'SUBMIT_TIME',
+        'FINISH_TIME',
+
+        'PROJ',
+        'JOB_NAME',
+        'JOB_DESCRIPTION',
+        'JOB_PRIORITY',
+        'EXEC_CWD',
+        'COMMAND'
+    ]
+
+    command = ["bjobs", "-json", "-o", " ".join(fields)] + sys.argv[1:]
+
+    try:
+        result = subprocess.run(command, check=True, text=True, capture_output=True)
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: bjobs faile: {e}", file=sys.stderr)
+        print(e.stderr, file=sys.stderr)
+        sys.exit(e.returncode)
+
+    info = json.loads(result.stdout)
+    jobs = info['RECORDS']
+
+    cleaned_jobs = []
+
+    time_fields = [
+        'START_TIME',
+        'FINISH_TIME',
+        'SUBMIT_TIME',
+    ]
+
+
+    for job in jobs:
+
+        cleaned_job = {}
+
+        for field, value in job.items():
+
+            # Handle _TIME fields
+            if field in time_fields:
+
+                # Get base without _TIME
+                time_field_base = field[:-5] if field.endswith("_TIME") else field[:-5]
+
+                t = job[field]
+                if not t: continue
+                t = t.rstrip(" L")
+                t = time.strptime(t, "%b %d %H:%M:%S %Y")
+                cleaned_job[f'{time_field_base}_DATE'] = time.strftime("%Y-%m-%d", t)
+                cleaned_job[f'{time_field_base}_TIME'] = time.strftime("%H:%M:%S", t)
+                continue
+
+            cleaned_job[field] = value
+
+        cleaned_jobs.append(cleaned_job)
+
+    print(json.dumps(cleaned_jobs, indent=2))
+
+if __name__ == "__main__":
+    main()
+
