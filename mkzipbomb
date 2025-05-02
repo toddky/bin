@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# USAGE: mkzipbomb
+# DESCRIPTION: Creates a 10 MB file that extracts to a 10GB file
+
+# https://idiallo.com/blog/zipbomb-protection
+dd if=/dev/zero bs=1G count=10 | gzip -c > 10GB.gz
+
