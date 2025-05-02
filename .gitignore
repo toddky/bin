@@ -158,6 +158,7 @@
 !/colorize
 !/copy-nvim
 !/copy-osc52
+!/copy-osc52.py
 !/cpfrom
 !/cp.
 !/cpp.
