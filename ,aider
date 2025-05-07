@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # USAGE: ,aider [args]
 # DESCRIPTION: Wrapper around aider
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 aider_args=()
 aider_args+=('--no-show-model-warnings')
 aider_args+=('--dark-mode')
 aider_args+=('--auto-commits')
 aider_args+=('--no-gitignore')
+aider_args+=('--vim')
+aider_args+=('--read' "$SCRIPT_DIR/.todd/AIDER.md")
 
 exec aider "${aider_args[@]}"
 
