@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+echo
+print-header 'COMMANDS'
+cat << 'EOF'
+/add <file>
+/drop <file>
+/read <file>
+/run <command>
+EOF
+
+echo
+print-header 'TIPS'
+cat << 'EOF'
+- Use /ask to make plan with aider, then say "go ahead" when you are happy with it
+- Use Ctrl-C to interrupt, partial response remains in conversation so you can refer to it
+- Use Ctrl-X Ctrl-E to open your editor for multiline-mode
+EOF
+
+
