@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 theme="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/theme"
 
+# Open Activity monitor when clicked
+if [[ "$SENDER" = "mouse.clicked" ]]; then
+	open -a 'Activity Monitor'
+	exit
+fi
+
 icon=''
 label="$(top -l 2 | awk '($1 == "CPU") { percent = $3 + $5 } END {print percent"%"}')"
 
