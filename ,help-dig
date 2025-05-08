@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+print-header 'dig'
+cat <<-EOF
+dig +noall +answer example.com
+EOF
