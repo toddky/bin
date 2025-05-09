@@ -3,8 +3,18 @@
 # DESCRIPTION: Get user ID from username
 
 username="$1"
+if [[ -z "$username" ]]; then
+	print-error "Username not specified"
+	exit 1
+fi
+
 endpoint="users?username=$username"
 response="$(gitlab-curl "$endpoint")"
 user_id="$(echo "$response" | jq -r '.[0].id')"
+
+if [[ "$user_id" == "null" ]]; then
+	print-error "Username '$username' not found"
+	exit 1
+fi
 echo "$user_id"
 
