@@ -2,6 +2,9 @@
 # USAGE: ,raw <command>
 # DESCRIPTION: Enter raw mode, restore settings on exit
 
+# Example
+# https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+
 # Restore settings on exit
 stty_orig="$(stty -g)"
 function atexit {
@@ -13,8 +16,6 @@ trap atexit EXIT
 stty raw
 #stty -echo -icanon time 0 min 1
 stty -echo -icanon time 0 min 0
-
-
 
 # Run command
 "$@"
