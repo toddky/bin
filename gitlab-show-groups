@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# USAGE: gitlab show-groups <username>
+# DESCRIPTION: Get group membership for a user
+username="$1"
+user_id="$(gitlab-get-user-id "$username")" || exit $?
+echo "Found user ID: $user_id" 1>&2
+
+endpoint="users/$user_id/memberships"
+response="$(gitlab-curl "$endpoint")"
+echo "$response" | jq .
+
