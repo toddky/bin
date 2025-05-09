@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-get-user-id
+# DESCRIPTION: Get user ID from username
+
+username="$1"
+endpoint="users?username=$username"
+response="$(gitlab-curl "$endpoint")"
+user_id="$(echo "$response" | jq -r '.[0].id')"
+echo "$user_id"
+
