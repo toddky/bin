@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+import argparse
+import sys
+import yaml
+
+parser = argparse.ArgumentParser()
+parser.add_argument('input', nargs='?', type=argparse.FileType(), default=sys.stdin)
+args = parser.parse_args()
+
+data = yaml.safe_load(args.input)
+
+count = {}
+
+def get_count_list(data, count, parent=''):
+    parent += '[]'
+    for index, value in enumerate(data):
+        #config += to_cfg(value, f'{parent}[{index}]')
+        #count[parent] = count.get(parent, 0) + 1
+        get_count(value, count, parent)
+
+def get_count_dict(data, count, parent=''):
+    for key, value in data.items():
+        get_count(value, count, f'{parent}.{key}')
+
+def get_count(data, count, parent=''):
+    if data == None:
+        return
+    elif type(data) in [bool, int, float, str]:
+        #print(f'TODD {count}')
+        count[parent] = count.get(parent, 0) + 1
+    elif type(data) == list:
+        return get_count_list(data, count, parent)
+    elif type(data) == dict:
+        return get_count_dict(data, count, parent)
+    else:
+        raise TypeError(f"Unable to handle {type(data)}")
+
+get_count(data, count, '.')
+
+for key, value in count.items():
+    print(f'{value:>4}   {key}')
+
