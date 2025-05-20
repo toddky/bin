@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# USAGE: ,wait
+# DESCRIPTION: Press any key to continue
+tput setaf 5 bold
+read -s -n 1 -p 'Press any key to continue...'
+echo
