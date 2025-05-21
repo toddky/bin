@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # USAGE: aerospace-work
-# DESCRIPTION: TODO
+# DESCRIPTION: Move windows around to workspace
 
 # Map specifc apps to specific spaces
 declare -A apps
 num_displays="$(mac-display-count)"
 
 apps['1Password']=1
+apps['zoom.us']=2
 apps['Code']=5
 apps['Cursor']=5
 apps['iTerm2']=4
