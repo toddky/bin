@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# USAGE: ,fix-py
+# DESCRIPTION: TODO
+
+import re
+import sys
+
+
+example_user_input = '''
+The most recent error in the pane is a Python syntax error.
+
+PYTHON:/tmp/tmp.wro9EKjMyb/./a.py
+<<<<<<< SEARCH
+print hi
+=======
+print(hi)
+>>>>>>> REPLACE
+
+This indicates that there is a missing parentheses in the print statement, and the script is exiting with a status code of 1.
+'''
+
+user_input = sys.argv[1]
+
+python_re = r'^PYTHON:\s*(?P<path>.*)\s*'
+search_re = r'^<<<<<+ +SEARCH'
+divider_re = r'^======+ *'
+replace_re = r'^>>>>>+ +REPLACE'
+
+in_search = False
+in_replace = False
+
+python = None
+search = ''
+replace = ''
+
+for line in user_input.splitlines():
+
+    if not python:
+        if match := re.match(python_re, line):
+            python = match.group('path')
+            continue
+        continue
+
+    if in_search:
+        if re.match(divider_re, line):
+            in_search = False
+            in_replace = True
+            continue
+        search += line + '\n'
+        continue
+
+    if in_replace:
+        if re.match(replace_re, line):
+            in_replace = False
+            continue
+        replace += line + '\n'
+        continue
+
+    if re.match(search_re, line):
+        in_search = True
+        continue
+
+if not python:
+    print('ERROR: No Python file found in the input.')
+    sys.exit(1)
+
+print('\33[1;33mWould you like to fix the following error? (y/n)\33[0m')
+print(f'Python file: {python}')
+print('<<<<<<< SEARCH')
+print(search, end='')
+print('=======')
+print(replace, end='')
+print('>>>>>>> REPLACE')
+
+response = input().strip().lower()
+
+if response != 'y':
+    print()
+    print('No changes made.')
+    sys.exit(0)
+
+with open(python, 'r') as f:
+    content = f.read()
+
+num_matches = len(re.findall(search, content))
+if num_matches == 0:
+    print('No matches found in the file.')
+    sys.exit(1)
+elif num_matches > 1:
+    print(f'ERROR: Found {num_matches} matches in the file. Please fix manually.')
+content = content.replace(search, replace)
+with open(python, 'w') as f:
+    f.write(content)
+
