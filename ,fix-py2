@@ -5,10 +5,17 @@
 import re
 import subprocess
 
+# ==============================================================================
+# GET TMUX PANE CONTENT
+# ==============================================================================
 cmd = ['tmux', 'capture-pane', '-p', '-S', '-']
 result = subprocess.run(cmd, capture_output=True)
 stdout = result.stdout.decode('utf-8') 
 
+
+# ==============================================================================
+# PARSE COMMANDS
+# ==============================================================================
 prompt_re = r'^todd.*»\s*(.*)$'
 timestamp_re = '\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
 exited_re = r'\(exited \d+\)'
@@ -37,7 +44,6 @@ for line in stdout.splitlines():
 #python_stacktrace_re = r'^\s*File ".*", line \d+, in .*$'
 python_stacktrace_re = r'\s*File "(.*)"'
 
-
 found_command = None
 found_output = None
 found_file = None
@@ -49,6 +55,14 @@ for command, output in reversed(cmd_output):
         found_file = matches[0]
         break
 
+if not found_command or not found_output or not found_file:
+    print('No Python stack trace found in tmux pane.')
+    exit(1)
+
+
+# ==============================================================================
+# AI PROMPT
+# ==============================================================================
 system_prompt = '''
 You are a terminal assistant.
 You will be given the contents of a tmux pane.
@@ -86,11 +100,88 @@ $ {found_command}
 {found_output}
 '''.strip()
 
+
+# ==============================================================================
+# RUN AI COMMAND
+# ==============================================================================
 cmd = ['ai']
 cmd += ['--system-prompt', system_prompt]
 cmd += ['--prompt', prompt]
-subprocess.run(cmd, check=True)
+result = subprocess.run(cmd, capture_output=True)
+ai_response = result.stdout.decode('utf-8') 
 
 
+# ==============================================================================
+# APPLY FIX
+# ==============================================================================
+python_re = r'^PYTHON:\s*(?P<path>.*)\s*'
+search_re = r'^<<<<<+ +SEARCH'
+divider_re = r'^======+ *'
+replace_re = r'^>>>>>+ +REPLACE'
 
+in_search = False
+in_replace = False
+
+python = None
+search = ''
+replace = ''
+
+for line in ai_response.splitlines():
+
+    if not python:
+        if match := re.match(python_re, line):
+            python = match.group('path')
+            continue
+        continue
+
+    if in_search:
+        if re.match(divider_re, line):
+            in_search = False
+            in_replace = True
+            continue
+        search += line + '\n'
+        continue
+
+    if in_replace:
+        if re.match(replace_re, line):
+            in_replace = False
+            continue
+        replace += line + '\n'
+        continue
+
+    if re.match(search_re, line):
+        in_search = True
+        continue
+
+if not python:
+    print('ERROR: No Python file found in the input.')
+    sys.exit(1)
+
+print('\33[1;33mWould you like to fix the following error? (y/n)\33[0m')
+print(f'Python file: {python}')
+print('<<<<<<< SEARCH')
+print(search, end='')
+print('=======')
+print(replace, end='')
+print('>>>>>>> REPLACE')
+
+response = input().strip().lower()
+
+if response != 'y':
+    print()
+    print('No changes made.')
+    exit(0)
+
+with open(python, 'r') as f:
+    content = f.read()
+
+num_matches = len(re.findall(search, content))
+if num_matches == 0:
+    print('No matches found in the file.')
+    exit(1)
+elif num_matches > 1:
+    print(f'ERROR: Found {num_matches} matches in the file. Please fix manually.')
+content = content.replace(search, replace)
+with open(python, 'w') as f:
+    f.write(content)
 
