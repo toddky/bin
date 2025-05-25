@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+# USAGE: ai-prompt-fix-python
+# DESCRIPTION: TODO
+
+import re
+import subprocess
+
+cmd = ['tmux', 'capture-pane', '-p', '-S', '-']
+result = subprocess.run(cmd, capture_output=True)
+stdout = result.stdout.decode('utf-8') 
+
+prompt_re = r'^todd.*»\s*(.*)$'
+timestamp_re = '\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
+exited_re = r'\(exited \d+\)'
+
+in_command = False
+output = ''
+cmd_output = []
+
+for line in stdout.splitlines():
+
+    if re.search(exited_re, line): continue
+    if re.search(timestamp_re, line): continue
+
+    if match := re.match(prompt_re, line):
+        if in_command:
+            cmd_output.append((command, output.strip()))
+            output = ''
+
+        command = match.group(1).strip()
+        in_command = True
+        continue
+
+    if in_command:
+        output += f'{line}\n'
+
+#python_stacktrace_re = r'^\s*File ".*", line \d+, in .*$'
+python_stacktrace_re = r'\s*File "(.*)"'
+
+
+found_command = None
+found_output = None
+found_file = None
+
+for command, output in reversed(cmd_output):
+    if matches := re.findall(python_stacktrace_re, output):
+        found_command = command
+        found_output = output.strip()
+        found_file = matches[0]
+        break
+
+system_prompt = '''
+You are a terminal assistant.
+You will be given the contents of a tmux pane.
+Your task is to identify a Python stack trace and provide a fix for the code.
+
+You will be provided with the following format:
+$ cat /path/to/file.py
+$ command.py
+Traceback (most recent call last):
+  File "/path/to/file.py", line 10, in <module>
+    main()
+  File "/path/to/file.py", line 5, in main
+    do_something()
+  File "/path/to/file.py", line 2, in do_something
+    raise ValueError("An error occurred")
+
+You will respond with a code block that contains the following:
+\`\`\`
+PYTHON:/path/to/file
+<<<<<<< SEARCH
+original code
+=======
+new code to replace bad code
+>>>>>>> REPLACE
+\`\`\`
+'''
+
+with open(found_file, 'r') as f:
+    found_file_content = f.read()
+
+prompt = f'''
+$ cat {found_file}
+{found_file_content}
+$ {found_command}
+{found_output}
+'''.strip()
+
+cmd = ['ai']
+cmd += ['--system-prompt', system_prompt]
+cmd += ['--prompt', prompt]
+subprocess.run(cmd, check=True)
+
+
+
+
