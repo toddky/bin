@@ -2,6 +2,8 @@
 # USAGE: vd-bjobs
 # DESCRIPTION: Open bjobs in vd
 
+export TERM=xterm-256color
+
 #bjobs-json "$@"; exit
 bjobs-json "$@" | vd -f json
 
