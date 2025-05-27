@@ -2,44 +2,20 @@
 # USAGE: ai-prompt-fix-python
 # DESCRIPTION: TODO
 
+# ==============================================================================
+# IMPORT
+# ==============================================================================
+import json
 import re
 import subprocess
 
 # ==============================================================================
 # GET TMUX PANE CONTENT
 # ==============================================================================
-cmd = ['tmux', 'capture-pane', '-p', '-S', '-']
+cmd = ['tmux-capture-pane', '--json']
 result = subprocess.run(cmd, capture_output=True)
-stdout = result.stdout.decode('utf-8') 
-
-
-# ==============================================================================
-# PARSE COMMANDS
-# ==============================================================================
-prompt_re = r'^todd.*»\s*(.*)$'
-timestamp_re = '\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
-exited_re = r'\(exited \d+\)'
-
-in_command = False
-output = ''
-cmd_output = []
-
-for line in stdout.splitlines():
-
-    if re.search(exited_re, line): continue
-    if re.search(timestamp_re, line): continue
-
-    if match := re.match(prompt_re, line):
-        if in_command:
-            cmd_output.append((command, output.strip()))
-            output = ''
-
-        command = match.group(1).strip()
-        in_command = True
-        continue
-
-    if in_command:
-        output += f'{line}\n'
+stdout = result.stdout.decode('utf-8')
+cmd_output = json.loads(stdout)
 
 #python_stacktrace_re = r'^\s*File ".*", line \d+, in .*$'
 python_stacktrace_re = r'\s*File "(.*)"'
@@ -48,7 +24,9 @@ found_command = None
 found_output = None
 found_file = None
 
-for command, output in reversed(cmd_output):
+for item in cmd_output:
+    command = item.get('command', '')
+    output = item.get('output', '')
     if matches := re.findall(python_stacktrace_re, output):
         found_command = command
         found_output = output.strip()
@@ -155,7 +133,7 @@ for line in ai_response.splitlines():
 
 if not python:
     print('ERROR: No Python file found in the input.')
-    sys.exit(1)
+    exit(1)
 
 print('\33[1;33mWould you like to fix the following error? (y/n)\33[0m')
 print(f'Python file: {python}')
