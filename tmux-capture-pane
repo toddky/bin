@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# USAGE: tmux-capture-pane
+# DESCRIPTION: Capture and parse the current tmux pane contents,
+
+import re
+import subprocess
+
+cmd = ['tmux', 'capture-pane', '-p', '-S', '-']
+result = subprocess.run(cmd, capture_output=True)
+pane_contents = result.stdout.decode('utf-8')
+
+prompt_re = r'^todd.*»\s*(.*)$'
+timestamp_re = '\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
+exited_re = r'\(exited \d+\)'
+
+in_command = False
+output = ''
+cmd_output = []
+
+for line in pane_contents.splitlines():
+
+    if re.search(exited_re, line): continue
+    if re.search(timestamp_re, line): continue
+
+    if match := re.match(prompt_re, line):
+        if in_command:
+            cmd_output.append((command, output.strip()))
+            output = ''
+
+        command = match.group(1).strip()
+        in_command = True
+        continue
+
+    if in_command:
+        output += f'{line}\n'
+
+for command, output in cmd_output:
+    if not (command and output):
+        continue
+
+    print(f'$ {command}')
+    if output.strip():
+        print(output.strip())
+
