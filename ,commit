@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# USAGE: ,ask bash <question>
+# DESCRIPTION: Ask a question about Bash scripting
+
+read -r -d '' system_prompt << EOF
+You will be given the output of \`git diff --staged\`
+You will come up with a concise and descriptive commit message based on the changes.
+Just return the commit message, do not include any other text.
+EOF
+
+question="$(git diff --staged)"
+exec ai --system-prompt "$system_prompt" --prompt "$question"
+
