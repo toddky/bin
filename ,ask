@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+# USAGE: ,ask <question>
+# DESCRIPTION: Ask a question about your terminal output
+
+# ==============================================================================
+# IMPORT
+# ==============================================================================
+import json
+import re
+import subprocess
+import sys
+
+
+# ==============================================================================
+# GET QUESTION
+# ==============================================================================
+question = ' '.join(sys.argv[1:])
+if not question:
+    print('USER_ERROR: No question provided.', file=sys.stderr)
+    exit(1)
+
+
+# ==============================================================================
+# GET TMUX PANE CONTENT
+# ==============================================================================
+cmd = ['tmux-capture-pane']
+result = subprocess.run(cmd, capture_output=True)
+pane_contents = result.stdout.decode('utf-8')
+
+
+# ==============================================================================
+# AI PROMPT
+# ==============================================================================
+system_prompt = '''
+You are a terminal assistant.
+You will be asked a question about the contents of another users' terminal contents.
+Your answer should be direct and succinct. No need to worry about being rude or polite, just answer the question. I will handle the politeness.
+If applicable, provide commands that the user can run to get more information.
+
+The terminal contents will be provided in the following format:
+
+QUESTION: User question goes here.
+
+$ command.py
+# output of `command.py`
+$ another command
+# output of `another command`
+'''
+
+prompt = f'''
+QUESTION: {question}
+
+{pane_contents}
+'''
+
+
+# ==============================================================================
+# RUN AI COMMAND
+# ==============================================================================
+cmd = ['ai']
+cmd += ['--system-prompt', system_prompt]
+cmd += ['--prompt', prompt]
+result = subprocess.run(cmd, capture_output=True)
+ai_response = result.stdout.decode('utf-8')
+print(ai_response)
+
