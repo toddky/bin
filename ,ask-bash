@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# USAGE: ,ask bash <question>
+# DESCRIPTION: Ask a question about Bash scripting
+
+question="$*"
+if [[ -z "$question" ]]; then
+	print-usage ',ask bash <question>'
+	print-error 'No question provided.'
+	exit 1
+fi
+
+read -r -d '' system_prompt << EOF
+You are an expert Bash programmer.
+Just provide code. No need for extra explanations.
+If libraries need to be installed, provide Bash command(s).
+No obvious comments.
+Avoid defining a function unless asked.
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$question"
+
