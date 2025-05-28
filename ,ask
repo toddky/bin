@@ -2,6 +2,12 @@
 # USAGE: ,ask <question>
 # DESCRIPTION: Ask a question about your terminal output
 
+subcmd="$0-$1"
+if command -v "$subcmd" &>/dev/null; then
+	shift
+	exec "$subcmd" "$@"
+fi
+
 question="$*"
 if [[ -z "$question" ]]; then
 	print-usage ',ask <question>'
