@@ -3,8 +3,19 @@
 git staged || exit $?
 
 staged="$(git ls-staged)"
-print-cmd git commit -m "$staged"
-git commit -m "$staged" || exit $?
+summary="$(,commit)"
+
+message="$(cat <<EOF
+$staged
+
+AI Summary:
+$summary
+EOF
+)"
+
+print-cmd git commit -m "$message"
+git commit -m "$message" || exit $?
 
 print-cmd git amend
 git amend || exit $?
+
