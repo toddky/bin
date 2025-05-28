@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# USAGE: ,ask Ruby <question>
+# DESCRIPTION: Ask a question Ruby scripting
+
+question="$*"
+if [[ -z "$question" ]]; then
+	print-usage ',ask ruby <question>'
+	print-error 'No question provided.'
+	exit 1
+fi
+
+read -r -d '' system_prompt << EOF
+You are an expert Ruby programmer.
+Just provide code. No need for extra explanations.
+If Ruby libraries need to be installed, provide gem command.
+Shell commands should be run using the list form.
+No obvious comments.
+Avoid defining a function unless asked.
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$question"
+
