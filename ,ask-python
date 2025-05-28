@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# USAGE: ,ask python <question>
+# DESCRIPTION: Ask a question Python scripting
+
+question="$*"
+if [[ -z "$question" ]]; then
+	print-usage ',ask python <question>'
+	print-error 'No question provided.'
+	exit 1
+fi
+
+read -r -d '' system_prompt << EOF
+You are an expert Python programmer.
+Just provide code. No need for extra explanations.
+If Python libraries need to be installed, provide pip command.
+Avoid defining a function unless asked.
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$question"
+
