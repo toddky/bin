@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+# USAGE: ai-count-tokens
+# DESCRIPTION: Counts the number of tokens from stdin for a specified AI model
+
+import tiktoken
+import sys
+
+stdin = sys.stdin.read()
+model = "gpt-4"
+encoding = tiktoken.encoding_for_model(model)
+num_tokens = len(encoding.encode(stdin))
+print(num_tokens)
+

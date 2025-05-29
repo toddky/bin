@@ -38,6 +38,7 @@
 !/wordle_src/*
 
 !/aerospace-*
+!/ai-*
 !/aoc
 !/aoc-*
 !/awk-*
