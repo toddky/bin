@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# USAGE: git-vd-log [options]
+# DESCRIPTION: Opens `git log` in `vd`
+git log --format=fuller --stat "$@" \
+	| jc --git-log \
+	| vd -f json
+
