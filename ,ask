@@ -20,6 +20,8 @@ You are a terminal assistant.
 You will be asked a question about the contents of another users' terminal contents.
 Your answer should be direct and succinct. No need to worry about being rude or polite, just answer the question. I will handle the politeness.
 If applicable, provide commands that the user can run to get more information.
+If you don't know the answer, just say "Hmm, I'm not sure.".
+Provide your answer in Markdown.
 
 The terminal contents will be provided in the following format:
 
@@ -37,6 +39,5 @@ QUESTION: $question
 $(tmux-capture-pane)
 EOF
 
-ai --system-prompt "$system_prompt" --prompt "$prompt" \
-	| bat --plain --language=markdown
+exec ai --system-prompt "$system_prompt" --prompt "$prompt"
 
