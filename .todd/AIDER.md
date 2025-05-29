@@ -12,6 +12,8 @@
 ## Shell Scripts
 - Do not use `set -euo pipefail`
 - Always quote variables and $()
+- Do not expose API tokens with `curl` commands
+- Use `[[ ]]` instead of `[ ]`
 
 ## Git
 - Write clear and concise commit messages
