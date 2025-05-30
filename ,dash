@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# USAGE: ,dash
+# DESCRIPTION: TODO
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+tmux_conf="$SCRIPT_DIR/config/tmux-dashboard/dashboard.tmux.conf"
+run_sh="$SCRIPT_DIR/config/tmux-dashboard/run.sh"
+
+tempdir="$(mktemp -d)"
+socket="$tempdir/socket"
+function cleanup() { rm -rf "$tempdir"; }
+trap cleanup EXIT
+
+unset TMUX
+tmux -S "$socket" -f "$tmux_conf" new-session "$run_sh"
+
