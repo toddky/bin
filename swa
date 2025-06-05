@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# USAGE: swa
+# DESCRIPTION: TODO
+
+date="$(date -v+1d '+%Y-%m-%d')"
+
+origin='PHX'
+dest='DEN'
+
+adults=2
+teens=1
+kids=1
+babies=1
+lap_infants=1
+passengers="$((adults+teens+kids+babies))"
+
+url="https://www.southwest.com/air/booking/select-depart.html"
+
+queries=()
+queries+=("tripType=oneway")
+queries+=("adultsCount=$adults")
+queries+=("olderChildCount=$kids")
+queries+=("youngerChildCount=$babies")
+queries+=("teensCount=$teens")
+queries+=("lapInfantPassengersCount=$lap_infants")
+queries+=("adultPassengersCount=$passengers")
+queries+=("destinationAirportCode=$dest&departureDate=$date&departureTimeOfDay=ALL_DAY")
+queries+=("fareType=USD&int=HOMEQBOMAIR")
+queries+=("originationAirportCode=$origin")
+queries+=("passengerType=ADULT&promoCode=&returnDate=&returnTimeOfDay=ALL_DAY")
+
+query_string=$(IFS='&'; echo "${queries[*]}")
+
+url="$url?$query_string"
+
+print-url "$url"
+
+open "$url"
+
