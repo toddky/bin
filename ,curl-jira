@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+url="$1"
+
+tempfile="$(mktemp)"
+function cleanup() { rm -rf "$tempfile"; }
+trap cleanup EXIT
+
+domain="$(hostname --long | rev | cut -d. -f1,2 | rev)"
+printf 'user ="%s"\n' "$USER@$domain:$(cat ~/.jira.apitoken)" > "$tempfile"
+curl -K "$tempfile" "$url"
+
