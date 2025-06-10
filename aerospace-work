@@ -2,6 +2,10 @@
 # USAGE: aerospace-work
 # DESCRIPTION: Move windows around to workspace
 
+# Set $PATH
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$SCRIPT_DIR:$PATH"
+
 # Map specifc apps to specific spaces
 declare -A apps
 num_displays="$(mac-display-count)"
