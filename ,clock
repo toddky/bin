@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # USAGE: ,clock &
+
 while true; do
 	tput sc
-	tput cup 0 $(($(tput cols)-29))
-	date
+	cols="$(tput cols)"
+	tput cup 0 $((cols-21))
+	printf "\x1b[48;5;159;38;5;234m %s \x1b[0m\n" "$(date +'%Y-%m-%d %H:%M:%S')"
 	tput rc
 	sleep 1
 done
