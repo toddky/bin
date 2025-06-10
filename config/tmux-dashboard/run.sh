@@ -2,7 +2,6 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 index="$(tmux display-message -p '#{pane_index}')"
-index="$((index - 1))"
 
 # REVISIT: Unhardcode this
 yaml="$SCRIPT_DIR/uptime.yaml"
@@ -12,6 +11,10 @@ info="$(cat uptime.yaml | jc --yaml | jq "$select")"
 
 cmd="$(jq -r '.command' <<< "$info")"
 refresh="$(jq '.refresh' <<< "$info")"
+
+if [[ "$cmd" == 'null' ]]; then
+	exit
+fi
 
 while true; do
 	eval $cmd
