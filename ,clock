@@ -2,11 +2,17 @@
 # USAGE: ,clock &
 
 while true; do
-	tput sc
 	cols="$(tput cols)"
-	tput cup 0 $((cols-21))
-	printf "\x1b[48;5;159;38;5;234m %s \x1b[0m\n" "$(date +'%Y-%m-%d %H:%M:%S')"
-	tput rc
-	sleep 1
+	# OLD
+	#tput sc
+	#printf "\033[%d;%dh" 0 "$((cols-21))"
+	#printf "\033[48;5;159;38;5;234m %s \033[0m\n" "$(date +'%Y-%m-%d %H:%M:%S')"
+	#tput rc
+	#sleep 1
+
+	row=0
+	col="$((cols-21))"
+	now="$(date +'%Y-%m-%d %H:%M:%S')"
+	printf "\033[s\033[%d;%dH\033[48;5;159;38;5;234m %s \033[0m\033[u" "$row" "$col" "$now"
 done
 
