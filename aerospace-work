@@ -14,6 +14,7 @@ apps['1Password']=1
 apps['zoom.us']=2
 apps['Code']=5
 apps['Cursor']=5
+apps['VNC Viewer']=5
 apps['iTerm2']=4
 apps['Gmail']=7
 apps['Slack']=7
