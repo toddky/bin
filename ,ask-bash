@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # USAGE: ,ask bash <question>
-# DESCRIPTION: Ask a question about Bash scripting
+# DESCRIPTION: Ask a Bash question
 
 question="$*"
 if [[ -z "$question" ]]; then

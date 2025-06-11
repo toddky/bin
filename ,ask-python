@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # USAGE: ,ask python <question>
-# DESCRIPTION: Ask a question Python scripting
+# DESCRIPTION: Ask a Python question
 
 question="$*"
 if [[ -z "$question" ]]; then
