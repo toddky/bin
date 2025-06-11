@@ -9,6 +9,9 @@ if [[ -z "$question" ]]; then
 	exit 1
 fi
 
+# Another analysis
+# https://byteatatime.dev/posts/cursor-prompt-analysis/
+
 # Cursor's system prompt
 # https://www.tensorzero.com/blog/reverse-engineering-cursors-llm-client/
 read -r -d '' system_prompt << 'EOF'
