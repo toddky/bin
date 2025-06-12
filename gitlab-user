@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-test
+# DESCRIPTION: Test GitLab
+#exec gitlab-curl "users?username=$1" | jq -r '.[] | "\(.id)\t\(.username)\t\(.name)"'
+exec gitlab-curl "users?username=$1" | jq -c '.[] | {id, username, name}'
+
