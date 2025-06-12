@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-groups <group>
+# DESCRIPTION: Find GitLab groups
+gitlab-curl "groups?search=$1" | jq -c '.[] | {id, name, full_path}'
