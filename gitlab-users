@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-users
+# DESCRIPTION: Find GitLab users
+(
+	( gitlab-curl "users?username=$1" | jq -c '.[] | {id, username, name}' ) &
+	( gitlab-curl "users?search=$1" | jq -c '.[] | {id, username, name}' ) &
+) | sort | uniq | jq -c
+
