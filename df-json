@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # USAGE: df-json
-# DESCRIPTION: TODO
+# DESCRIPTION: Dump out `df` in JSON format
 
 import jc
 import json
