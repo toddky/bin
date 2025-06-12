@@ -1,42 +1,38 @@
 #!/usr/bin/env bash
-dir="${1:-.}"
-depth="${2:-1}"
-[[ -d "$dir" ]] || exit 1
 
-base="$(basename "$dir")"
-if [[ "$base" == '.' ]] && [[ "$dir" != . ]]; then
-	exit 1
-elif [[ "$base" == '..' ]]; then
-	exit 1
-fi
+exec &> >(tee du.txt)
 
-result="$(du --max-depth=0 "$dir" 2>/dev/null)" || exit 1
-read -r size _ <<<"$result"
-((size=size/1024))
+du 2>/dev/null | while read -r size dir; do
+	size_mb="$((size/1024))"
+	((size_mb<100)) && continue
 
+	case "$dir" in
+		*/.git/*)                    continue;;
+		*/.venv/*)                   continue;;
+		*/venv/*)                    continue;;
+		*/logs/*)                    continue;;
+		*/lib/*)                     continue;;
 
-case "$base" in
-	.git) last=1;;
-	work) last=1;;
-	logs) last=1;;
-	test.outputs) last=1;;
-	*) last=0;;
-esac
+		# Bazel
+		*/external/*)                continue;;
+		*/execroot/*)                continue;;
+		*/bazel_output_user_root/*)  continue;;
 
-if ((last)); then
-	printf '%-10s %s\n' "$size" "$dir"
-	exit 0
-fi
+		# Zebu
+		*/frame_0/*)                 continue;;
+		*/zrci_run/*)                continue;;
+		*/backend_default/*)         continue;;
 
-((size<100)) && exit 1
+		# Directory extension
+		*.vdb/*)                     continue;;
+		*.zCui.work/*)               continue;;
+	esac
 
-if ((depth)); then
-	((depth--))
-	for d in "$dir"/* "$dir"/.*; do
-		"$0" "$d" "$depth"
-	done
-fi
+	size="$(numfmt --from-unit=1024 --to iec $size)"
 
-printf '%-10s %s\n' "$size" "$dir"
-exit 0
+	printf '%8s  %s\n' "$size" "$dir"
+	#printf '%8s  %s\n' "$size_mb" "$dir"
+	[[ "$(dirname "$dir")" == '.' ]] && echo
+	[[ -d "$dir/.git" ]] && echo
+done
 
