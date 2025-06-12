@@ -6,6 +6,7 @@ API_KEY="$(cat "$HOME/.gitlab_key")" || exit $?
 GITLAB_URL="$(cat "$HOME/.gitlab_url")" || exit $?
 
 endpoint="${1:-user}"
+shift
 
 # Create a temporary file for the API token header
 header_file="$(mktemp)"
@@ -14,5 +15,5 @@ trap on_exit EXIT
 printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
 url="$GITLAB_URL/api/v4/$endpoint"
 
-curl -s --header @"$header_file" "$url"
+curl -s --header @"$header_file" "$@" "$url" 
 
