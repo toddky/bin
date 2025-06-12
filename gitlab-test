@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-test
+# DESCRIPTION: Test GitLab
+exec gitlab-curl user | jq .
