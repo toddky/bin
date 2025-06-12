@@ -22,14 +22,15 @@ def main():
         # 'ASK_HOSTS',
 
         'RUN_TIME',
+        'CPU_USED',
         'MAX_MEM',
         'CPU_PEAK',
         'CPU_EFFICIENCY',
         'RUNTIMELIMIT',
         'ESTIMATED_RUN_TIME',
         'PEND_TIME',
-        'START_TIME',
         'SUBMIT_TIME',
+        'START_TIME',
         'FINISH_TIME',
 
         'PROJ',
