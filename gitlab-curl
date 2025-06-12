@@ -9,9 +9,9 @@ endpoint="${1:-user}"
 
 # Create a temporary file for the API token header
 header_file="$(mktemp)"
-echo "PRIVATE-TOKEN: $API_KEY" > "$header_file"
 function on_exit { rm -f "$header_file"; }
 trap on_exit EXIT
+printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
 url="$GITLAB_URL/api/v4/$endpoint"
 
 curl -s --header @"$header_file" "$url"
