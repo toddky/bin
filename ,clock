@@ -14,5 +14,6 @@ while true; do
 	col="$((cols-21))"
 	now="$(date +'%Y-%m-%d %H:%M:%S')"
 	printf "\033[s\033[%d;%dH\033[48;5;159;38;5;234m %s \033[0m\033[u" "$row" "$col" "$now"
+	sleep 0.3
 done
 
