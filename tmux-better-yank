@@ -2,21 +2,18 @@
 # USAGE: tmux-better-yank
 # DESCRIPTION: TODO
 
+# vim: ft=python noet ts=4 sw=0 sts
+
 # tmux bind-key -T prefixless M-y run-shell /home/$USER/bin/tmux-better-yank
 
 # ==============================================================================
 # IMPORT
 # ==============================================================================
 import atexit
-import json
-import os
-import shutil
 import subprocess
 import re
 import sys
-import tempfile
 import termios
-import time
 import tty
 
 # ==============================================================================
@@ -49,67 +46,80 @@ def find_matches(lines, regex, group=1):
 		matches.append([m.group(group), row, start_col, end_col-start_col])
 	return matches
 
-matches = {}
+all_matches = {}
 
 # todd 755 bin main » <command>
-matches['command'] = find_matches(lines, r".*»\s*(\S.*)")
+all_matches['command'] = find_matches(lines, r".*»\s*(\S.*)")
 
 # lrwxrwxrwx 1 todd group   11 Jan  1 23:59 file -> /path/to/file
 # drwxrwxrwx 1 todd group    0 Jan  1 23:59 dir/
 # -rw-r--r-- 1 todd group  10K Jan  1 23:59 file.txt
 perms = '[-dl][-r][-w][-x][-r][-w][-x][-r][-w][-x]'
-matches['file'] = find_matches(lines, r"[-dl]([-r][-w][-x]){3}.* (\S+)", 2)
+all_matches['file'] = find_matches(lines, r"[-dl]([-r][-w][-x]){3}.* (\S+)", 2)
 
 
 # ==============================================================================
 # GENERATE HINTS
 # ==============================================================================
 hintchars = 'fdsavcxzrewqtgb1234567890jklmuiopyhn'
-for key, value in matches.items():
+for key, value in all_matches.items():
 	for i, match in enumerate(value):
-		match.append(hintchars[i])
+		try:
+			match.append(hintchars[i])
+		except IndexError:
+			continue
 
 
 # ==============================================================================
 # SCREEN
 # ==============================================================================
+# REVISIT: Why do I have to print pane contents before setraw()?
+clear_screen = "\033[H\033[J"
+print(clear_screen)
+print(pane_contents, end='')
 
-# Hide cursor, show cursor on exit
-def show_cursor(): print("\033[?25h")
-atexit.register(show_cursor)
+fd = sys.stdin.fileno()
+orig_settings = termios.tcgetattr(fd)
+def reset_terminal():
+	termios.tcsetattr(fd, termios.TCSADRAIN, orig_settings)
+	# Show cursor
+	print("\033[?25h")
+
+atexit.register(reset_terminal)
+tty.setraw(sys.stdin.fileno())
+# Hide cursor
 print("\033[?25l")
 
-# Clear screen
-clear_screen = "\033[H\033[J"
-
-def xy(x, y):
-    print("\033[{x};{y}H")
-
-# Print hints
 def print_hint(x, y, hint):
-    print(f'\033[{x+2};{y+1}H\033[37;44;1m{hint}\033[0m')
+	print(f'\033[{x+2};{y+1}H\033[37;44;1m{hint}\033[0m')
 
-print(clear_screen)
-print(pane_contents)
-for type, matches in matches.items():
-    for match in matches:
-        hint = f'{type[0]}{match[4]}'
-        print_hint(match[1], match[2], hint)
+for type, matches in all_matches.items():
+	for match in matches:
+		hint = f'{type[0]}{match[4]}'
+		print_hint(match[1], match[2], hint)
+
 
 # ==============================================================================
 # GETCH
 # ==============================================================================
-fd = sys.stdin.fileno()
-orig_settings = termios.tcgetattr(fd)
-def reset_terminal():
-    termios.tcsetattr(fd, termios.TCSADRAIN, orig_settings)
-atexit.register(reset_terminal)
-
 key = ''
-while key != 'q':
-    # read a single key from stdin
-    tty.setraw(sys.stdin.fileno())
-    key = sys.stdin.read(1)
-    if key == 'q':
-        break
+keys = ''
+while True:
+	key = sys.stdin.read(1)
+	keys += key
+
+	if key == '\x1b':
+		keys = ''
+		continue
+	if keys == 'q':
+		exit(0)
+
+	# find match
+	if len(keys) > 1:
+		for type, matches in all_matches.items():
+			for match in matches:
+				hint = f'{type[0]}{match[4]}'
+				if keys == hint:
+					subprocess.run(['tmux', 'set-buffer', match[0]])
+					exit(0)
 
