@@ -4,87 +4,112 @@
 
 # tmux bind-key -T prefixless M-y run-shell /home/$USER/bin/tmux-better-yank
 
+# ==============================================================================
+# IMPORT
+# ==============================================================================
 import atexit
 import json
 import os
 import shutil
 import subprocess
+import re
 import sys
 import tempfile
 import termios
 import time
 import tty
 
-# Use temp dir
-temp_dir = tempfile.mkdtemp()
-os.chdir(temp_dir)
-def cleanup(): shutil.rmtree(temp_dir)
-atexit.register(cleanup)
+# ==============================================================================
+# CAPTURE PANE
+# ==============================================================================
+pane_id = None
+if len(sys.argv) > 1:
+    pane_id = sys.argv[1]
+capture_cmd = ['tmux', 'capture-pane', '-p', '-e']
+if pane_id:
+    capture_cmd += ['-t', pane_id]
+pane_contents = subprocess.run(capture_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True).stdout.strip()
 
-# Get tmux pane info
-pane_tty, orig_x, orig_y = os.popen("tmux display-message -p '#{pane_tty} #{cursor_x} #{cursor_y}'").read().strip().split()
+ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+lines = [ansi_escape.sub('', line.rstrip('\n')) for line in pane_contents.split('\n')]
 
-# Open tty
-pane_tty = open(pane_tty, "w")
-def print_tty(msg):
-    print(msg, file=pane_tty, end='', flush=True)
 
-# Get pane content
-result = subprocess.run(['tmux-pane-contents'], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-pane = result.stdout.decode('utf-8').strip()
-result = subprocess.run(['tmux-pane-hints'], input=pane, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, shell=True)
-all_matches = json.loads(result.stdout.strip())
-#print_tty(all_matches)
+# ==============================================================================
+# FIND MATCHES
+# ==============================================================================
+def find_matches(lines, regex, group=1):
+	'''
+	Find matches in lines using regex and group
+	'''
+	matches = []
+	for row, line in enumerate(lines):
+		m = re.match(regex, line)
+		if not m: continue
+		start_col, end_col = m.span(group)
+		matches.append([m.group(group), row, start_col, end_col-start_col])
+	return matches
 
-# Hide cursor
-def show_cursor():
-    print_tty("\033[?25h")
+matches = {}
+
+# todd 755 bin main » <command>
+matches['command'] = find_matches(lines, r".*»\s*(\S.*)")
+
+# lrwxrwxrwx 1 todd group   11 Jan  1 23:59 file -> /path/to/file
+# drwxrwxrwx 1 todd group    0 Jan  1 23:59 dir/
+# -rw-r--r-- 1 todd group  10K Jan  1 23:59 file.txt
+perms = '[-dl][-r][-w][-x][-r][-w][-x][-r][-w][-x]'
+matches['file'] = find_matches(lines, r"[-dl]([-r][-w][-x]){3}.* (\S+)", 2)
+
+
+# ==============================================================================
+# GENERATE HINTS
+# ==============================================================================
+hintchars = 'fdsavcxzrewqtgb1234567890jklmuiopyhn'
+for key, value in matches.items():
+	for i, match in enumerate(value):
+		match.append(hintchars[i])
+
+
+# ==============================================================================
+# SCREEN
+# ==============================================================================
+
+# Hide cursor, show cursor on exit
+def show_cursor(): print("\033[?25h")
 atexit.register(show_cursor)
-print_tty("\033[?25l")
+print("\033[?25l")
 
-# Move cursor to original position on exit
-def revert_screen():
-    # Clear screen
-    print_tty("\033[2J")
-    # Move cursor to 0,0
-    print_tty("\033[H")
-    # Reprint pane
-    print_tty(pane)
-    # Move cursor to original position
-    print_tty(f'\033[{int(orig_y)+1};{int(orig_x)+1}H')
-atexit.register(revert_screen)
+# Clear screen
+clear_screen = "\033[H\033[J"
+
+def xy(x, y):
+    print("\033[{x};{y}H")
 
 # Print hints
 def print_hint(x, y, hint):
-    print_tty(f'\033[{x+1};{y+1}H\033[37;44;1m{hint}\033[0m')
+    print(f'\033[{x+2};{y+1}H\033[37;44;1m{hint}\033[0m')
 
-for type, matches in all_matches.items():
+print(clear_screen)
+print(pane_contents)
+for type, matches in matches.items():
     for match in matches:
         hint = f'{type[0]}{match[4]}'
         print_hint(match[1], match[2], hint)
 
-# Get key from stdin
-# REVISIT: Make this compatible with tmux
-def getch():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd)
-        ch = sys.stdin.read(1)
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
-
-# sleep 1s
-time.sleep(1)
-
-sys.exit(0)
-
-# TODO: Figure out how to getch()
+# ==============================================================================
+# GETCH
+# ==============================================================================
+fd = sys.stdin.fileno()
+orig_settings = termios.tcgetattr(fd)
+def reset_terminal():
+    termios.tcsetattr(fd, termios.TCSADRAIN, orig_settings)
+atexit.register(reset_terminal)
 
 key = ''
 while key != 'q':
-    # Get key from stdin
-    key = getch()
-    print_tty(key)
+    # read a single key from stdin
+    tty.setraw(sys.stdin.fileno())
+    key = sys.stdin.read(1)
+    if key == 'q':
+        break
 
