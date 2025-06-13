@@ -102,16 +102,21 @@ for type, matches in all_matches.items():
 # ==============================================================================
 # GETCH
 # ==============================================================================
+def message(msg):
+	subprocess.run(['tmux', 'display-message', msg])
+
 key = ''
 keys = ''
 while True:
 	key = sys.stdin.read(1)
 	keys += key
+	message(f'Keys: {keys}')
 
 	if key == '\x1b':
 		keys = ''
 		continue
 	if keys == 'q':
+		message('Quitting...')
 		exit(0)
 
 	# find match
@@ -121,5 +126,6 @@ while True:
 				hint = f'{type[0]}{match[4]}'
 				if keys == hint:
 					subprocess.run(['tmux', 'set-buffer', match[0]])
+					message(f'Copied: {match[0]}')
 					exit(0)
 
