@@ -1,0 +1,113 @@
+#!/usr/bin/env ruby
+# vim: ft=ruby noet ts=4 sw=0 sts
+
+require 'yaml'
+
+# ==============================================================================
+# HELP
+# ==============================================================================
+command = ARGV[0]
+command = 'list' if ARGV.empty?
+
+if command == 'help'
+	puts <<~HELP
+	Usage: todo [command] [options]
+
+	Commands:
+	  init                    Initialize a new todo list
+	  add <project> <task>    Add a new task to the todo list
+	  list                    List all tasks in the todo list
+	  done <id>               Mark a task as done
+	  remove <id>             Remove a task from the todo list
+
+	Options:
+	  -h, --help    Show this help message
+	HELP
+	exit
+end
+
+
+# ==============================================================================
+# INIT
+# ==============================================================================
+home = File.expand_path('~')
+todo_yaml = File.join(home, '.todo.yaml')
+if ARGV[0] == 'init'
+	if File.exist?(todo_yaml)
+		puts "USER_ERROR: Unable to run init, todo list already exists at #{todo_yaml}"
+		exit 1
+	end
+	File.write(todo_yaml, {}.to_yaml)
+	puts "Initialized todo list at #{todo_yaml}"
+	exit
+end
+
+
+# ==============================================================================
+# LOAD
+# ==============================================================================
+if not File.exist?(todo_yaml)
+	$stderr.puts "Todo list not found at #{todo_yaml}. Please run 'todo init' first."
+	exit
+end
+data = YAML.load_file(todo_yaml)
+
+
+# ==============================================================================
+# ADD
+# ==============================================================================
+if command == 'add'
+	if ARGV.length < 3
+		$stderr.puts "USER_ERROR: Please provide a project and task to add."
+		exit 1
+	end
+
+	project = ARGV[1]
+	task = ARGV[2..-1].join(' ')
+	data[project] ||= []
+	data[project] << { 'task' => task, created_at: Time.now, finished_at: nil, delete_at: nil }
+	File.write(todo_yaml, data.to_yaml)
+	puts "Added task '#{task}' to project '#{project}'."
+	exit
+end
+
+
+# ==============================================================================
+# LIST
+# ==============================================================================
+red_circle    = '🔴'
+orange_circle = '🟠'
+yellow_circle = '🟡'
+green_circle  = '🟢'
+blue_circle   = '🔵'
+purple_circle = '🟣'
+black_circle  = '⚫️'
+white_circle  = '⚪️'
+brown_circle  = '🟤'
+
+not_started = '❌'
+in_progress = '⏳'
+done        = '✅'
+star        = '⭐️'
+urgent      = '❗️'
+very_urgent = '‼️'
+critical    = '⚠️'
+reminder    = '🔔'
+note        = '📝'
+
+if command == 'list'
+	if data.empty?
+		puts "No tasks found."
+	else
+		data.each do |project, tasks|
+			puts "Project: #{project}"
+			tasks.each_with_index do |task, index|
+				status = task['done'] ? '[x]' : '[ ]'
+				puts "  #{index + 1}. #{status} #{task['task']}"
+			end
+		end
+	end
+	exit
+end
+
+
