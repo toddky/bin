@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-repos <repo_name>
+# DESCRIPTION: Find GitLab repositories by searching for the repository name
+gitlab-curl "projects?search=$1" | jq -c '.[] | {id, path_with_namespace}'
