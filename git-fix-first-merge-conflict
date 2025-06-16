@@ -11,14 +11,20 @@ if [[ -z "$start_line" || -z "$end_line" ]]; then
 	print-error "Unable to find start line (start_line='$start_line') and/or end line (end_line='$end_line') of merge conflict"
 	exit 1
 fi
-print-info "Found conflict at lines $start_line-$end_line"
+print-info "Found conflict in file $file at lines $start_line-$end_line"
 conflict="$(awk "NR >= $start_line && NR <= $end_line" "$file")"
+
+# Get information from conflicting commits
+current_sha="$(git blame -L "$((start_line+1)),$((start_line+1))" "$file" | cut -d' ' -f1)" || exit $?
+current_message="$(git log --pretty=format:"%h %an %ad %s" --date=short -1 "$current_sha")" || exit $?
+incoming_sha="$(git blame -L "$((end_line-1)),$((end_line-1))" "$file" | cut -d' ' -f1)" || exit $?
+incoming_message="$(git log --pretty=format:"%h %an %ad %s" --date=short -1 "$incoming_sha")" || exit $?
 
 response="$(,ask merge "$conflict")"
 #print-header 'Full Response'; echo "$response"; echo
 
 print-header 'Explanation'
-explanation="$(awk '/Here is the merged code:/ {exit} 1;' <<<"$response")" || exit $?
+explanation="$(awk '/Merged code:/ {exit} 1;' <<<"$response")" || exit $?
 echo "$explanation"
 echo
 
@@ -26,7 +32,7 @@ print-header 'Merged Code'
 code="$(awk '
 	code && /^```/ {count++; next}
 	(count==1)
-	/Here is the merged code:/ {code=1}
+	/Merged code:/ {code=1}
 ' <<< "$response")" || exit $?
 if [[ -z "$code" ]]; then
 	print-error 'Code changes are empty.'
@@ -52,6 +58,12 @@ print-retval "$retval"
 git add "$file" || exit $?
 read -r -d '' commit_message << EOF
 [AI] $summary
+
+File: $file
+
+Conflicts:
+$current_message
+$incoming_message
 
 $explanation
 EOF
