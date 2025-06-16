@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# USAGE: awk-replace-chunk <start> <end> <chunk>
+# DESCRIPTION: Replaces a chunk of lines in a file with a specified chunk
+file="$1"
+start="$2"
+end="$3"
+chunk="$4"
+
+tmpfile="$(mktemp)"
+function cleanup() { rm -f "$tmpfile"; }
+trap cleanup EXIT 
+
+awk -v start="$start" -v end="$end" -v chunk="$chunk" '
+	(NR==start) { print chunk; skip=1 }
+	(NR==end) {skip=0; next }
+	(skip) { next }
+	1
+' "$file" > "$tmpfile" || exit $?
+mv "$tmpfile" "$file"
+
