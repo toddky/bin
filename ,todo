@@ -51,7 +51,7 @@ if not File.exist?(todo_yaml)
 	$stderr.puts "Todo list not found at #{todo_yaml}. Please run 'todo init' first."
 	exit
 end
-tasks = YAML.load_file(todo_yaml)
+projects = YAML.load_file(todo_yaml)
 
 
 # ==============================================================================
@@ -67,26 +67,38 @@ black_circle  = '⚫️'
 white_circle  = '⚪️'
 brown_circle  = '🟤'
 
+trash       = '🗑️'
 not_started = '❌'
 in_progress = '⏳'
 done        = '✅'
 star        = '⭐️'
-urgent      = '❗️'
-very_urgent = '‼️'
 critical    = '⚠️'
 reminder    = '🔔'
 note        = '📝'
 
+urgent      = '❗️'
+very_urgent = '‼️'
+urgencies   = [very_urgent, urgent, ' ']
+
+blocker     = '❌'
+critical    = '⚠️'
+importances = [blocker, critical, ' ']
+
+bold_blue = "\e[1;34m"
+reset = "\e[0m"
+
 if command == 'list'
-	if tasks.empty?
+	if projects.empty?
 		puts "No tasks found."
 		exit
 	else
-		tasks.each do |project, tasks|
-			puts "Project: #{project}"
+		projects.each do |project, tasks|
 			tasks.each_with_index do |task, index|
-				status = task['done'] ? '[x]' : '[ ]'
-				puts "  #{index + 1}. #{status} #{task['summary']}"
+				id = "#{project}-#{task['id']}"
+				importance = importances[task['importance'] || -1]
+				urgency = urgencies[task['urgency'] || -1]
+				done = task['finished_at'] ? done : ' '
+				puts "#{urgency.ljust(2)}#{importance.ljust(2)}  #{bold_blue}#{id.rjust(3)}#{reset} #{task['summary']}"
 			end
 		end
 	end
@@ -104,20 +116,25 @@ if command == 'add'
 	end
 
 	project = ARGV[1].upcase
-	tasks[project] ||= []
-	size = tasks[project].size
+	projects[project] ||= []
+	size = projects[project].size
 
 	summary = ARGV[2..-1].join(' ')
 
 	task = Hash.new
-	task['id'] = size + 1
-	task['summary'] = summary
-	task['created_at'] = Time.now
+	task['id']          = size + 1
+	task['summary']     = summary
+	task['created_at']  = Time.now
 	task['finished_at'] = nil
-	task['deleted_at'] = nil
+	task['deleted_at']  = nil
 
-	tasks[project] << task
-	File.write(todo_yaml, tasks.to_yaml)
+	# Priority, lower is higher
+	task['urgency']    = 2
+	task['importance'] = 2
+	task['impact']     = 1
+
+	projects[project] << task
+	File.write(todo_yaml, projects.to_yaml)
 	puts "Added task '#{summary}' to project '#{project}'."
 	exit
 end
