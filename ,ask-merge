@@ -49,6 +49,9 @@ Here is the merged code:
 ```
 Merged code goes here
 ```
+
+One-line summary:
+Summary goes here
 EOF
 
 exec ai --system-prompt "$system_prompt" --prompt "$prompt"
