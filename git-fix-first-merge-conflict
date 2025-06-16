@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# USAGE: git-fix-first-merge-conflict <file>
+# DESCRIPTION: Resolves the first merge conflict using AI
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+file="${1:?"Usage: $0 <file>"}"
+
+start_line="$(awk '/^<<<<+ HEAD/ { print NR; exit }' "$file")"
+end_line="$(awk '/^>>>>+/ { print NR; exit }' "$file")"
+conflict="$(awk "NR >= $start_line && NR <= $end_line" "$file")"
+print-info "Found conflict at lines $start_line-$end_line"
+
+result="$(,ask merge "$conflict")"
+
+explanation="$(echo "$result" | awk '/Here is the merged code:/ {exit} 1;')"
+code="$(echo "$result" | awk '/One-line summary:/ {exit}; code && !/^```/; /Here is the merged code:/{code=1}' )"
+
+print-header 'Explanation'
+echo "$explanation"
+echo
+print-header 'Merged Code'
+echo "$code"
+if [[ -z "$code" ]]; then
+	print-error 'Code changes are empty.'
+	exit 1
+fi
+echo
+
+print-info 'Applying Merged Code'
+awk-replace-chunk "$file" "$start_line" "$end_line" "$code"
+retval=$?
+print-retval "$retval"
+
+git add "$file" || exit $?
+git commit -m "AI-generated code to handle merge conflicts\n\n$explanation"
+
