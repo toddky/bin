@@ -55,35 +55,6 @@ tasks = YAML.load_file(todo_yaml)
 
 
 # ==============================================================================
-# ADD
-# ==============================================================================
-if command == 'add'
-	if ARGV.length < 3
-		$stderr.puts "USER_ERROR: Please provide a project and task to add."
-		exit 1
-	end
-
-	project = ARGV[1].upcase
-	tasks[project] ||= []
-	size = tasks[project].size
-
-	summary = ARGV[2..-1].join(' ')
-
-	task = Hash.new
-	task['id'] = size + 1
-	task['summary'] = summary
-	task['created_at'] = Time.now
-	task['finished_at'] = nil
-	task['deleted_at'] = nil
-
-	tasks[project] << task
-	File.write(todo_yaml, tasks.to_yaml)
-	puts "Added task '#{summary}' to project '#{project}'."
-	exit
-end
-
-
-# ==============================================================================
 # LIST
 # ==============================================================================
 red_circle    = '🔴'
@@ -109,6 +80,7 @@ note        = '📝'
 if command == 'list'
 	if tasks.empty?
 		puts "No tasks found."
+		exit
 	else
 		tasks.each do |project, tasks|
 			puts "Project: #{project}"
@@ -118,6 +90,35 @@ if command == 'list'
 			end
 		end
 	end
+	exit
+end
+
+
+# ==============================================================================
+# ADD
+# ==============================================================================
+if command == 'add'
+	if ARGV.length < 3
+		$stderr.puts "USER_ERROR: Please provide a project and task to add."
+		exit 1
+	end
+
+	project = ARGV[1].upcase
+	tasks[project] ||= []
+	size = tasks[project].size
+
+	summary = ARGV[2..-1].join(' ')
+
+	task = Hash.new
+	task['id'] = size + 1
+	task['summary'] = summary
+	task['created_at'] = Time.now
+	task['finished_at'] = nil
+	task['deleted_at'] = nil
+
+	tasks[project] << task
+	File.write(todo_yaml, tasks.to_yaml)
+	puts "Added task '#{summary}' to project '#{project}'."
 	exit
 end
 
