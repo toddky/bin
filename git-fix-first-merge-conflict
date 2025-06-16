@@ -7,11 +7,15 @@ file="${1:?"Usage: $0 <file>"}"
 
 start_line="$(awk '/^<<<<+ HEAD/ { print NR; exit }' "$file")"
 end_line="$(awk '/^>>>>+/ { print NR; exit }' "$file")"
-conflict="$(awk "NR >= $start_line && NR <= $end_line" "$file")"
+if [[ -z "$start_line" || -z "$end_line" ]]; then
+	print-error "Unable to find start line (start_line='$start_line') and/or end line (end_line='$end_line') of merge conflict"
+	exit 1
+fi
 print-info "Found conflict at lines $start_line-$end_line"
+conflict="$(awk "NR >= $start_line && NR <= $end_line" "$file")"
 
 response="$(,ask merge "$conflict")"
-print-header 'Full Response'; echo "$response"; echo
+#print-header 'Full Response'; echo "$response"; echo
 
 print-header 'Explanation'
 explanation="$(awk '/Here is the merged code:/ {exit} 1;' <<<"$response")" || exit $?
