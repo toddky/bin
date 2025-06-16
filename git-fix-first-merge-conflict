@@ -10,20 +10,34 @@ end_line="$(awk '/^>>>>+/ { print NR; exit }' "$file")"
 conflict="$(awk "NR >= $start_line && NR <= $end_line" "$file")"
 print-info "Found conflict at lines $start_line-$end_line"
 
-result="$(,ask merge "$conflict")"
-
-explanation="$(echo "$result" | awk '/Here is the merged code:/ {exit} 1;')"
-code="$(echo "$result" | awk '/One-line summary:/ {exit}; code && !/^```/; /Here is the merged code:/{code=1}' )"
+response="$(,ask merge "$conflict")"
+print-header 'Full Response'; echo "$response"; echo
 
 print-header 'Explanation'
+explanation="$(awk '/Here is the merged code:/ {exit} 1;' <<<"$response")" || exit $?
 echo "$explanation"
 echo
+
 print-header 'Merged Code'
-echo "$code"
+code="$(awk '
+	code && /^```/ {count++; next}
+	(count==1)
+	/Here is the merged code:/ {code=1}
+' <<< "$response")" || exit $?
 if [[ -z "$code" ]]; then
 	print-error 'Code changes are empty.'
 	exit 1
 fi
+echo "$code"
+echo
+
+print-header 'Summary'
+summary="$(awk '
+	(found && NF) {summary = summary $0 "\n"; next}
+	/One-line summary:/ {found=1}
+	END {print summary}
+' <<< "$response")" || exit $?
+echo "$summary"
 echo
 
 print-info 'Applying Merged Code'
@@ -32,5 +46,10 @@ retval=$?
 print-retval "$retval"
 
 git add "$file" || exit $?
-git commit -m "AI-generated code to handle merge conflicts\n\n$explanation"
+read -r -d '' commit_message << EOF
+[AI] $summary
+
+$explanation
+EOF
+git commit -m  "$commit_message" "$file" || exit $?
 
