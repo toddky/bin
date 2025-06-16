@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # USAGE: gitlab-curl <endpoint>
-# DESCRIPTION: Curl GitLab API with authentication
+# DESCRIPTION: curl GitLab API with authentication
 
 API_KEY="$(cat "$HOME/.gitlab_key")" || exit $?
 GITLAB_URL="$(cat "$HOME/.gitlab_url")" || exit $?
@@ -15,5 +15,7 @@ trap on_exit EXIT
 printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
 url="$GITLAB_URL/api/v4/$endpoint"
 
-curl -s --header @"$header_file" "$@" "$url" 
+# gitlab-curl projects/<project>/jobs/<job_id>/trace -o job.log
+
+curl -s --header @"$header_file" "$@" "$url"
 
