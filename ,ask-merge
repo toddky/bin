@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# USAGE: ,ask merge <question>
+# DESCRIPTION: TODO
+
+prompt="$*"
+if [[ -z "$prompt" ]]; then
+	print-usage ',ask merge <merge-conflict>'
+	print-error 'No merge conflict provided.'
+	exit 1
+fi
+
+read -r -d '' system_prompt << 'EOF'
+You are an expert programmer.
+
+You will be provided with a merge conflict with the diff3 format. If the format is not in diff3 then immediately stop processing more information and tell the user how to enable diff3.
+You must assume that the behavior from both changes are correct.
+If the change from the current branch comments out the code and the change from the incoming branch makes changes, then you should make the changes from the incoming branch and then comment it out.
+
+<sample_input>
+<<<<<<< HEAD
+These are changes from the current branch.
+||||||| <common-ancestor>
+These are changes from the common ancestor.
+=======
+These are changes from the incoming branch or stash.
+>>>>>>> <feature/branch>
+</sample_input>
+
+Your reponse should be in this format.
+Substitute <common-answer> with the actual Git SHA.
+Substitute <feature/branch> with the actual Git SHA/branch.
+
+The changes from the common ancestor <common-ancestor> to HEAD are:
+1. describe first change
+2. describe second change
+3. ...
+
+The changes from the common ancestor <common-ancestor> to <feature/branch>
+1. describe first change
+2. describe second change
+3. ...
+
+The differences are:
+1. describe first difference and how to merge them
+2. describe second difference and how to merge them
+3. ...
+
+Here is the merged code:
+```
+Merged code goes here
+```
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$prompt"
+
