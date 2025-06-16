@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # vim: ft=ruby noet ts=4 sw=0 sts
 
+require 'securerandom'
 require 'yaml'
 
 # ==============================================================================
@@ -50,7 +51,7 @@ if not File.exist?(todo_yaml)
 	$stderr.puts "Todo list not found at #{todo_yaml}. Please run 'todo init' first."
 	exit
 end
-data = YAML.load_file(todo_yaml)
+tasks = YAML.load_file(todo_yaml)
 
 
 # ==============================================================================
@@ -62,12 +63,22 @@ if command == 'add'
 		exit 1
 	end
 
-	project = ARGV[1]
-	task = ARGV[2..-1].join(' ')
-	data[project] ||= []
-	data[project] << { 'task' => task, created_at: Time.now, finished_at: nil, delete_at: nil }
-	File.write(todo_yaml, data.to_yaml)
-	puts "Added task '#{task}' to project '#{project}'."
+	project = ARGV[1].upcase
+	tasks[project] ||= []
+	size = tasks[project].size
+
+	summary = ARGV[2..-1].join(' ')
+
+	task = Hash.new
+	task['id'] = size + 1
+	task['summary'] = summary
+	task['created_at'] = Time.now
+	task['finished_at'] = nil
+	task['deleted_at'] = nil
+
+	tasks[project] << task
+	File.write(todo_yaml, tasks.to_yaml)
+	puts "Added task '#{summary}' to project '#{project}'."
 	exit
 end
 
@@ -96,18 +107,24 @@ reminder    = '🔔'
 note        = '📝'
 
 if command == 'list'
-	if data.empty?
+	if tasks.empty?
 		puts "No tasks found."
 	else
-		data.each do |project, tasks|
+		tasks.each do |project, tasks|
 			puts "Project: #{project}"
 			tasks.each_with_index do |task, index|
 				status = task['done'] ? '[x]' : '[ ]'
-				puts "  #{index + 1}. #{status} #{task['task']}"
+				puts "  #{index + 1}. #{status} #{task['summary']}"
 			end
 		end
 	end
 	exit
 end
+
+
+# ==============================================================================
+# DUMP
+# ==============================================================================
+
 
 
