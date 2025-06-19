@@ -2,5 +2,12 @@
 
 print-header 'dig'
 cat <<-EOF
+dig example.com
+dig +trace example.com
+dig +short example.com
 dig +noall +answer example.com
+dig +noall +authority example.com
+dig TXT example.com
+dig @8.8.8.8 example.com
+dig @8.8.8.8 NS example.com
 EOF
