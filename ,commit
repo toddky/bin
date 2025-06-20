@@ -2,11 +2,20 @@
 # USAGE: ,ask bash <question>
 # DESCRIPTION: Ask a question about Bash scripting
 
-read -r -d '' system_prompt << EOF
-You will be given the output of \`git diff --staged\`
-You will come up with a concise and descriptive commit message based on the changes.
+read -r -d '' system_prompt << 'EOF'
+<task>
+You will be given the output of `git diff`.
+Write a clear and concise summary of important changes and their impact for a git commit message.
+</task>
+
+<custom_instructions>
 Just return the commit message, do not include any other text.
+If the file is new, say 'new' somewhere in the message.
+Unimportant changes do not need to be mentioned.
+If the diff is empty, say so.
+</custom_instructions>
 EOF
+#echo "$system_prompt"; exit
 
 question="$(git diff --staged)"
 exec ai --system-prompt "$system_prompt" --prompt "$question"
