@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: pgrep-rg
+# DESCRIPTION: Looks for rg processes from VSCode
+exec pgrep -af '/home[^ ]*rg.*--follow'
