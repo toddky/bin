@@ -7,6 +7,12 @@ cat << 'EOF'
 /drop <file>
 /read <file>
 /run <command>
+/help <question about aider>
+
+# Switch modes
+/code
+/architect
+/ask
 EOF
 
 echo
