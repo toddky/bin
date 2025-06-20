@@ -251,6 +251,7 @@
 !/pyinfo
 !/pymath
 !/pyserver
+!/raw.sh
 !/realdir.py
 !/realpath.py
 !/relpath.py
