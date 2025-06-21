@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+# USAGE: gitlab mr <project_id> <mr_iid>
+# DESCRIPTION: Show details of MR
+
+import datetime
+import json
+import subprocess
+import sys
+
+project_id = sys.argv[1]
+mr_iid = sys.argv[2]
+
+cmd = ['gitlab-curl', f'/projects/{project_id}/merge_requests/{mr_iid}']
+stdout = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+mr = json.loads(stdout)
+#print(json.dumps(mr, indent=2))
+
+def fmt_date(date_str):
+    return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y-%m-%d %H:%M:%S')
+
+cleaned_mr = {
+    'iid'           : mr['iid'],
+    'project_id'    : mr['project_id'],
+    'title'         : mr['title'],
+    'author'        : mr['author']['username'],
+    'assignee'      : mr['assignee']['username'] if mr['assignee'] else None,
+    'reviewers'     : [r['username'] for r in mr['reviewers']] if mr['reviewers'] else [],
+    'state'         : mr['state'],
+
+    'merge_status'         : mr['merge_status'],
+    'merge_error'          : mr['merge_error'] if mr['merge_error'] else None,
+    'has_conflicts'        : mr['has_conflicts'],
+    'discussions_resolved' : mr['blocking_discussions_resolved'],
+
+    'pipeline_iid'    : mr['pipeline']['iid'] if mr['pipeline'] else None,
+    'pipeline_status' : mr['pipeline']['status'] if mr['pipeline'] else None,
+
+    'source_branch' : mr['source_branch'],
+    'target_branch' : mr['target_branch'],
+    'created_at'    : fmt_date(mr['created_at']),
+    'updated_at'    : fmt_date(mr['updated_at']),
+    'closed_at'     : fmt_date(mr['closed_at']) if mr['closed_at'] else None,
+    'merged_at'     : fmt_date(mr['merged_at']) if mr['merged_at'] else None,
+    'web_url'       : mr['web_url'],
+}
+print(json.dumps(cleaned_mr))
+
