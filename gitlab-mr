@@ -14,6 +14,7 @@ cmd = ['gitlab-curl', f'/projects/{project_id}/merge_requests/{mr_iid}']
 stdout = subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
 mr = json.loads(stdout)
 #print(json.dumps(mr, indent=2))
+#exit()
 
 def fmt_date(date_str):
     return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y-%m-%d %H:%M:%S')
@@ -50,29 +51,29 @@ if True:
     del mr['latest_build_finished_at']
     del mr['first_deployed_to_production_at']
 
-    pipeline = mr['pipeline']
-    del pipeline['id']
-    del pipeline['ref']
-    del pipeline['project_id']
-    del pipeline['sha']
-    pipeline['created_at'] = fmt_date(pipeline['created_at'])
-    pipeline['updated_at'] = fmt_date(pipeline['updated_at'])
+    if pipeline := mr['pipeline']:
+        del pipeline['id']
+        del pipeline['ref']
+        del pipeline['project_id']
+        del pipeline['sha']
+        pipeline['created_at'] = fmt_date(pipeline['created_at'])
+        pipeline['updated_at'] = fmt_date(pipeline['updated_at'])
 
-    head_pipeline = mr['head_pipeline']
-    del head_pipeline['id']
-    del head_pipeline['ref']
-    del head_pipeline['project_id']
-    del head_pipeline['sha']
-    head_pipeline['created_at'] = fmt_date(head_pipeline['created_at'])
-    head_pipeline['updated_at'] = fmt_date(head_pipeline['updated_at'])
-    head_pipeline['started_at'] = fmt_date(head_pipeline['started_at']) if head_pipeline['started_at'] else None
-    head_pipeline['finished_at'] = fmt_date(head_pipeline['finished_at']) if head_pipeline['finished_at'] else None
-    head_pipeline['committed_at'] = fmt_date(head_pipeline['committed_at']) if head_pipeline['committed_at'] else None
-    head_pipeline['user'] = head_pipeline['user']['username'] if head_pipeline['user'] else None
+    if head_pipeline := mr['head_pipeline']:
+        del head_pipeline['id']
+        del head_pipeline['ref']
+        del head_pipeline['project_id']
+        del head_pipeline['sha']
+        head_pipeline['created_at'] = fmt_date(head_pipeline['created_at'])
+        head_pipeline['updated_at'] = fmt_date(head_pipeline['updated_at'])
+        head_pipeline['started_at'] = fmt_date(head_pipeline['started_at']) if head_pipeline['started_at'] else None
+        head_pipeline['finished_at'] = fmt_date(head_pipeline['finished_at']) if head_pipeline['finished_at'] else None
+        head_pipeline['committed_at'] = fmt_date(head_pipeline['committed_at']) if head_pipeline['committed_at'] else None
+        head_pipeline['user'] = head_pipeline['user']['username'] if head_pipeline['user'] else None
 
-    detailed_status = head_pipeline['detailed_status']
-    del detailed_status['illustration']
-    del detailed_status['favicon']
+        if detailed_status := head_pipeline['detailed_status']:
+            del detailed_status['illustration']
+            del detailed_status['favicon']
 
     del mr['user']
 
