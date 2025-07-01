@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: git fetchu
+# DESCRIPTION: git fetch --unshallow
+exec print-run git fetch --unshallow
