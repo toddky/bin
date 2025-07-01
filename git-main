@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# USAGE: git-main
+# DESCRIPTION: Get main branch, check it out, and set upstream
+
+# Get main branch name
+main_branch="$(git remote show origin | awk '/^\s+HEAD branch:/ { print $3 }')"
+print-info "Main branch: $main_branch"
+
+# Checkout main branch name
+echo
+if print-run git show-ref --verify "refs/heads/$main_branch"; then
+	echo
+	print-run git checkout "$main_branch"
+else
+	echo
+	print-run git checkout -b "$main_branch"
+fi
+
+# Set upstream
+echo
+upstream="$(print-run git rev-parse --abbrev-ref --symbolic-full-name @{u})"
+if [[ "$upstream" != "origin/$main_branch" ]]; then
+	echo
+	print-run git branch --set-upstream-to="origin/$main_branch"
+fi
+
