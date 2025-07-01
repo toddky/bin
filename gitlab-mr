@@ -18,6 +18,68 @@ mr = json.loads(stdout)
 def fmt_date(date_str):
     return datetime.datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y-%m-%d %H:%M:%S')
 
+if True:
+    del mr['id']
+    del mr['diff_refs']
+
+    mr['created_at'] = fmt_date(mr['created_at'])
+    mr['updated_at'] = fmt_date(mr['updated_at'])
+    mr['closed_at'] = fmt_date(mr['closed_at']) if mr['closed_at'] else None
+    mr['merged_at'] = fmt_date(mr['merged_at']) if mr['merged_at'] else None
+
+    mr['merged_by'] = mr['merged_by']['username'] if mr['merged_by'] else None
+    mr['merge_user'] = mr['merge_user']['username'] if mr['merge_user'] else None
+    mr['author'] = mr['author']['username']
+    mr['assignee'] = mr['assignee']['username'] if mr['assignee'] else None
+    mr['assignees'] = [a['username'] for a in mr['assignees']] if mr['assignees'] else []
+    mr['reviewers'] = [r['username'] for r in mr['reviewers']] if mr['reviewers'] else []
+
+    mr['reference'] = mr['references']['full']
+
+    del mr['source_project_id']
+    del mr['target_project_id']
+    del mr['milestone']
+    del mr['squash_commit_sha']
+    del mr['references']
+    del mr['time_stats']
+    del mr['subscribed']
+    del mr['upvotes']
+    del mr['downvotes']
+
+    del mr['latest_build_started_at']
+    del mr['latest_build_finished_at']
+    del mr['first_deployed_to_production_at']
+
+    pipeline = mr['pipeline']
+    del pipeline['id']
+    del pipeline['ref']
+    del pipeline['project_id']
+    del pipeline['sha']
+    pipeline['created_at'] = fmt_date(pipeline['created_at'])
+    pipeline['updated_at'] = fmt_date(pipeline['updated_at'])
+
+    head_pipeline = mr['head_pipeline']
+    del head_pipeline['id']
+    del head_pipeline['ref']
+    del head_pipeline['project_id']
+    del head_pipeline['sha']
+    head_pipeline['created_at'] = fmt_date(head_pipeline['created_at'])
+    head_pipeline['updated_at'] = fmt_date(head_pipeline['updated_at'])
+    head_pipeline['started_at'] = fmt_date(head_pipeline['started_at']) if head_pipeline['started_at'] else None
+    head_pipeline['finished_at'] = fmt_date(head_pipeline['finished_at']) if head_pipeline['finished_at'] else None
+    head_pipeline['committed_at'] = fmt_date(head_pipeline['committed_at']) if head_pipeline['committed_at'] else None
+    head_pipeline['user'] = head_pipeline['user']['username'] if head_pipeline['user'] else None
+
+    detailed_status = head_pipeline['detailed_status']
+    del detailed_status['illustration']
+    del detailed_status['favicon']
+
+    del mr['user']
+
+    print(json.dumps(mr))
+    exit()
+
+
 cleaned_mr = {
     'iid'           : mr['iid'],
     'project_id'    : mr['project_id'],
