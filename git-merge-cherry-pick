@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# USAGE: git-merge-cherry-pick <SHA>
+# DESCRIPTION: Merge a SHA into the current branch
+
+cherry_pick_sha="${1:?}"
+current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+# Get base SHA
+print-cmd git merge-base "$cherry_pick_sha" "$current_branch"
+base_sha="$(git merge-base "$cherry_pick_sha" "$current_branch")"
+retval=$?
+echo "$base_sha"
+print-retval "$retval"
+((retval)) && exit "$retval"
+
+# Delete old tmp branch if it exists
+tmp_branch="$current_branch-$cherry_pick_sha"
+git branch -D "$tmp_branch" &>/dev/null
+
+# Checkout tmp branch and cherry-pick SHA
+print-run git checkout "$base_sha" -b "$tmp_branch" || exit $?
+git cherry-pick "$cherry_pick_sha" || exit $?
+
+# Checkout main branch and merge tmp branch
+git checkout "$current_branch" || exit $?
+git merge "$tmp_branch" || exit $?
+git branch -D "$tmp_branch" || exit $?
+
