@@ -59,6 +59,7 @@
 /fzf.git
 !/git-*
 !/gitlab-*
+!/gmail-*
 !/grep-*
 !/is-*
 !/install-*

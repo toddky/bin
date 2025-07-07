@@ -1,0 +1,10 @@
+#!/usr/bin/env python3.11
+# USAGE: gmail-unread
+# DESCRIPTION: Prints the number of unread emails
+
+from python_lib import gmail
+
+gmail = gmail.Gmail().connect()
+unread_count = gmail.get_unread_count()
+print(unread_count)
+
