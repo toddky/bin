@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gmail-open
+# DESCRIPTION: Launch Gmail PWA
+osascript -e 'tell application "Gmail" to activate'
