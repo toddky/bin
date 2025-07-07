@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$SCRIPT_DIR:$PATH"
+theme="$SCRIPT_DIR/theme"
+icon='󱃚'
+
+# Loading
+if [[ "$SENDER" = "mouse.clicked" ]]; then
+	loading_icon=''
+	sketchybar --set "$NAME" icon="$loading_icon" label=''
+	sleep 1
+fi
+
+label="$(gmail-unread)"
+retval=$?
+
+if ((retval)); then
+	icon='󰵂'
+	label=ERR
+	theme_color='red'
+elif ((label)); then
+	theme_color='red'
+else
+	icon='󰇯'
+	label=''
+	theme_color='green'
+fi
+color="0xff$("$theme" "$theme_color")"
+
+args=()
+args+=(--set "$NAME")
+args+=(update_freq=60)
+args+=(icon="$icon" icon.color="$color")
+args+=(label="$label" label.color="$color")
+sketchybar "${args[@]}"
+
