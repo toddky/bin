@@ -4,6 +4,13 @@ host="$1"
 theme="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/theme"
 icon='●'
 
+# Loading
+if [[ "$SENDER" = "mouse.clicked" ]]; then
+	loading_icon='🔄'
+	sketchybar --set "$NAME" icon="$loading_icon" label=''
+	sleep 1
+fi
+
 # Get ping
 result="$(ping -c 2 -n -q "$host")"
 retval=$?
