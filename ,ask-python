@@ -25,6 +25,7 @@ If Python libraries need to be installed, provide pip command.
 - When using print(), add a comment of the expected output.
 - Do not define function unless asked.
 - Run shell commands using the list form.
+- Avoid deep nesting by returning early.
 </coding_guidelines>
 EOF
 
