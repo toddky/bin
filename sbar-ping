@@ -8,7 +8,6 @@ icon='●'
 if [[ "$SENDER" = "mouse.clicked" ]]; then
 	loading_icon=''
 	sketchybar --set "$NAME" icon="$loading_icon" label=''
-	sleep 1
 fi
 
 # Get ping
