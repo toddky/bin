@@ -2,22 +2,28 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PATH="$SCRIPT_DIR:$PATH"
 
+if [[ "$SENDER" = "mouse.clicked" ]]; then
+	check_secure_input=1
+fi
+
+color="0xff$(theme green)"
+icon=''
+label='skhd'
 
 if ! pgrep -qx skhd; then
 	color="0xff$(theme red)"
 	icon=''
 	label='skhd is not running'
 
+# REVISIT: Calling ioreg every second is probably too much
 # skhd: secure keyboard entry is enabled
-elif ioreg -l -w 0 |& grep -q SecureInput; then
-	color="0xff$(theme red)"
-	icon=''
-	label='secure keyboard entry is enabled'
-
-else
-	color="0xff$(theme green)"
-	icon=''
-	label='skhd'
+#elif ioreg -l -w 0 |& grep -q SecureInput; then
+elif ((check_secure_input)); then
+	if ioreg -l -w 0 |& grep -q SecureInput; then
+		color="0xff$(theme red)"
+		icon=''
+		label='secure keyboard entry is enabled'
+	fi
 fi
 
 args=()
