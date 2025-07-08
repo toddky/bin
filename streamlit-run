@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# USAGE: streamlit-run app.py
+tt-_python3 ,streamlit run "$@"
