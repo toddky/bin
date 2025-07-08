@@ -77,6 +77,7 @@
 !/print-*
 !/rand*
 !/sbar-*
+!/streamlit-*
 !/test-*
 !/tr-*
 !/tree*
@@ -277,7 +278,6 @@
 !/ssh.rb
 !/ssh2ssh
 !/stdin2qrcode
-!/streamlit-demo
 !/supercmd
 !/svn-url
 !/swa
