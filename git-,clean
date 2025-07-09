@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# USAGE: git-,clean [ARGS]
+# DESCRIPTION: Run with -n first, then rerun if user says yes
+
+args="$@"
+if [[ -z "${args[@]}" ]]; then
+	args=(-d -x)
+fi
+
+print-cmd git clean -n "${args[@]}"
+git clean -n "${args[@]}"
+echo
+
+yesno 'Continue?' || exit $?
+print-run git clean "${args[@]}"
+
