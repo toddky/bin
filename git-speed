@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# USAGE: git-speed
+# DESCRIPTION: TODO
+
+print-run git config core.preloadIndex true
+echo
+
+print-run git fetch --prune
+echo
+
+print-run git worktree prune
+echo
+
+
+git_dir="$(git rev-parse --absolute-git-dir)"
+# TODO: Run du -sh on $git_dir
+
+# Who knows why 250?
+print-run git repack -a -d --depth=250 --window=250
+echo
+
+
+# TODO: This command deletes branches that are currently merged into your current branch
+# git branch --merged | grep -v "\*" | xargs -n 1 git branch -d
+
+# REVISIT: Are these needed?
+# git gc --aggressive --prune=now
+# git commit-graph write --reachable --changed-paths
+
+
