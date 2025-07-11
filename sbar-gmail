@@ -6,9 +6,9 @@ icon='󱃚'
 
 # Loading
 if [[ "$SENDER" = "mouse.clicked" ]]; then
+	osascript -e 'tell application "Gmail" to activate'
 	loading_icon=''
 	sketchybar --set "$NAME" icon="$loading_icon" label=''
-	sleep 1
 fi
 
 label="$(gmail-unread)"
