@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# USAGE: ,curl zipcode <zipcode>
+# DESCRIPTION: Get map data from zipcode
+postalcode="${1:?}"
+curl -s "https://nominatim.openstreetmap.org/search?postalcode=$postalcode&country=us&format=json"
+
