@@ -4,3 +4,46 @@ b=1
 a='b[$(echo hack >&2; echo 0)]'
 [[ "$a" -eq 1 ]] && echo yes || echo no
 
+# Run shell
+echo
+echo xargs -a /dev/null sh -p
+
+echo
+print-url 'https://github.com/dgl/vt-houdini/blob/main/cmd/vtest-server/ssh.go'
+# var basicTests = []Test{
+# 	{"ENQ", "\x05\x7F", DefaultTimeout, ""},
+# 	{"DSR", "\x1b[6n", DefaultTimeout, ""},
+# 	{"DSR??", "\x1b[?6n", DefaultTimeout, ""}, // XXX?
+# 	{"DECREQTPARM", "\x1b[x", DefaultTimeout, ""},
+# 	{"DA", "\x1b[c", DefaultTimeout, ""},
+# 	{"DA2", "\x1b[>c", DefaultTimeout, ""},
+# 	{"DA3", "\x1b[=c", DefaultTimeout, ""},
+# 	{"DECRQCRA", "\x1b[s\x1b[HX\x1b[1;1;1;1;1;1*y\x1b[u", DefaultTimeout, ""},
+# 	{"XTVERSION", "\x1b[>q", DefaultTimeout, ""},
+# 	{"TITLE", "\x1b[21t", DefaultTimeout, ""},
+# 	{"DECRQSS_SGR", "\x1bP$qm\x1b\\", DefaultTimeout, ""},
+# }
+#
+# var cveTests = []Test{
+# 	// Xterm title reporting
+# 	{"CVE-2003-0063", "\x1b]0;touch /tmp/cve-2003-0063\a\x1b[21t", DefaultTimeout, "cve-2003-0063"},
+# 	// DECRQSS. This doesn't have a newline even though it could, as the variant in iTerm2 and Kitty
+# 	// can't be detected if we add control characters.
+# 	{"CVE-2008-2383", "\x1bP$q;touch /tmp/cve-2008-2383\x1b\\", DefaultTimeout, "cve-2008-2383"},
+# 	// iterm2 tmux?
+# 	// Xterm.js (variant of ???)
+# 	{"CVE-2019-0542", "\x1bP+qfoo;\ntouch /tmp/cve-2019-0542;aa\n\x1b\\", DefaultTimeout, "cve-2019-0542;aa\n"},
+# 	// rxvt-unicode "graphics"
+# 	{"CVE-2021-33477", "\x1bG", DefaultTimeout, "\n"},
+# 	// xterm font OSC
+# 	{"CVE-2022-45063", "\x1b]50;$(touch /tmp/cve-2022-45063)\a\x1b]50;?\a", DefaultTimeout, "cve-2022-45063)\a"},
+# 	// conemu title
+# 	{"CVE-2022-46387", "\x1b]0;\rtouch /tmp/cve-2022-46387\r\a\x1b[21t", DefaultTimeout, "cve-2022-46387\r"},
+# 	// iterm2 DECRQSS
+# 	{"CVE-2022-45872", "\x1bP$q;touch /tmp/cve-2022-45872\n\x1b\\\n\x1bP$qm\x1b\\", DefaultTimeout, "cve-2022-45872\n"},
+#
+# 	// XXX: Hack, consider doing this as part of trySeqs?
+# 	// Catch late replies.
+# 	{"pad", "", DefaultTimeout, "\x1B"},
+# }
+
