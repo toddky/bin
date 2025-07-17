@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: sbar-tail
+# DESCRIPTION: Tail sbar log
+exec tailf /opt/homebrew/var/log/sketchybar/sketchybar.err.log
