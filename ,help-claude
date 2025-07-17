@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+print-header 'Claude Code'
+print-url 'https://docs.anthropic.com/en/docs/claude-code'
+print-url 'https://github.com/anthropics/claude-code'
+
+echo
+print-header 'Basic Commands'
+cat <<-EOF
+claude --dangerously-skip-permissions
+
+# Continue most recent conversation
+claude --continue
+# Resume a specific conversation
+claude --resume
+
+# Non-interactive mode (for scripts)
+claude --print "your prompt here"
+EOF
+
+echo
+print-header 'Tips'
+cat <<-EOF
+- Create a \`.claude/settings.json\` in your project directory
+- <Esc><Esc> to open conversation history
+- S-<Tab> \`plan mode\`  or \`auto-accept edits on\`
+- "ultrathink"
+- "subagent"
+EOF
+
