@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# USAGE: iterm2-esc
+# DESCRIPTION: TODO
+
+# REVISIT: Make this work in tmux
+# 
+# set -g default-terminal "screen-256color"
+# 
+# # True color support
+# set -sa terminal-overrides ',xterm-256color:RGB'
+# set -sa terminal-overrides ',screen-256color:RGB'
+# 
+# # Cursor shapes
+# set -sa terminal-overrides ',*:Ss=\E[%p1%d q:Se=\E[2 q'
+# 
+
+# https://iterm2.com/documentation-escape-codes.html
+
+# Cursor shape - Block
+printf '\033]1337;CursorShape=0\a'
+# Cursor shape - Vertical Bar
+printf '\033]1337;CursorShape=1\a'
+# Cursor shape - Underline
+printf '\033]1337;CursorShape=2\a'
+
+# Make sure iterm2 notifications are enabled
+printf '\033]9;notification text goes here\007'
+#printf '\033Ptmux;\033\033]9;Hello from inside tmux!\007\033\\'
+
+
