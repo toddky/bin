@@ -8,6 +8,10 @@ a='b[$(echo hack >&2; echo 0)]'
 echo
 echo xargs -a /dev/null sh -p
 
+# Create a red.txt file
+# touch "$(printf "\e[31mred.txt\e[0m")"
+
+
 echo
 print-url 'https://github.com/dgl/vt-houdini/blob/main/cmd/vtest-server/ssh.go'
 # var basicTests = []Test{
