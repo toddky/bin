@@ -3,15 +3,14 @@
 git staged || exit $?
 
 staged="$(git ls-staged)"
-summary="$(,commit)"
+message="$staged"
 
-message="$(cat <<EOF
-$staged
-
-AI Summary:
-$summary
-EOF
-)"
+fi_summary="$(,commit)"
+if [[ -n "$ai_summary" ]]; then
+	newline=$'\n'
+	message+="${newline}${newline}AI Summary:"
+	message+="${newline}$ai_summary"
+fi
 
 print-cmd git commit -m "$message"
 git commit -m "$message" || exit $?
