@@ -6,7 +6,12 @@ exec 1>&2
 printf "\e[34;1m%s\e[0m " "$prompt"
 
 for arg in "$@"; do
+
+	# Strip out API token
+	arg="$(sed -E 's/(Authorization:.*sk-)\w+/\1REDACTED/' <<<"$arg")"
+
 	clean_arg="$(printf '%q' "$arg")"
+
 	if [[ "$arg" == "$clean_arg" ]]; then
 		echo -n "$arg "
 		continue
