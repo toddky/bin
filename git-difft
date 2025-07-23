@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# USAGE: git-difft <args>
+# DESCRIPTION: Run git diff using difftastic
+
+if command -v difft &> /dev/null; then
+	extcmd='difft'
+elif [[ -x "$HOME/.cargo/bin/difft" ]]; then
+	extcmd="$HOME/.cargo/bin/difft"
+else
+	print-error "difft command not found. Please install difftastic."
+	exit 1
+fi
+
+exec git difftool --no-prompt --extcmd=difft "$@"
+
