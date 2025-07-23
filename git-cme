@@ -5,7 +5,7 @@ git staged || exit $?
 staged="$(git ls-staged)"
 message="$staged"
 
-fi_summary="$(,commit)"
+ai_summary="$(,commit)"
 if [[ -n "$ai_summary" ]]; then
 	newline=$'\n'
 	message+="${newline}${newline}AI Summary:"
