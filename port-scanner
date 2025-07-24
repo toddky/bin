@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# USAGE: port-scanner [HOST]
+# DESCRIPTION: Find open ports between 1-8888
+addr="${1:-127.0.0.1}"
+for port in {1..8888}; do
+	echo -n 2>/dev/null < "/dev/tcp/$addr/$port" || continue
+	echo "$port/tcp open"
+done
+
