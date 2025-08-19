@@ -3,6 +3,7 @@
 print-header 'Claude Code'
 print-url 'https://docs.anthropic.com/en/docs/claude-code'
 print-url 'https://github.com/anthropics/claude-code'
+print-url 'https://docs.anthropic.com/en/docs/claude-code/hooks'
 
 echo
 print-header 'Basic Commands'
