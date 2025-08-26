@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: git push-notes
+# DESCRIPTION: Push notes
+exec print-run git push origin 'refs/notes/*'
