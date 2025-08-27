@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# USAGE: ,todo2
+# DESCRIPTION: TODO
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+function red() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=210;;
+		2) color=196;;
+		3) color=124;;
+		*) color=196;;
+	esac
+	echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+function blue() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=123;;
+		2) color=39 ;;
+		3) color=27 ;;
+		*) color=39 ;;
+	esac
+	printf "\e[38;5;${color}m●\e[0m"
+}
+
+function yellow() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=230;;
+		2) color=226;;
+		3) color=220;;
+		*) color=220;;
+	esac
+	printf "\e[38;5;${color}m●\e[0m"
+}
+
+#blue 0; blue 1; blue 2; blue 3; echo
+#red 0; red 1; red 2; red 3; echo
+#yellow 0; yellow 1; yellow 2; yellow 3; echo
+
+while read line; do
+	[[ -z "$line" ]] && continue
+
+	# [0-3][0-3][0-3]
+	if [[ "$line" =~ ^([0-3])([0-3])([0-3])\ (.*)$ ]]; then
+		first=${BASH_REMATCH[1]}
+		second=${BASH_REMATCH[2]}
+		third=${BASH_REMATCH[3]}
+		line=${BASH_REMATCH[4]}
+
+		blue "$first"
+		red "$second"
+		yellow "$third"
+		echo -n " "
+		echo "$line"
+	else
+		echo "??? $line"
+	fi
+ 
+done < "$HOME/todo.txt"
+
+
