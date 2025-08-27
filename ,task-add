@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# USAGE: ,task-add
+# DESCRIPTION: Add a new task to the task list with a specified priority.
+
+todo_txt="$HOME/todo.txt"
+
+priority="$1" && shift
+description="$*"
+
+function usage {
+	print-usage ",task add <PRIORITY> <DESC>"
+	exit 0
+}
+
+if ! [[ "$priority" =~ [0-3][0-3][0-3] ]]; then
+	echo "USER_ERROR: Priority ($priority) must be a three-digit number between 000 and 333."
+	usage
+fi
+
+if [[ -z "$description" ]]; then
+	echo "USER_ERROR: Task description cannot be empty."
+	usage
+fi
+
+# Works even if $todo_txt doesn't exit
+max_id="$(awk '($2>max) {max=$2} END {print max}' "$todo_txt" 2>/dev/null)"
+id="$((max_id+1))"
+
+ts="$(date -u +%s)"
+due=0
+task="TASK\t$id\t$ts\t$due\t$priority\t$description"
+echo -e "$task" >> "$todo_txt"
+,task-print "$task" || exit $?
+
