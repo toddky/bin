@@ -4,10 +4,9 @@
 
 task="$(echo -e "$*")"
 
-read -r discard id created due priority description <<< "$task"
-IFS=$'\t' read -r discard id created due priority description <<< "$task"
-
+IFS=$'\t' read -r _ id created due priority description <<< "$task"
 created="$(date +'%Y-%m-%d' -d "@$created")"
+#created="$(date +'%Y-%m-%d %T' -d "@$created")"
 priority="$(,task-print-priority "$priority")"
 
 #printf '%s %s \e[34;1m%4d\e[0m %s\n' "$priority" "$created" "$id" "$description"
