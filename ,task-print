@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# USAGE: ,task-print
+# DESCRIPTION: Print task
+
+task="$(echo -e "$*")"
+
+read -r discard id created due priority description <<< "$task"
+IFS=$'\t' read -r discard id created due priority description <<< "$task"
+
+created="$(date +'%Y-%m-%d' -d "@$created")"
+priority="$(,task-print-priority "$priority")"
+
+#printf '%s %s \e[34;1m%4d\e[0m %s\n' "$priority" "$created" "$id" "$description"
+printf '%s \e[34;1m%4d\e[0m %s\n' "$priority" "$id" "$description"
+
