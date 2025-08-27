@@ -1,0 +1,117 @@
+#!/bin/bash
+
+red() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=224 ;;  # light pink
+        2) color=217 ;;  # pink
+        3) color=210 ;;  # light red
+        4) color=203 ;;  # red
+        5) color=196 ;;  # bright red
+        6) color=160 ;;  # dark red
+        7) color=124 ;;  # darker red
+        8) color=88 ;;   # very dark red
+        9) color=52 ;;   # darkest red
+        *) color=196 ;;  # default to bright red
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+orange() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=230 ;;  # light yellow
+        2) color=223 ;;  # pale orange
+        3) color=216 ;;  # light orange
+        4) color=209 ;;  # orange
+        5) color=208 ;;  # bright orange
+        6) color=202 ;;  # dark orange
+        7) color=166 ;;  # darker orange
+        8) color=130 ;;  # very dark orange
+        9) color=94 ;;   # darkest orange
+        *) color=208 ;;  # default to bright orange
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+yellow() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=231 ;;  # very light yellow
+        2) color=230 ;;  # light yellow
+        3) color=229 ;;  # pale yellow
+        4) color=226 ;;  # yellow
+        5) color=220 ;;  # bright yellow
+        6) color=214 ;;  # dark yellow
+        7) color=178 ;;  # darker yellow
+        8) color=142 ;;  # very dark yellow
+        9) color=100 ;;  # darkest yellow
+        *) color=226 ;;  # default to bright yellow
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+green() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=194 ;;  # light green
+        2) color=156 ;;  # pale green
+        3) color=120 ;;  # light green
+        4) color=118 ;;  # green
+        5) color=46 ;;   # bright green
+        6) color=40 ;;   # dark green
+        7) color=34 ;;   # darker green
+        8) color=28 ;;   # very dark green
+        9) color=22 ;;   # darkest green
+        *) color=46 ;;   # default to bright green
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+blue() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=195 ;;  # light blue
+        2) color=159 ;;  # pale blue
+        3) color=123 ;;  # light blue
+        4) color=75 ;;   # blue
+        5) color=39 ;;   # bright blue
+        6) color=33 ;;   # dark blue
+        7) color=27 ;;   # darker blue
+        8) color=21 ;;   # very dark blue
+        9) color=18 ;;   # darkest blue
+        *) color=39 ;;   # default to bright blue
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+purple() {
+    local shade=$1
+    case $shade in
+        0) color=15 ;;   # white
+        1) color=225 ;;  # light purple
+        2) color=189 ;;  # pale purple
+        3) color=147 ;;  # light purple
+        4) color=141 ;;  # purple
+        5) color=135 ;;  # bright purple
+        6) color=129 ;;  # dark purple
+        7) color=93 ;;   # darker purple
+        8) color=57 ;;   # very dark purple
+        9) color=53 ;;   # darkest purple
+        *) color=135 ;;  # default to bright purple
+    esac
+    echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+for color_func in red orange yellow green blue purple; do
+    for i in {0..9}; do
+        $color_func $i
+    done
+    echo
+done
+
