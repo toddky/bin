@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+if command -v ",task-$1" &>/dev/null; then
+	SUPERCMD=,task exec supercmd "$@"
+fi
+
+todo_txt="$HOME/todo.txt"
+
+while read task; do
+	,task-print "$task"
+done < <(awk '($1 == "TASK") {print $0}' "$todo_txt")
+
