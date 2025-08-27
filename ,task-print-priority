@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# USAGE: ,print-priority
+# DESCRIPTION: Pretty print priority
+
+function red() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=210;;
+		2) color=196;;
+		3) color=124;;
+		*) color=196;;
+	esac
+	echo -ne "\e[38;5;${color}m●\e[0m"
+}
+
+function blue() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=123;;
+		2) color=39 ;;
+		3) color=27 ;;
+		*) color=39 ;;
+	esac
+	printf "\e[38;5;${color}m●\e[0m"
+}
+
+function yellow() {
+	case "$1" in
+		0) printf '\e[30m●\e[0m'; return;;
+		1) color=230;;
+		2) color=226;;
+		3) color=220;;
+		*) color=220;;
+	esac
+	printf "\e[38;5;${color}m●\e[0m"
+}
+
+#blue 0; blue 1; blue 2; blue 3; echo
+#red 0; red 1; red 2; red 3; echo
+#yellow 0; yellow 1; yellow 2; yellow 3; echo
+
+priority="$1"
+
+first="${priority:0:1}"
+second="${priority:1:1}"
+third="${priority:2:1}"
+
+blue   "$first"
+red    "$second"
+yellow "$third"
+
