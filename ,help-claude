@@ -23,6 +23,7 @@ echo
 print-header 'Tips'
 cat <<-EOF
 - Create a \`.claude/settings.json\` in your project directory
+- Create custom commands in \`.claude/commands/\`
 - <Esc><Esc> to open conversation history
 - S-<Tab> \`plan mode\`  or \`auto-accept edits on\`
 - "ultrathink"
