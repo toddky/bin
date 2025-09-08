@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# USAGE: git ai-summarize <SHA>
+# DESCRIPTION: Summarize a git commit using AI
+
+[[ -n "$1" ]] || { print-usage "$(basename "$0") <SHA>" >&2; exit 1; }
+
+commit_info="$(git show "$1")" || exit $?
+
+read -r -d '' system_prompt << EOF
+<context>
+You will be given the output of \`git show <sha>\`
+</context>
+
+<task>
+Summarize the entire commit in a single sentence.
+Use backticks for code and file names.
+</task>
+
+<format>
+YYYY-MM-DD EMOJI One sentence summary.
+</format>
+
+<emojis>
+🛠️ for fixes
+🚨 for urgent fixes
+✨ for new features
+⚡ for performance optimizations
+📝 for documentation
+⚙️  for config changes
+🚧  for WIP/experimental changes
+⏪ for reverts
+</emojis>
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$commit_info"
+
