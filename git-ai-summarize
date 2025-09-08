@@ -2,9 +2,18 @@
 # USAGE: git ai-summarize <SHA>
 # DESCRIPTION: Summarize a git commit using AI
 
-[[ -n "$1" ]] || { print-usage "$(basename "$0") <SHA>" >&2; exit 1; }
+commit="$1" || exit $?
+[[ -n "$commit" ]] || { print-usage "$(basename "$0") <SHA>" >&2; exit 1; }
 
-commit_info="$(git show "$1")" || exit $?
+commit_info="$(git show "$commit")" || exit $?
+top="$(git-top)" || exit $?
+
+summary_txt="$top/.summary/${commit}.txt"
+mkdir -p "$(dirname "$summary_txt")" || exit $?
+if [[ -f "$summary_txt" ]]; then
+	cat "$summary_txt"
+	exit
+fi
 
 read -r -d '' system_prompt << EOF
 <context>
@@ -32,5 +41,8 @@ YYYY-MM-DD EMOJI One sentence summary.
 </emojis>
 EOF
 
-exec ai --system-prompt "$system_prompt" --prompt "$commit_info"
+print-info "Summarizing ${commit}..."
+summary="$(ai --system-prompt "$system_prompt" --prompt "$commit_info")" || exit $?
+echo "$summary" > "$summary_txt"
+cat "$summary_txt"
 
