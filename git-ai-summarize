@@ -5,16 +5,16 @@
 commit="$1" || exit $?
 [[ -n "$commit" ]] || { print-usage "$(basename "$0") <SHA>" >&2; exit 1; }
 
-commit_info="$(git show "$commit")" || exit $?
+# Check for summary.txt
 top="$(git-top)" || exit $?
-
 summary_txt="$top/.summary/${commit}.txt"
-mkdir -p "$(dirname "$summary_txt")" || exit $?
 if [[ -f "$summary_txt" ]]; then
 	cat "$summary_txt"
 	exit
 fi
+mkdir -p "$(dirname "$summary_txt")" || exit $?
 
+# System prompt
 read -r -d '' system_prompt << EOF
 <context>
 You will be given the output of \`git show <sha>\`
@@ -41,8 +41,10 @@ YYYY-MM-DD EMOJI One sentence summary.
 </emojis>
 EOF
 
+# Get commit info
+commit_details="$(git show "$commit")" || exit $?
 print-info "Summarizing ${commit}..."
-summary="$(ai --system-prompt "$system_prompt" --prompt "$commit_info")" || exit $?
+summary="$(ai --system-prompt "$system_prompt" --prompt "$commit_details")" || exit $?
 echo "$summary" > "$summary_txt"
 cat "$summary_txt"
 
