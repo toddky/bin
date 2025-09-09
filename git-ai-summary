@@ -25,6 +25,13 @@ Summarize the entire commit in a single sentence.
 Use backticks for code and file names.
 </task>
 
+<additional_info>
+Just return the commit message, do not include any other text.
+If the file is new, say 'new' somewhere in the message.
+Unimportant changes do not need to be mentioned.
+If the diff is empty, say so.
+</additional_info>
+
 <format>
 YYYY-MM-DD EMOJI One sentence summary.
 </format>
