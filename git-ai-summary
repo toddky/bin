@@ -42,7 +42,11 @@ YYYY-MM-DD EMOJI One sentence summary.
 EOF
 
 # Get commit info
-commit_details="$(git show "$commit")" || exit $?
+if [[ "$commit" == 'staged' ]]; then
+	commit_details="$(git diff --staged)" || exit $?
+else
+	commit_details="$(git show "$commit")" || exit $?
+fi
 print-info "Summarizing: ${commit}"
 summary="$(ai --system-prompt "$system_prompt" --prompt "$commit_details")" || exit $?
 echo "$summary"

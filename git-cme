@@ -5,7 +5,7 @@ git staged || exit $?
 staged="$(git ls-staged)"
 message="$staged"
 
-ai_summary="$(git-ai-summary HEAD)"
+ai_summary="$(git-ai-summary staged)"
 if [[ -n "$ai_summary" ]]; then
 	newline=$'\n'
 	message+="${newline}${newline}AI Summary:"
