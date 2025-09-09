@@ -3,8 +3,11 @@
 # DESCRIPTION: Ask a question about Bash scripting
 
 read -r -d '' system_prompt << 'EOF'
-<task>
+<context>
 You will be given the output of `git diff`.
+</context>
+
+<task>
 Write a clear and concise summary of important changes and their impact for a git commit message.
 </task>
 
@@ -14,6 +17,13 @@ If the file is new, say 'new' somewhere in the message.
 Unimportant changes do not need to be mentioned.
 If the diff is empty, say so.
 </custom_instructions>
+
+<good_example>
+write-commit-msg: Add a new <context> section
+</good_example>
+<bad_example>
+Updated system prompt in the 'write-commit'-msg file to include a new <context> section, clarifying the input details for the task.
+</bad_example>
 EOF
 #echo "$system_prompt"; exit
 
