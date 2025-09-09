@@ -32,9 +32,9 @@ YYYY-MM-DD EMOJI One sentence summary.
 <emojis>
 🛠️ for fixes
 🚨 for urgent fixes
-✨ for new features
+✨ for new features or quality of life improvements
 ⚡ for performance optimizations
-📝 for documentation
+📝 for documentation or readability
 ⚙️  for config changes
 🚧  for WIP/experimental changes
 ⏪ for reverts
