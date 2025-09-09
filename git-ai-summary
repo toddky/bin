@@ -43,8 +43,9 @@ YYYY-MM-DD EMOJI One sentence summary.
 ⚡ for performance optimizations
 📝 for documentation or readability
 ⚙️  for config changes
-🚧  for WIP/experimental changes
+🚧 for WIP/experimental changes
 ⏪ for reverts
+🗑️ for deleted code or files
 </emojis>
 EOF
 
