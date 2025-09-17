@@ -17,6 +17,10 @@ claude --resume
 
 # Non-interactive mode (for scripts)
 claude --print "your prompt here"
+
+# Commands
+\`/init\` create CLAUDE.md file for codebase
+\`/model\` to switch which model
 EOF
 
 echo
