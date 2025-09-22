@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-projstats <proj_id>
+# DESCRIPTION: Show statistics for GitLab project
+gitlab curl "projects/$1?statistics=true" | jq .statistics
