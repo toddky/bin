@@ -14,6 +14,25 @@ if [[ -f "$summary_txt" ]]; then
 fi
 mkdir -p "$(dirname "$summary_txt")" || exit $?
 
+read -r -d '' format << EOF
+<format>
+YYYY-MM-DD EMOJI One sentence summary.
+</format>
+EOF
+
+# Get commit info, special handling for staged
+if [[ "$commit" == 'staged' ]]; then
+	commit_details="$(git diff --staged)" || exit $?
+	read -r -d '' format << EOF
+<format>
+EMOJI path/to/filename: One sentence summary in present tense.
+</format>
+EOF
+
+else
+	commit_details="$(git show "$commit")" || exit $?
+fi
+
 # System prompt
 read -r -d '' system_prompt << EOF
 <context>
@@ -32,9 +51,7 @@ Unimportant changes do not need to be mentioned.
 If the diff is empty, say so.
 </additional_info>
 
-<format>
-YYYY-MM-DD EMOJI One sentence summary.
-</format>
+$format
 
 <emojis>
 🛠️ for fixes
@@ -49,12 +66,6 @@ YYYY-MM-DD EMOJI One sentence summary.
 </emojis>
 EOF
 
-# Get commit info
-if [[ "$commit" == 'staged' ]]; then
-	commit_details="$(git diff --staged)" || exit $?
-else
-	commit_details="$(git show "$commit")" || exit $?
-fi
 print-info "Summarizing: ${commit}"
 summary="$(ai --system-prompt "$system_prompt" --prompt "$commit_details")" || exit $?
 echo "$summary"
