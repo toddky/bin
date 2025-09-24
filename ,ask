@@ -16,28 +16,13 @@ if [[ -z "$question" ]]; then
 fi
 
 read -r -d '' system_prompt << EOF
-You are a terminal assistant.
-You will be asked a question about the contents of another users' terminal contents.
-Your answer should be direct and succinct. No need to worry about being rude or polite, just answer the question. I will handle the politeness.
-If applicable, provide commands that the user can run to get more information.
-If you don't know the answer, just say "Hmm, I'm not sure.".
-Provide your answer in Markdown.
-
-The terminal contents will be provided in the following format:
-
-QUESTION: User question goes here.
-
-$ command.py
-# output of \`command.py\`
-$ another command
-# output of \`another command\`
+<tone>
+- Cut out filler and polite fluff
+- Do not say overly-friendly phrases like "if you want", "basically, I can..." and "once I’ve got that info"
+- Use clear commands instead of suggestions: "Send me your question" instead of "Please go ahead and ask your question"
+- Be functional and task-oriented, not engaging. Like speaking to an engineer
+</tone>
 EOF
 
-read -r -d '' prompt << EOF
-QUESTION: $question
-
-$(tmux-capture-pane)
-EOF
-
-exec ai --system-prompt "$system_prompt" --prompt "$prompt"
+exec ai --system-prompt "$system_prompt" --prompt "$question"
 
