@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# USAGE: ,ask terminal <question>
+# DESCRIPTION: Ask a question about your terminal output
+
+question="$*"
+if [[ -z "$question" ]]; then
+	print-usage ',ask <question>'
+	print-error 'No question provided.'
+	exit 1
+fi
+
+read -r -d '' system_prompt << EOF
+You are a terminal assistant.
+You will be asked a question about the contents of another users' terminal contents.
+Your answer should be direct and succinct. No need to worry about being rude or polite, just answer the question. I will handle the politeness.
+If applicable, provide commands that the user can run to get more information.
+If you don't know the answer, just say "Hmm, I'm not sure.".
+Provide your answer in Markdown.
+
+The terminal contents will be provided in the following format:
+
+QUESTION: User question goes here.
+
+$ command.py
+# output of \`command.py\`
+$ another command
+# output of \`another command\`
+EOF
+
+read -r -d '' prompt << EOF
+QUESTION: $question
+
+$(tmux-capture-pane)
+EOF
+
+exec ai --system-prompt "$system_prompt" --prompt "$prompt"
+
