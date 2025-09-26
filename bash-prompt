@@ -72,6 +72,7 @@ fi
 ((RETVAL)) && printf "\e[31m(exited $RETVAL)\e[0m\n"
 
 # Get execution time
+#start_ms="$1"
 if ((start_ms)); then
 
 	# Get seconds
@@ -145,11 +146,12 @@ if [[ -n "$permission" ]]; then
 fi
 
 base="$(basename "$PWD")"
-if ! [[ -d "$PWD" ]]; then
+if ! readlink -f . &>/dev/null; then
 	base_color="$red"
+elif grep -q "$(whoami)" <<<"$PWD"; then
+	base_color="$green"
 else
 	base_color="$yellow"
-	grep -q "$(whoami)" <<<"$PWD" && base_color="$green"
 fi
 prompt+=" $base_color$base"
 
