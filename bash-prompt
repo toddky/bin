@@ -148,6 +148,8 @@ fi
 base="$(basename "$PWD")"
 if ! readlink -f . &>/dev/null; then
 	base_color="$red"
+elif ! [[ -d "$PWD" ]]; then
+	base_color="$red"
 elif grep -q "$(whoami)" <<<"$PWD"; then
 	base_color="$green"
 else
