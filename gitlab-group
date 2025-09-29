@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-group <group>
+# DESCRIPTION: Show gitlab group infor
+gitlab-curl "groups/$1"
