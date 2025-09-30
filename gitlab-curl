@@ -15,9 +15,16 @@ trap on_exit EXIT
 printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
 url="$GITLAB_URL/api/v4/$endpoint"
 
-curl_args=(-s --header "Content-Type: application/json" --header @"$header_file" "$@" "$url")
-print-cmd curl "${curl_args[@]}"
-curl "${curl_args[@]}"
+#debug=1
+
+# Args
+curl_args=()
+((debug)) || curl_args+=(-s)
+curl_args+=(--header "Content-Type: application/json" --header @"$header_file" "$@" "$url")
+
+# Run
+((debug)) && print-cmd curl "${curl_args[@]}"
+exec curl "${curl_args[@]}"
 
 # gitlab-curl projects/<project>/jobs/<job_id>/trace -o job.log
 #curl -s --header @/tmp/tmp.2T93sqd14t -X post --form admin=true "$url/api/v4/users/700"
