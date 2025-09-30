@@ -9,6 +9,17 @@ require "json"
 
 
 # ==============================================================================
+# SYSTEM PROMPT
+# ==============================================================================
+SYSTEM_PROMPT = <<-EOF
+<tone>
+- Cut out filler and polite fluff
+- Be functional and task-oriented, not engaging. Like speaking to an engineer
+</tone>
+EOF
+
+
+# ==============================================================================
 # TOOLS
 # ==============================================================================
 tools = [
@@ -262,6 +273,7 @@ loop do
 	end
 
 	stream = anthropic.messages.stream(
+		system: SYSTEM_PROMPT,
 		max_tokens: max_tokens,
 		messages: messages,
 		model: model,
