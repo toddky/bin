@@ -51,6 +51,14 @@ Unimportant changes do not need to be mentioned.
 If the diff is empty, say so.
 </additional_info>
 
+<examples>
+  <1>
+    <bad>Enhances readability by truncating long input strings before displaying them.</bad>
+    <bad>Truncate long input strings before printing them for better readability.</bad>
+    <good>Truncate long input strings before printing them.</good>
+  </1>
+</examples>
+
 $format
 
 <emojis>
