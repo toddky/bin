@@ -1,0 +1,236 @@
+#!/usr/bin/env ruby
+# vim: ft=ruby noet ts=4 sw=0 sts
+
+# ==============================================================================
+# REQUIRE
+# ==============================================================================
+require "anthropic"
+require "json"
+
+
+# ==============================================================================
+# TOOLS
+# ==============================================================================
+tools = [
+	{
+		name: "quit",
+		description: "Exit the chat",
+		input_schema: {
+			type: "object",
+		}
+	},
+	{
+		name: "read_file",
+		description: "Read contents of a file from the filesystem",
+		input_schema: {
+			type: "object",
+			properties: {
+				file_path: {
+					type: "string",
+					description: "Path to the file to read"
+				}
+			},
+			required: ["file_path"]
+		}
+	},
+	{
+		name: "write_file",
+		description: "Write contents to a file on the filesystem",
+		input_schema: {
+			type: "object",
+			properties: {
+				file_path: {
+					type: "string",
+					description: "Path to the file to write"
+				},
+				text: {
+					type: "string",
+					description: "Text to write to the file"
+				}
+			},
+			required: ["file_path", "text"]
+		}
+	}
+]
+
+def quit(input)
+	exit
+end
+
+def read_file(input)
+	file_path = input["file_path"]
+	begin
+		content = File.read(file_path)
+		return {status: "success", content: content}
+	rescue Errno::ENOENT
+		return {status: "error", message: "File not found"}
+	rescue => e
+		return {status: "error", message: e.message}
+	end
+end
+
+def write_file(input)
+	file_path = input["file_path"]
+	text = input["text"]
+	begin
+		File.write(file_path, text)
+		return {status: "success", message: "File written successfully"}
+	rescue => e
+		return {status: "error", message: e.message}
+	end
+end
+
+
+
+# ==============================================================================
+# CALL TOOL
+# ==============================================================================
+def call_tool(content)
+	name = content.name
+	input = content.input.empty? ? {} : JSON.parse(content.input)
+
+	shortened_input = {}
+	input.each do |k,v|
+		if v.is_a?(String) and v.length > 80
+			v = v[0..70] + "<...SNIP...>"
+		end
+		shortened_input[k] = v
+	end
+
+	#puts "\n\e[90m🔧 #{name}(#{content.input})\e[0m"
+	puts "\n\e[90m🔧 #{name}(#{shortened_input})\e[0m"
+	tool_use_message = {
+		role: "assistant", content: [
+		{
+			type: "tool_use",
+			id: content.id,
+			name: content.name,
+			input: input,
+		}
+	]}
+
+	result = send(name, input)
+
+	tool_result_message = {
+		role: "user",
+		content: [
+			{
+				type: "tool_result",
+				tool_use_id: content.id,
+				content: result.to_json,
+			}
+		]
+	}
+
+	return tool_use_message, tool_result_message
+end
+
+
+# ==============================================================================
+# PRINT
+# ==============================================================================
+def print_chunk(chunk)
+	#print "(#{chunk.type.inspect})"
+
+	case chunk.type
+	when :message_start
+		print '🤖 '
+	when :content_block_start
+	when :content_block_delta
+		if chunk.delta.type == :text_delta
+			print chunk.delta.text
+			$stdout.flush
+		else
+			return
+			#puts "\nERROR: Unknown delta type: #{chunk.delta.type.inspect}"
+			#p chunk.delta
+			#exit
+		end
+	when :text
+	when :content_block_stop
+
+	when :input_json
+		# TODO
+	when :message_delta
+		# TODO
+	when :message_stop
+		 puts
+		return chunk.message.content
+
+	else
+		puts "\nERROR: Unknown chunk type: #{chunk.type.inspect}"
+		p chunk
+		exit
+	end
+
+	return nil
+end
+
+
+# ==============================================================================
+# SETUP
+# ==============================================================================
+api_key    = ENV["ANTHROPIC_AUTH_TOKEN"],
+base_url   = ENV["ANTHROPIC_BASE_URL"]
+max_tokens = 4096
+model      = ENV["ANTHROPIC_MODEL"]
+
+anthropic = Anthropic::Client.new(
+	api_key: api_key,
+	base_url: base_url,
+)
+
+messages = []
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+puts '=' * 80
+puts 'CHAT'
+puts '=' * 80
+
+prev_type = nil
+loop do
+	if prev_type != :tool_use
+		#print "> "
+		print "👤 "
+		input = gets.chomp
+		messages << {role: "user", content: input}
+	end
+
+	stream = anthropic.messages.stream(
+		max_tokens: max_tokens,
+		messages: messages,
+		model: model,
+		tools: tools,
+	)
+
+	contents = nil
+	stream.each do |chunk|
+		contents = print_chunk(chunk)
+	end
+
+	next if contents.nil?
+
+	contents.each do |content|
+		case content.type
+		when :text
+			messages << {role: "assistant", content: content.text}
+
+		when :tool_use
+			tool_use_msg, tool_result_msg = call_tool(content)
+			messages << tool_use_msg
+			messages << tool_result_msg
+
+		else
+			puts "ERROR: Unknown content type: #{content.type.inspect}"
+			exit
+		end
+		prev_type = content.type
+	end
+
+	puts "\n"
+	#p messages
+end
+
