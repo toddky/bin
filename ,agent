@@ -153,6 +153,27 @@ end
 #puts response.content[0].text
 #exit
 
+def ask_json(prompt, system_prompt = nil, retries = 3)
+	responses = []
+	while retries > 0
+		response = ask(prompt, system_prompt)
+		begin
+			json = JSON.parse(response.content[0].text)
+			return json
+		rescue JSON::ParserError => e
+			responses << response.content[0].text
+			retries -= 1
+		end
+	end
+
+	$stderr.puts "\nERROR: Failed to parse JSON response after multiple attempts."
+	$stderr.puts "Responses received:"
+	responses.each_with_index do |resp, idx|
+		$stderr.puts "Attempt #{idx + 1}: #{resp}"
+	end
+	exit 1
+end
+
 
 # ==============================================================================
 # PRINT
