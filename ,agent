@@ -127,6 +127,34 @@ end
 
 
 # ==============================================================================
+# ASK
+# ==============================================================================
+def ask(prompt, system_prompt = nil)
+	max_tokens = 4096
+	api_key    = ENV["ANTHROPIC_AUTH_TOKEN"],
+	base_url   = ENV["ANTHROPIC_BASE_URL"]
+	model      = ENV["ANTHROPIC_MODEL"]
+
+	anthropic = Anthropic::Client.new(
+		api_key: api_key,
+		base_url: base_url,
+	)
+
+	messages = [{role: "user", content: prompt}]
+	response = anthropic.messages.create(
+		max_tokens: max_tokens,
+		system:     system_prompt,
+		messages:   messages,
+		model:      model,
+	)
+	return response
+end
+#response = ask('In one sentence, tell me what is the meaning of life.')
+#puts response.content[0].text
+#exit
+
+
+# ==============================================================================
 # PRINT
 # ==============================================================================
 def print_chunk(chunk)
