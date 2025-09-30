@@ -71,6 +71,17 @@ end
 
 def write_file(input)
 	file_path = input["file_path"]
+
+	system_prompt = 'Check if the provided file path is safe to write to. It should not be a dotrc file, config file, system file, or any sensitive file. Respond with a JSON object: { "safe": true } if it is safe, or { "safe": false, "reason": "explanation" } if it is not safe.'
+	prompt = File.expand_path(file_path)
+	response = ask_json(prompt, system_prompt)
+
+	safe = response['safe'] || false
+	if not safe then
+		reason = response['reason'] || 'Unknown reason'
+		return {status: 'error', message: "Unsafe file path: #{reason}"}
+	end
+
 	text = input["text"]
 	begin
 		File.write(file_path, text)
