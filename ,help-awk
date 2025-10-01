@@ -22,5 +22,7 @@ echo
 cat <<EOF
 Split by comma:      \`awk -F ',' ...\`
 Print last column:   \`awk '{print \$NF}'\`
-\`awk '{sum+=\$1} END {print sum}'\`
+
+Sum:                 \`awk '{sum+=\$1} END {print sum}'\`
+Lowercase:           \`awk '{print tolower(\$0)}'\`
 EOF
