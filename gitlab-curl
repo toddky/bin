@@ -24,7 +24,7 @@ curl_args+=(--header "Content-Type: application/json" --header @"$header_file" "
 
 # Run
 ((debug)) && print-cmd curl "${curl_args[@]}"
-exec curl "${curl_args[@]}"
+curl "${curl_args[@]}"
 
 # gitlab-curl projects/<project>/jobs/<job_id>/trace -o job.log
 #curl -s --header @/tmp/tmp.2T93sqd14t -X post --form admin=true "$url/api/v4/users/700"
