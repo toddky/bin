@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-show-project <project>
+# DESCRIPTION: Show gitlab project info
+project="$(printf '%s' "$1" | jq -sRr @uri)"
+exec gitlab-curl "projects/$project"
