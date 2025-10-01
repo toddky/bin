@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# USAGE: gitlab-pipeline <project_id>
+# DESCRIPTION: Get every single pipeline job in the past 7 days and print as JSON
+
+import json
+import os
+import requests
+import sys
+from datetime import datetime, timedelta
+
+from python_lib import gitlab
+
+if len(sys.argv) != 2:
+    print("Usage: gitlab-pipeline <project_id>", file=sys.stderr)
+    sys.exit(1)
+
+project_id = sys.argv[1]
+
+ACCESS_TOKEN = gitlab.get_key()
+GITLAB_URL = gitlab.get_url()
+
+url = f"{GITLAB_URL}/api/v4/projects/{project_id}/jobs"
+headers = {
+    'Private-Token': ACCESS_TOKEN
+}
+
+params = {
+    'per_page': 100,
+    'page': 1
+}
+
+# Get jobs updated in the past 7 days
+# REVISIT: Make this work
+seven_days_ago = (datetime.now() - timedelta(days=7)).isoformat()
+params['updated_after'] = seven_days_ago
+
+all_jobs = []
+
+while True:
+    print(f"Fetching page {params['page']}", file=sys.stderr)
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code != 200:
+        print(f"Failed to retrieve jobs: {response.status_code}", file=sys.stderr)
+        sys.exit(1)
+
+    jobs = response.json()
+    if not jobs:
+        break
+
+    all_jobs.extend(jobs)
+
+    #print(jobs[0]['created_at'], file=sys.stderr)
+
+    # Check if there are more pages
+    if 'x-next-page' not in response.headers or not response.headers['x-next-page']:
+        break
+
+    params['page'] += 1
+
+    #if params['page'] > 200: break
+
+print(json.dumps(all_jobs, indent=2))
+
