@@ -26,6 +26,7 @@ If Python libraries need to be installed, provide pip command.
 - Do not define function unless asked.
 - Run shell commands using the list form.
 - Avoid deep nesting by returning early.
+- ALWAYS USE PYTHON 3. NEVER USE PYTHON 2.
 </coding_guidelines>
 EOF
 
