@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-get-project-id
+# DESCRIPTION: Get project ID from project name
+
+project="$1"
+if [[ -z "$project" ]]; then
+	print-error "Project not specified"
+	exit 1
+fi
+
+project_id="$(gitlab show-project "$project" | jq .id)"
+if [[ "$project_id" == "null" ]]; then
+	print-error "Project '$project' not found"
+	exit 1
+fi
+
+echo "$project_id"
+
