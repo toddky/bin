@@ -14,6 +14,9 @@
 require "anthropic"
 require "json"
 
+RESET = "\e[0m"
+RED = "\e[31;1m"
+
 
 # ==============================================================================
 # SYSTEM PROMPT
