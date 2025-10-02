@@ -93,9 +93,8 @@ def write_file(input)
 	- Avoid user home directories like /home/user/.ssh or /home/user/.config
 	- Avoid hidden files or directories
 
-	IMPORTANT: YOUR RESPONSE MUST BE VALID JSON. ONLY RESPOND WITH JSON. DO NOT ADD MARKDOWN FORMATTING.
-	Safe example: { "safe": true }
-	Unsafe example: { "safe": false, "reason": "explanation" }
+	Safe response example: { "safe": true }
+	Unsafe response example: { "safe": false, "reason": "explanation" }
 	EOF
 
 	prompt = File.expand_path(file_path)
@@ -189,7 +188,11 @@ end
 #puts response.content[0].text
 #exit
 
-def ask_json(prompt, system_prompt = nil, retries = 3)
+def ask_json(prompt, system_prompt = '', retries = 3)
+
+	important = 'IMPORTANT: YOUR RESPONSE MUST BE VALID JSON. ONLY RESPOND WITH JSON. DO NOT ADD MARKDOWN FORMATTING.'
+	system_prompt = "#{system_prompt}\n\n#{important}"
+
 	responses = []
 	while retries > 0
 		response = ask(prompt, system_prompt)
