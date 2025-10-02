@@ -64,6 +64,18 @@ tools = [
 			},
 			required: ["file_path", "text"]
 		}
+	},
+	{
+		name: "bash",
+		description: "Execute a bash command on the system",
+		input_schema: {
+			type: "object",
+			properties: {
+				command: { type: "string", description: "The bash command to execute" },
+				reason:  { type: "string", description: "The reason for executing this command. This will be used to determine if the command is safe." }
+			},
+			required: ["command"]
+		}
 	}
 ]
 
@@ -118,6 +130,54 @@ def write_file(input)
 	end
 end
 
+def bash(input)
+
+	command = input["command"]
+	reason  = input["reason"] || "No reason provided"
+
+	# Safety check
+	system_prompt = <<-EOF
+	You will be given a bash command and must determine if it is safe to execute.
+
+	The reason for executing this command is:
+	<reason>
+	#{reason}
+	</reason>
+
+	You must determine if the command is safe to run based on the following criteria:
+	- The reason must match the command being run.
+	- Must not be obfuscated or encoded in any way.
+	- Must not curl then pipe to bash, sh, or any other shell.
+	- Does not run sudo or require elevated privileges.
+	- It must not modify any files in any way.
+	- It must not compromise system security or user data.
+
+	Safe response example: { "safe": true }
+	Unsafe response example: { "safe": false, "reason": "explanation" }
+	EOF
+
+
+	response = ask_json(command, system_prompt)
+
+	safe = response['safe'] || false
+	if not safe then
+		reason = response['reason'] || 'Unknown reason'
+		return {status: 'error', message: "Unsafe command: #{reason}"}
+	end
+
+	# Run command
+	stdout, stderr, status = Open3.capture3("bash", "-c", command)
+
+	# Return resultz
+	status = status.exitstatus == 0 ? 'success' : 'error'
+	message = <<-EOF
+STDOUT:
+#{stdout}
+STDERR:
+#{stderr}
+	EOF
+	return { status: status, message: message }
+end
 
 
 # ==============================================================================
@@ -261,6 +321,12 @@ def print_chunk(chunk)
 
 	return nil
 end
+
+
+# ==============================================================================
+# TESTS
+# ==============================================================================
+#puts bash({"command" => "echo hello", "reason" => "test"}).to_json; exit
 
 
 # ==============================================================================
