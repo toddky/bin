@@ -333,6 +333,20 @@ end
 
 
 # ==============================================================================
+# HELPERS
+# ==============================================================================
+def get_input()
+	# Supports multiline input with 250ms delay
+	lines = [STDIN.gets&.chomp]
+	while IO.select([STDIN], nil, nil, 0.25)
+		lines << STDIN.gets&.chomp
+	end
+	lines.pop if lines.last&.empty?
+	return lines.join("\n")
+end
+
+
+# ==============================================================================
 # TESTS
 # ==============================================================================
 #puts bash({"command" => "echo hello", "reason" => "test"}).to_json; exit
@@ -369,7 +383,7 @@ loop do
 		print GREEN
 		#print "> "
 		print "👤 "
-		input = gets.chomp
+		input = get_input()
 		print RESET
 		messages << {role: "user", content: input}
 	end
