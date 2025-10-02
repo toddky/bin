@@ -23,6 +23,8 @@ SYSTEM_PROMPT = <<-EOF
 - Cut out filler and polite fluff
 - Be functional and task-oriented, not engaging. Like speaking to an engineer
 </tone>
+
+IMPORTANT: DO NOT CREATE FILES UNLESS EXPLICITLY INSTRUCTED TO DO SO.
 EOF
 
 
