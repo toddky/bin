@@ -145,6 +145,11 @@ def call_tool(content)
 	]}
 
 	result = send(name, input)
+	result = {status: "error", message: "Tool returned no result"} if result.nil?
+
+	if result[:status] != "success"
+		$stderr.puts "#{RED}❌ #{result[:message]}#{RESET}"
+	end
 
 	tool_result_message = {
 		role: "user",
