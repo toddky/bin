@@ -20,6 +20,9 @@ require 'open3'
 RESET = "\e[0m"
 BOLD  = "\e[1m"
 RED   = "\e[31m"
+GREEN = "\e[38;5;46m"
+BLUE  = "\e[38;5;51m"
+GRAY  = "\e[90m"
 
 
 # ==============================================================================
@@ -202,8 +205,7 @@ def call_tool(content)
 		shortened_input[k] = v
 	end
 
-	#puts "\n\e[90m🔧 #{name}(#{content.input})\e[0m"
-	puts "\n\e[90m🔧 #{name}(#{shortened_input})\e[0m"
+	puts "#{BLUE}🔧 #{name}#{RESET} #{shortened_input}"
 	tool_use_message = {
 		role: "assistant", content: [
 		{
@@ -293,11 +295,11 @@ end
 # PRINT
 # ==============================================================================
 def print_chunk(chunk)
-	#print "(#{chunk.type.inspect})"
+	#print "#{GRAY}(#{chunk.type.inspect})#{RESET}"
 
 	case chunk.type
 	when :message_start
-		print '🤖 '
+		#print '🤖 '
 	when :content_block_start
 	when :content_block_delta
 		if chunk.delta.type == :text_delta
@@ -364,11 +366,11 @@ print RESET
 prev_type = nil
 loop do
 	if prev_type != :tool_use
-		print "\e[48;5;237m"
+		print GREEN
 		#print "> "
 		print "👤 "
 		input = gets.chomp
-		print "\e[0m"
+		print RESET
 		messages << {role: "user", content: input}
 	end
 
