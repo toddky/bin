@@ -101,6 +101,9 @@ end
 
 def write_file(input)
 	file_path = input["file_path"]
+	if File.exist? file_path
+		return {status: 'error', message: "File already exists, editing files not supported yet"}
+	end
 
 	system_prompt = <<-EOF
 	You will be given a file path and must determine if it is safe to write to that file.
