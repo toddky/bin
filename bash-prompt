@@ -203,9 +203,9 @@ else
 		prompt+=" $git_branch"
 
 		# Get ahead/behind
-		ahead_behind="$(git rev-list --count --left-right @{upstream}...HEAD)"
-		ahead="$( echo "$ahead_behind" | cut -f1)"
-		behind="$(echo "$ahead_behind" | cut -f2)"
+		behind_ahead="$(git rev-list --count --left-right @{upstream}...HEAD)"
+		ahead="$( echo "$behind_ahead" | cut -f2)"
+		behind="$(echo "$behind_ahead" | cut -f1)"
 		((ahead)) && prompt+=" $yellow+$ahead"
 		((behind)) && prompt+=" $red-$behind"
 	fi
