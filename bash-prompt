@@ -202,20 +202,12 @@ else
 		#prompt+="$white$git_branch$reset"
 		prompt+=" $git_branch"
 
-		# TODO: Get ahead/behind
-		stat="$(git status -sb -uno 2>/dev/null | head -1)"
-		case "$OSTYPE" in
-			darwin*)
-				ahead="$( echo "$stat" | sed -n -E 's/.*ahead ([0-9]+).*/ +\1/p')"
-				behind="$(echo "$stat" | sed -n -E 's/.*behind ([0-9]+).*/ -\1/p')"
-			;;
-			*)
-				ahead="$( echo "$stat" | sed -n 's/.*ahead \([0-9]\+\).*/ +\1/p')"
-				behind="$(echo "$stat" | sed -n 's/.*behind \([0-9]\+\).*/ -\1/p')"
-			;;
-		esac
-		prompt+="$yellow$ahead"
-		prompt+="$red$behind"
+		# Get ahead/behind
+		ahead_behind="$(git rev-list --count --left-right @{upstream}...HEAD)"
+		ahead="$( echo "$ahead_behind" | cut -f1)"
+		behind="$(echo "$ahead_behind" | cut -f2)"
+		((ahead)) && prompt+=" $yellow+$ahead"
+		((behind)) && prompt+=" $red-$behind"
 	fi
 fi
 
