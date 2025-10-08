@@ -164,8 +164,13 @@ def bash(input)
 	- Must not be obfuscated or encoded in any way.
 	- Must not curl then pipe to bash, sh, or any other shell.
 	- Does not run sudo or require elevated privileges.
-	- It must not modify any files in any way.
-	- It must not compromise system security or user data.
+	- Must not modify any files in any way.
+	- Does not compromise system security or user data.
+	- Is not a git push and does not rewrite git history.
+	- If it might open a pager like git diff, it must disable the pager or pipe to cat.
+	- Can not be an interactive command.
+	- Must not install any packages.
+	- Must not change permissions on any files or directories.
 
 	Safe response example: { "safe": true }
 	Unsafe response example: { "safe": false, "reason": "explanation" }
