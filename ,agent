@@ -180,12 +180,11 @@ def bash(input)
 
 	# Return resultz
 	status = status.exitstatus == 0 ? 'success' : 'error'
-	message = <<-EOF
-STDOUT:
-#{stdout}
-STDERR:
-#{stderr}
-	EOF
+	message = ''
+	message += 'STDOUT:'
+	message += (stdout && !stdout.empty?) ? "\n#{stdout}\n" : " <no output>\n"
+	message += 'STDERR:'
+	message += (stderr && !stderr.empty?) ? "\n#{stderr}\n" : " <no output>\n"
 	return { status: status, message: message }
 end
 
