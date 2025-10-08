@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-rerun <pipeline_url>
+# DESCRIPTION: Rerun failing pipelines from GitLab
+url='https://aus-gitlab.local.tenstorrent.com/riscv/riscv_cluster/-/pipelines/616641'
+url="${url#https://*/}"
+read -r project pipeline_id <<<"$(sed -e 's:/-/pipelines/:\t:' <<<"$url")"
+project_id="$(gitlab get-project-id "$project")"
+
+# TODO: Finish this script
+print-cmd gitlab curl projects/$project_id/pipelines/$pipeline_id/jobs
+print-cmd gitlab curl projects/$project_id/jobs/$job_id/trace
+
