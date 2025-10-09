@@ -63,7 +63,9 @@ yesno "Add user to group?" || exit
 
 access_level=30
 
-result="$(gitlab-curl "groups/$group_id/members" --request POST --data "user_id=$user_id&access_level=$access_level")"
+data="{\"user_id\":$user_id, \"access_level\": $access_level}"
+#print-cmd gitlab-curl "groups/$group_id/members" --request POST --data "$data"
+result="$(gitlab-curl "groups/$group_id/members" --request POST --data "$data")"
 echo "$result"
 echo "$result" | jq .
 
