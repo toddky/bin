@@ -1,0 +1,9 @@
+#!/bin/env bash
+
+for i in $(seq 0 127); do
+	codepoint=$((0xE0000 + i))
+	char=$(printf "\\U$(printf '%08x' $codepoint)")
+	[[ "$char" =~ [[:print:]] ]] || char="(not displayable)"
+	printf "%04X: %s\n" "$codepoint" "$char"
+done
+
