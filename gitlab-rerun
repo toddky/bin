@@ -2,11 +2,27 @@
 # USAGE: gitlab-rerun <pipeline_url>
 # DESCRIPTION: Rerun failing pipelines from GitLab
 url="$1"
+
+# Get project ID from URL
 url="${url#https://*/}"
 read -r project pipeline_id <<<"$(sed -e 's:/-/pipelines/:\t:' <<<"$url")"
 project_id="$(gitlab get-project-id "$project")"
 
-# TODO: Finish this script
-print-cmd gitlab curl projects/$project_id/pipelines/$pipeline_id/jobs
-print-cmd gitlab curl projects/$project_id/jobs/$job_id/trace
+data="per_page=100"
+
+# Uncomment to debug:
+data="include_retried=true&per_page=100"
+
+all_jobs="$(gitlab curl "projects/$project_id/pipelines/$pipeline_id/jobs?$data")"
+failed_jobs="$(jq '.[] | select(.status == "failed")' <<<"$all_jobs")"
+
+# Uncomment to debug:
+#echo "$all_jobs" | jq '.[] | {id,name,status}'
+#echo "$failed_jobs" | jq '{id,name,status}'
+
+for job_id in $(jq -r '.id' <<<"$failed_jobs"); do
+	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
+	print-cmd gitlab curl -X POST "projects/$project_id/jobs/$job_id/retry"
+	echo
+done
 
