@@ -397,13 +397,27 @@ loop do
 		messages << {role: "user", content: input}
 	end
 
-	stream = anthropic.messages.stream(
-		system: SYSTEM_PROMPT,
-		max_tokens: max_tokens,
-		messages: messages,
-		model: model,
-		tools: tools,
-	)
+	begin
+		stream = anthropic.messages.stream(
+			system: SYSTEM_PROMPT,
+			max_tokens: max_tokens,
+			messages: messages,
+			model: model,
+			tools: tools,
+		)
+	rescue Anthropic::Errors::BadRequestError => e
+		print "#{RED}ERROR: Bad request - "
+		begin
+			puts e.body[:error][:message]
+		rescue
+			puts e.body
+		ensure
+			print RESET
+		end
+		# TODO: Make it recover
+		puts "Exiting..."
+		exit 1
+	end
 
 	contents = nil
 	stream.each do |chunk|
