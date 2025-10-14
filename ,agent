@@ -249,6 +249,51 @@ end
 
 
 # ==============================================================================
+# MCP CLASS
+# ==============================================================================
+class MCP
+	def initialize(command_args)
+		@stdin, @stdout, @stderr, @thread = Open3.popen3(*command_args)
+		@request_id = 0
+
+		# Cleanup on exit
+		at_exit do
+			@stdin.close rescue nil
+			@stdout.close rescue nil
+			@stderr.close rescue nil
+			Process.kill("TERM", @thread.pid) if @thread.alive? rescue nil
+		end
+
+		# Initialize the MCP server
+		call("initialize")
+
+		# Get available tools
+		@tools_response = call("tools/list")
+	end
+
+	def get_tools()
+		@tools_response["result"]["tools"] if @tools_response["result"]
+	end
+
+	def call(method, params = {})
+		@request_id += 1
+		request = {
+			jsonrpc: "2.0",
+			id: @request_id,
+			method: method,
+			params: params
+		}
+
+		@stdin.puts(request.to_json)
+		@stdin.flush
+
+		response_line = @stdout.gets
+		JSON.parse(response_line)
+	end
+end
+
+
+# ==============================================================================
 # ASK
 # ==============================================================================
 def ask(prompt, system_prompt = nil)
