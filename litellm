@@ -54,6 +54,7 @@ def get(endpoint, **kwargs):
     return response
 
 def ask(question, system_prompt, model, stream=True):
+    # https://docs.litellm.ai/docs/completion/input
 
     messages = [
         {
@@ -70,6 +71,9 @@ def ask(question, system_prompt, model, stream=True):
         "messages": messages,
     }
     data["stream"] = stream
+
+    # Max output tokens
+    #data["max_tokens"] = 100
 
     try:
         timeout = 120
@@ -98,13 +102,14 @@ def ask(question, system_prompt, model, stream=True):
 
         if json_str == '[DONE]':
             print()
+            continue
 
         try:
             chunk = json.loads(json_str)
             if chunk['choices'][0]['delta'].get('content'):
                 print(chunk['choices'][0]['delta']['content'], end='', flush=True)
         except json.JSONDecodeError:
-            print(f"\033[90m{json_str}\033[0m", end='')
+            print(f"\033[31m{json_str}\033[0m", end='')
             continue
 
 def print_chunk(chunk):
