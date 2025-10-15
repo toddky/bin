@@ -71,7 +71,12 @@ def ask(question, system_prompt, model, stream=True):
     }
     data["stream"] = stream
 
-    response = post("chat/completions", json=data, stream=stream)
+    try:
+        timeout = 120
+        response = post("chat/completions", json=data, stream=stream, timeout=timeout)
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Print response for non-streaming mode
     if not stream:
@@ -122,7 +127,7 @@ def print_chunk(chunk):
     print(content, end='', flush=True)
 
 def list_models():
-    response = get("models")
+    response = get("models", timeout=5)
     models = response.json()
     for model in models['data']:
         print(f"- {model['id']}" )
