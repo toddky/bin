@@ -20,13 +20,28 @@ failed_jobs="$(jq -c '.[] | select(.status == "failed")' <<<"$all_jobs")"
 #echo "$all_jobs" | jq '.[] | {id,name,status}'
 #echo "$failed_jobs" | jq '{id,name,status}'
 
+tmpdir="$(mktemp -d)"
+function cleanup { rm -rf "$tmpdir"; }
+trap cleanup EXIT
+cd "$tmpdir"
+
 while IFS= read -r job; do
 	job_id="$(echo "$job" | jq -r .id)"
 	name="$(echo "$job" | jq -r .name)"
 	reason="$(echo "$job" | jq -r .failure_reason)"
+
+	# Reasons:
+	# - job_execution_timeout
+	# - script_failure
+
 	printf "\e[34;1m$name\e[0m - \e[31;1m%s\e[0m\n" "$reason"
-	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
+	if [[ "$reason" == "script_failure" ]]; then
+		print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
+		gitlab curl "projects/$project_id/jobs/$job_id/trace" > "${project_id}_${job_id}.log"
+	fi
 	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/retry" -X POST
 	echo
 done < <(jq -c <<<"$failed_jobs")
+
+print-run pwd
 
