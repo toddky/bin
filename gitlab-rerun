@@ -24,8 +24,7 @@ while IFS= read -r job; do
 	job_id="$(echo "$job" | jq -r .id)"
 	name="$(echo "$job" | jq -r .name)"
 	reason="$(echo "$job" | jq -r .failure_reason)"
-	echo "Job Name: $name"
-	echo "Failure Reason: $reason"
+	printf "\e[34;1m$name\e[0m - \e[31;1m%s\e[0m\n" "$reason"
 	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
 	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/retry" -X POST
 	echo
