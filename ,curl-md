@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# USAGE: ,curl md <url>
+# DESCRIPTION: Get URL and dump it in Markdown
+url="${1:?}"
+exec curl -s "$url" | 2md
+
