@@ -141,13 +141,15 @@ def list_models():
 # MAIN
 # ==============================================================================
 if __name__ == "__main__":
+    #default_model = 'azure/gpt-4o'
+    default_model = 'gemini/gemini-2.0-flash'
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Ask a question to the AI.')
-    parser.add_argument('--model', default='azure/gpt-4o', help='AI model to use (default: azure/gpt-4o)')
-    parser.add_argument('--system-prompt', default='You are a helpful assistant.', help='System prompt to use (default: "You are a helpful assistant.")')
-    parser.add_argument('--streaming', action='store_true', help='Enable streaming mode (default: False)')
-    parser.add_argument('--list', action='store_true', help='List available models and exit')
+    parser.add_argument('--model', default=default_model, help=f'AI model to use (default: {default_model})')
+    parser.add_argument('--system-prompt', '-s', default='You are a helpful assistant.', help='System prompt to use (default: "You are a helpful assistant.")')
+    parser.add_argument('--streaming', '-i', action='store_true', help='Enable streaming mode (default: False)')
+    parser.add_argument('--list', '-l', action='store_true', help='List available models and exit')
     parser.add_argument('question', nargs='*', help='Question to ask the AI. Use "-" to read from stdin.')
     args = parser.parse_args()
 
