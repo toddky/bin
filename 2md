@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+
+import fileinput
+import html2text
+
+# Read from files or stdin
+html_content = ''.join(fileinput.input())
+
+# Convert HTML to markdown
+h = html2text.HTML2Text()
+
+# Use markdown format [text](url) for links
+h.ignore_links = False
+
+# Don't wrap lines (unlimited width)
+h.body_width = 0
+
+content = h.handle(html_content)
+print(content)
+
