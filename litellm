@@ -115,11 +115,10 @@ def ask(question, system_prompt, model, stream=True):
 def print_chunk(chunk):
 
     # Check response
-    #if 'choices' not in chunk:
-    #    error_msg = chunk
-    #    if 'error' in chunk:
-    #        error_msg = chunk['error']['message']['error']
-    #    raise Exception(error_msg)
+    if 'choices' not in chunk and 'error' in chunk:
+        error_msg = chunk['error']['message']
+        print(error_msg, file=sys.stderr)
+        sys.exit(1)
 
     choice = chunk['choices'][0]
 
