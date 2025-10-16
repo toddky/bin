@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# USAGE: hist-compact
+# DESCRIPTION: Compact all HISTFILE files
+
+HISTDIR="$HOME/.bash_histories"
+
+cat "$HISTDIR"/* |
+	| sed 's/ *$//' \
+	| awk '
+		/^#[0-9]+/ { ts=$0; next }
+		( seen[$0] || $1 == "cd" || $1 == "ls" || $1 == "ll" ) { ts=""; next; }
+		{ seen[$0]++ }
+		(ts!="") { print ts, $0; ts="" }
+		' \
+	| sort -n \
+	| sed 's/\([^ ]*\) \(.*\)/\1\n\2/'
+
