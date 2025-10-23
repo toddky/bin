@@ -258,6 +258,7 @@
 !/pyinfo
 !/pymath
 !/pyserver
+!/py-args
 !/raw.sh
 !/realdir.py
 !/realpath.py
