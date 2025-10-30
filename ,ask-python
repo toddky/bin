@@ -22,13 +22,15 @@ If Python libraries need to be installed, provide pip command.
 
 <coding_guidelines>
 - No obvious comments.
-- When using print(), add a comment of the expected output.
-- Do not define function unless asked.
+- No type hints.
+- No type annotations.
+- When using print(), add a comment on the same line of the expected output
 - Run shell commands using the list form.
 - Avoid deep nesting by returning early.
 - ALWAYS USE PYTHON 3. NEVER USE PYTHON 2.
+- DO NOT DEFINE FUNCTIONS UNLESS THE USERS ASKS SPECIFICALLY FOR A FUNCTION.
 </coding_guidelines>
 EOF
 
-exec ai --system-prompt "$system_prompt" --prompt "$question"
+exec litellm --system-prompt "$system_prompt" "$question"
 
