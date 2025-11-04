@@ -24,6 +24,16 @@ claude --print "your prompt here"
 EOF
 
 echo
+print-header 'Environment'
+print-url 'https://docs.claude.com/en/docs/claude-code/settings#environment-variables'
+cat <<-EOF
+export ANTHROPIC_BASE_URL="<url>"
+export ANTHROPIC_MODEL="<model-name>"
+export ANTHROPIC_AUTH_TOKEN="\$(cat ~/.claude_apitoken)"
+EOF
+
+
+echo
 print-header 'Tips'
 cat <<-EOF
 - Create a \`.claude/settings.json\` in your project directory
