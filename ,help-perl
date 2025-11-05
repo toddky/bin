@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+print-header 'PERL'
+
+cat <<-EOF
+perl -ne 'print if /PATTERN/' file.txt
+
+command | perl -ne 'print if /PATTERN/'
+command | perl -ne 'print unless /PATTERN/'
+
+ps aux | perl -ane 'print "\$F[0] \$F[10]\\n"'
+
+# Pattern to split() for -a switch
+perl -F '/:/'
+
+# sed
+perl -pe "s/old/new/g"
+
+# sort
+perl -e "print sort <>"
+
+# uniq
+perl -ne 'print if $_ ne $prev; $prev = $_'
+
+# tr
+perl -pe 'tr/a-z/A-Z/'
+EOF
+
