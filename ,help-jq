@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+print-header 'JQ'
+
+
+# Example from https://jsonquerylang.org/
+example="$(cat <<-EOF
+[
+  {"name": "Chris", "age": 23, "city": "New York"},
+  {"name": "Emily", "age": 19, "city": "Atlanta"},
+  {"name": "Joe", "age": 32, "city": "New York"},
+  {"name": "Kevin", "age": 19, "city": "Atlanta"},
+  {"name": "Michelle", "age": 27, "city": "Los Angeles"},
+  {"name": "Robert", "age": 45, "city": "Manhattan"},
+  {"name": "Sarah", "age": 31, "city": "New York"}
+]
+EOF
+)"
+
+echo "$example"
+
+echo
+echo '.[] | select(.city == "New York" and .age > 30)'
+echo "$example" | jq -c '.[] | select(.city == "New York" and .age > 30)'
+
+echo
+echo 'sort_by(.age) | map({name, age}) | .[]'
+echo "$example" | jq -c 'sort_by(.age) | map({name, age}) | .[]'
+
+echo
+echo '[.[].age] | add / length'
+echo "$example" | jq '[.[].age] | add / length'
+
