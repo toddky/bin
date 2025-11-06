@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# Help
+function usage() {
+	cat 1>&2 <<EOF
+usage: ai-bash <command> <reason>
+  <command>   The command to run
+  <reason>    The reason for running the command, uses AI to check for safety
+
+returns:
+  { status: <status>, message: <message> }
+  <status>    "success" or "error"
+  <message>   The output or error message
+end
+
+EOF
+}
+
+if [[ "$#" -lt 2 ]] || [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
+	usage
+	exit 1
+fi
+
+# Temp files
+stdout_txt="$(mktemp)"
+stderr_txt="$(mktemp)"
+function cleanup() { rm -rf "$stdout_txt" "$stderr_txt"; }
+trap cleanup EXIT
+
+# Run command
+bash -c "$1" >"$stdout_txt" 2>"$stderr_txt"
+exit_status=$?
+
+# Print results
+# TODO: Fix output to use status and message fields
+jq -n \
+	--rawfile stdout "$stdout_txt" \
+	--rawfile stderr "$stderr_txt" \
+	--argjson exit_status "$exit_status" \
+	'{ "stdout": $stdout, "stderr": $stderr, "exit_status": $exit_status }'
+
