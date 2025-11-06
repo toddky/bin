@@ -28,6 +28,9 @@
 # 	bash-prompt
 # end
 
+# Reset LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/lib64:/usr/lib64
+
 current_ms="$(date +'%s%3N')"
 
 parent="$(cat /proc/$PPID/comm 2>/dev/null)"
