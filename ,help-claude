@@ -40,7 +40,12 @@ cat <<-EOF
 - Create custom commands in \`.claude/commands/\`
 - <Esc><Esc> to open conversation history
 - S-<Tab> \`plan mode\`  or \`auto-accept edits on\`
-- "ultrathink"
-- "subagent"
+- Keywords:
+  - "ultrathink"
+  - "subagent"
+- Mention files that might be useful.
+- When telling it not to do something, tell it what to do instead.
+- \`/catchup\` to read all changed files in current branch.
+- Instead or providing a bunch of flags, provide a bash wrapper script.
 EOF
 
