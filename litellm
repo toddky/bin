@@ -146,10 +146,26 @@ if __name__ == "__main__":
     #default_model = 'azure/gpt-4o'
     default_model = 'gemini/gemini-2.0-flash'
 
+    default_system_prompt = '''
+<tone>
+- Cut out filler and polite fluff
+- Do not say overly-friendly phrases like "if you want", "basically, I can..." and "once I’ve got that info"
+- Use clear commands instead of suggestions: "Send me your question" instead of "Please go ahead and ask your question"
+- Be functional and task-oriented, not engaging. Like speaking to an engineer
+</tone>
+
+<coding>
+ONLY PROVIDE A SINGLE CODE BLOCK UNLESS ASKED.
+Do not provide multiple options. PICK ONE and tell me why it is the best.
+When calling `print()` or `echo`, add a comment of the expected output.
+Provide comments for other options rather than printing them outside of code blocks.
+</coding>
+'''
+
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Ask a question to the AI.')
     parser.add_argument('--model', default=default_model, help=f'AI model to use (default: {default_model})')
-    parser.add_argument('--system-prompt', '-s', default='You are a helpful assistant.', help='System prompt to use (default: "You are a helpful assistant.")')
+    parser.add_argument('--system-prompt', '-s', default=default_system_prompt, help='System prompt to use')
     parser.add_argument('--streaming', '-i', action='store_true', help='Enable streaming mode (default: False)')
     parser.add_argument('--list', '-l', action='store_true', help='List available models and exit')
     parser.add_argument('question', nargs='*', help='Question to ask the AI. Use "-" to read from stdin.')
