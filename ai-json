@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# USAGE: ai-json
+# DESCRIPTION: Ask an AI question that will return a JSON
+
+# ==============================================================================
+# IMPORT
+# ==============================================================================
+import argparse
+import json
+import subprocess
+import sys
+
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+parser = argparse.ArgumentParser(description='List available models from LiteLLM.')
+parser.add_argument('--system-prompt', type=str, help='System prompt to guide the AI response.')
+
+args, unknown = parser.parse_known_args()
+
+
+# ==============================================================================
+# SYSTEM PROMPT
+# ==============================================================================
+system_prompt = args.system_prompt
+if not system_prompt:
+    system_prompt = '''
+<tone>
+- Cut out filler and polite fluff
+- Do not say overly-friendly phrases like "if you want", "basically, I can..." and "once I’ve got that info"
+- Use clear commands instead of suggestions: "Send me your question" instead of "Please go ahead and ask your question"
+- Be functional and task-oriented, not engaging. Like speaking to an engineer
+</tone>
+'''
+important = 'IMPORTANT: YOUR RESPONSE MUST BE VALID JSON. ONLY RESPOND WITH JSON. DO NOT ADD MARKDOWN FORMATTING LIKE ```JSON, OTHERWISE I WILL GET THIS ERROR: Error decoding JSON: Expecting value: line 1 column 1 (char 0) '
+system_prompt += '\n' + important
+
+
+# ==============================================================================
+# COMMAND
+# ==============================================================================
+cmd = ['litellm']
+cmd += ['--system-prompt', system_prompt]
+cmd += unknown
+
+# Run command
+result = subprocess.run(cmd, capture_output=True)
+returncode = result.returncode
+if returncode != 0:
+    stderr = result.stderr.decode('utf-8')
+    print(f'ERROR: {stderr}', file=sys.stderr)
+    sys.exit(returncode)
+
+
+# ==============================================================================
+# JSON
+# ==============================================================================
+stdout = result.stdout.decode('utf-8')
+
+# Strip markdown formatting if present
+import re
+codeblock_re = r'^```(json|JSON)?\s*$'
+lines = stdout.splitlines()
+lines = [line for line in lines if line]
+lines = [line for line in lines if not re.fullmatch(codeblock_re, line)]
+stdout = '\n'.join(lines)
+
+result_json = None
+try:
+    result_json = json.loads(stdout)
+except json.JSONDecodeError as e:
+    print(f'Error decoding JSON: {e}')
+    print('Raw output:')
+    print(stdout)
+    sys.exit(1)
+
+if result_json:
+    print(json.dumps(result_json, indent=2))
+
