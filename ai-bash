@@ -72,7 +72,13 @@ command="$1"
 
 model='azure/gpt-4o'
 #model='anthropic/claude-sonnet-4-5-20250929'
-litellm --model "$model" --system-prompt "$system_prompt" "$command"
+response="$(litellm --model "$model" --system-prompt "$system_prompt" "$command")"
+status="$(jq -r '.status' <<< "$response")"
+message="$(jq -r '.message' <<< "$response")"
+if [[ "$status" != "success" ]]; then
+	echo "$response"
+	exit 0
+fi
 
 
 # ==============================================================================
