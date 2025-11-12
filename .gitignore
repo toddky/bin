@@ -322,6 +322,7 @@
 !/ydiff
 !/yesno
 !/yesno-tui
+!/youtube-song
 !/zsh.rb
 
 # vim: ft=sh

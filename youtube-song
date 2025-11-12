@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# USAGE: youtube-song
+# DESCRIPTION: Download song at highest quality
+
+music_dir="$HOME/Music/Songs"
+mkdir -p "$music_dir" || exit $?
+
+exec yt-dlp -f bestaudio -o "$music_dir/%(title)s.%(ext)s" "$@"
+
