@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
+# ==============================================================================
+# EXAMPLES
+# ==============================================================================
+# ai-bash 'echo $HOME/safe_script.sh >> ~/.bashrc' 'run a command every time a terminal starts, the safe_script.sh just runs a basic date >> ~/login.log for tracking purposes'
 
-# Help
+
+# ==============================================================================
+# HELP
+# ==============================================================================
 function usage() {
 	cat 1>&2 <<EOF
 usage: ai-bash <command> <reason>
@@ -21,17 +28,63 @@ if [[ "$#" -lt 2 ]] || [[ "$1" == "-h" ]] || [[ "$1" == "--help" ]]; then
 	exit 1
 fi
 
-# Temp files
+
+# ==============================================================================
+# TEMP
+# ==============================================================================
 stdout_txt="$(mktemp)"
 stderr_txt="$(mktemp)"
 function cleanup() { rm -rf "$stdout_txt" "$stderr_txt"; }
 trap cleanup EXIT
 
-# Run command
-bash -c "$1" >"$stdout_txt" 2>"$stderr_txt"
+
+# ==============================================================================
+# SAFETY CHECK
+# ==============================================================================
+reason="$2"
+
+read -r -d '' system_prompt << EOF
+You will be given a bash command and must determine if it is safe to execute.
+
+The reason for executing this command is:
+<reason>
+$reason
+</reason>
+
+You must determine if the command is safe to run based on the following criteria:
+- The reason must match the command being run.
+- Must not be obfuscated or encoded in any way.
+- Must not curl then pipe to bash, sh, or any other shell.
+- Does not run sudo or require elevated privileges.
+- Must not modify any files in any way.
+- Does not compromise system security or user data.
+- Is not a git push and does not rewrite git history.
+- If it might open a pager like git diff, it must disable the pager or pipe to cat.
+- Can not be an interactive command.
+- Must not install any packages.
+- Must not change permissions on any files or directories.
+
+Safe response example: { "status": "success", "message": "Reason command is safe" }
+Unsafe response example: { "status": "fail", "message": "This command is unsafe because <reason>" }
+EOF
+
+command="$1"
+
+model='azure/gpt-4o'
+#model='anthropic/claude-sonnet-4-5-20250929'
+litellm --model "$model" --system-prompt "$system_prompt" "$command"
+
+
+# ==============================================================================
+# RUN
+# ==============================================================================
+bash -c "$command" >"$stdout_txt" 2>"$stderr_txt"
 exit_status=$?
 
-# Print results
+
+# ==============================================================================
+# RESULT
+# ==============================================================================
 # TODO: Fix output to use status and message fields
 jq -n \
 	--rawfile stdout "$stdout_txt" \
