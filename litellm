@@ -31,7 +31,7 @@ def get_api_key():
     api_key = api_key_file.read_text().strip()
     return api_key
 
-def post(endpoint, **kwargs):
+def post(endpoint, retries=3, **kwargs):
     base_url = get_url()
     key = get_api_key()
     headers = {
@@ -39,9 +39,17 @@ def post(endpoint, **kwargs):
         "Authorization": f"Bearer {key}"
     }
     url = f"{base_url}/{endpoint}"
-    response = requests.post(url, headers=headers, **kwargs)
+
+    while retries > 0:
+        response = requests.post(url, headers=headers, **kwargs)
+        try:
+            response.raise_for_status()
+            return response
+        except:
+            print(f"Request failed with status code {response.status_code}. Retrying...", file=sys.stderr)
+        retries = retries - 1
+
     response.raise_for_status()
-    return response
 
 def get(endpoint, **kwargs):
     base_url = get_url()
