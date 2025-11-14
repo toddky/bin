@@ -15,6 +15,11 @@ if [[ -z "$question" ]]; then
 	exit 1
 fi
 
+if [[ "$question" == '-' ]]; then
+	print-info 'Getting prompt from stdin...' 1>&2
+	question="$(cat)"
+fi
+
 read -r -d '' system_prompt << EOF
 <tone>
 - Cut out filler and polite fluff
@@ -22,6 +27,15 @@ read -r -d '' system_prompt << EOF
 - Use clear commands instead of suggestions: "Send me your question" instead of "Please go ahead and ask your question"
 - Be functional and task-oriented, not engaging. Like speaking to an engineer
 </tone>
+
+<banned_words>
+- Disruptive
+- Innovative
+- Leverage
+- Synergy
+- Production-ready
+- Telemetry
+</banned_words>
 EOF
 
 exec ai --system-prompt "$system_prompt" --prompt "$question"
