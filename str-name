@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-tr '[:blank:]' ' ' \
+exec tr '[:blank:]' ' ' \
 	| tr -s '[:blank:]' \
 	| tr -d ':' \
 	| tr ' ' '-'

@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-tr ':' $'\n'
+exec tr ':' $'\n'
