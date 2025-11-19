@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: str-quotes
+# DESCRIPTION: Fix smart quotes
+exec sed -e 's/[“”]/"/g' -e  "s/[‘’]/'/g"

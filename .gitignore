@@ -78,6 +78,8 @@
 !/print-*
 !/rand*
 !/sbar-*
+!/str
+!/str-*
 !/streamlit-*
 !/test-*
 !/tr-*
