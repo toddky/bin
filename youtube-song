@@ -5,5 +5,11 @@
 music_dir="$HOME/Music/Songs"
 mkdir -p "$music_dir" || exit $?
 
-exec yt-dlp -f bestaudio -o "$music_dir/%(title)s.%(ext)s" "$@"
+args=()
+args+=(--extractor-args "youtube:player_client=android")
+args+=(--extract-audio)
+args+=(--audio-format mp3)
+args+=(-o "$music_dir/%(title)s.%(ext)s")
+args+=("$@")
+exec yt-dlp "${args[@]}"
 
