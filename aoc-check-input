@@ -20,7 +20,7 @@ contents="$(cat input.txt 2>/dev/null)"
 
 [[ "$contents" == '404 Not Found' ]] && error "404 Not Found"
 
-if [[ "$contents" =~ "^Please don't repeatedly request this endpoint before it unlocks" ]]; then
+if [[ "$contents" =~ "Please don't repeatedly request this endpoint before it unlocks" ]]; then
 	error 'is rate limited'
 fi
 
