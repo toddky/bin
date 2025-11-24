@@ -4,7 +4,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ==============================================================================
-# GET YEAR AND DAY
+# GET DATE
 # ==============================================================================
 year="$1"
 day="$((10#$2))"
@@ -20,46 +20,16 @@ day="$(printf "%02d" "$day")"
 
 
 # ==============================================================================
-# GET SESSION
-# ==============================================================================
-cd "$(git-top)" || exit $?
-session="$(cat .session.txt)" || exit $?
-
-
-# ==============================================================================
 # SET UP DIRECTORY
 # ==============================================================================
-mkdir -p "$year"
-cd "$year" || exit $?
-mkdir -p "$day"
-cd "$day" || exit $?
-cp -n ../../template.rb a.rb
-touch example.txt
+cd "$(git-top)" || exit $?
+template="$(pwd)/template.rb"
 
-# Check if input.txt is valid
-if [[ -f input.txt ]]; then
-	contents="$(cat input.txt)"
-	if [[ -z "$contents" ]]; then
-		echo "input.txt is empty"
-		rm input.txt
+mkdir -p "$year/$day" || exit $?
+cd "$year/$day" || exit $?
+cp -n "$template" a.rb
 
-	elif [[ "$contents" == '404 Not Found' ]]; then
-		echo "input.txt is 404 Not Found"
-		rm input.txt
-
-	elif [[ "$contents" =~ "^Please don't repeatedly request this endpoint before it unlocks" ]]; then
-		echo "input.txt is rate limited"
-		rm input.txt
-	fi
-fi
-
-# Download input.txt
-if [[ ! -f input.txt ]] && [[ -n "$session" ]]; then
-	echo
-	url="https://adventofcode.com/${year}/day/$((10#${day}))/input"
-	echo "Downloading input.txt from $url"
-	curl --cookie "session=$session" "$url" > input.txt
-fi
+aoc-check-input 'input.txt' || aoc-download "$year" "$day" "$session" > 'input.txt'
 
 
 # ==============================================================================
