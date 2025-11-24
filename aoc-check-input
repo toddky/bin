@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# USAGE: aoc check-input <file>
+# DESCRIPTION: Check if input.txt is valid
+
+input_txt="${1:-input.txt}"
+
+function error {
+	msg="$1"
+	[[ -f "$input_txt" ]] && cat "$input_txt"
+	printf '\e[31;1mERROR:\e[0m (input.txt) %s\n' "$1"
+	rm -f "$input_txt"
+	exit 1
+}
+
+[[ -f input.txt ]] || error 'file not found'
+
+contents="$(cat input.txt 2>/dev/null)"
+
+[[ -z "$contents" ]] && error 'file is empty'
+
+[[ "$contents" == '404 Not Found' ]] && error "404 Not Found"
+
+if [[ "$contents" =~ "^Please don't repeatedly request this endpoint before it unlocks" ]]; then
+	error 'is rate limited'
+fi
+
+if [[ "$contents" =~ "Puzzle inputs differ by user.  Please log in to get your puzzle input" ]]; then
+	error 'not logged in'
+fi
+
+exit 0
+
