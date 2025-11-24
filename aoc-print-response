@@ -2,23 +2,28 @@
 # vim: ft=ruby noet ts=4 sw=0 sts
 
 def print_response(response)
+
 	main = response.match(/<main>\n(.*)^<\/main>/m)[1]
 	result = main.gsub(/<p>/,"\n").gsub(/<.*?>/m,'').split("\n").join(' ').gsub(/\s+/,' ').strip
 
-	right = "That's the right answer!"
-	wrong = "That's not the right answer."
-	early = "You gave an answer too recently;"
-
-	reset = "\e[0m"
-	bold_red = "\e[31;1m"
-	bold_green = "\e[32;1m"
+	reset       = "\e[0m"
+	bold_red    = "\e[31;1m"
+	bold_green  = "\e[32;1m"
 	bold_yellow = "\e[33;1m"
-	bold_cyan = "\e[34;1m"
+	bold_cyan   = "\e[34;1m"
 
 	result.gsub!(/\[.+?\]/, "#{bold_cyan}\\0#{reset}")
-	result.gsub!(right, "#{bold_green}#{right}#{reset}")
-	result.gsub!(wrong, "#{bold_red}#{wrong}#{reset}")
-	result.gsub!(early, "#{bold_yellow}#{early}#{reset}")
+
+	responses = []
+	responses.append([bold_green, "That's the right answer!"])
+	responses.append([bold_red, /That's not the right answer[^\.]*\./])
+	responses.append([bold_yellow, "You gave an answer too recently;"])
+	responses.append([bold_yellow, "You don't seem to be solving the right level."])
+
+	responses.each do |color, response|
+		result.gsub!(response, "#{color}\\0#{reset}")
+	end
+
 	puts result
 end
 
