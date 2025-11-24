@@ -3,8 +3,11 @@
 # DESCRIPTION: Download input for year/day
 
 # ==============================================================================
-# ARGS
+# SETUP
 # ==============================================================================
+# Only print the puzzle to stdout
+exec 3>&1 1>&2
+
 year="$1"
 day="$((10#$2))" # Day is base 10
 session="$3"
@@ -27,5 +30,5 @@ day="$(printf "%02d" "$day")"
 
 url="https://adventofcode.com/${year}/day/$((10#${day}))/input"
 printf "\e[34;1m%s\e[0m\n" "$url"
-curl --cookie "session=$session" "$url"
+curl --cookie "session=$session" "$url" 1>&3
 
