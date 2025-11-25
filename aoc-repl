@@ -9,6 +9,10 @@
 # stack level too deep (SystemStackError)
 export RUBY_THREAD_VM_STACK_SIZE=10000000
 
+GREEN='\e[32m'
+BLUE='\e[37;44;1m'
+RESET='\e[0m'
+
 
 # ==============================================================================
 # FUNCTIONS
@@ -33,9 +37,6 @@ trap atexit EXIT
 # ==============================================================================
 # MAIN
 # ==============================================================================
-BLUE='\e[37;44;1m'
-RESET='\e[0m'
-
 prev_mtime=0
 script_args=()
 rerun=1
@@ -55,7 +56,7 @@ while true; do
 	# Check if script is done
 	if [[ -n "$pid" ]]; then
 		if ! kill -0 "$pid" 2>/dev/null; then
-			printf "\e[32m(done)\e[0m"
+			printf "${GREEN}(done)\e[0m\n"
 			pid=''
 		fi
 	fi
@@ -64,9 +65,6 @@ while true; do
 	latest_file="$(ls -1 -rt ./* ../../todd.rb 2>/dev/null | tail -n 1)"
 	[[ -x "$latest_file" ]] && script="$latest_file"
 	[[ -x "$script" ]] || continue
-
-	# If the script writes answer.txt, do not trigger a rerun
-	[[ "$latest_file" == 'answer.txt' ]] && continue
 
 	# Get mtime of file
 	if [[ "$OSTYPE" =~ .*darwin.* ]]; then
@@ -77,6 +75,9 @@ while true; do
 
 	if ! ((rerun)); then
 		((mtime==prev_mtime)) && continue
+
+		# If the script writes answer.txt, do not trigger a rerun
+		[[ "$(basename "$latest_file")" == 'answer.txt' ]] && continue
 	fi
 
 	# Kill script if running
@@ -88,7 +89,7 @@ while true; do
 	# Print top header
 	width="$(tput cols)"
 	height="$(tput lines)"
-	printf "\n \n\ec"
+	printf " \n\ec"
 	printf "${BLUE}%0.s " $(seq 1 "$width")
 	printf "\r${script}"
 	now="$(date +'%Y-%m-%d %T')"
