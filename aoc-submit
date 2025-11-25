@@ -2,7 +2,7 @@
 
 if ((${#@} != 5)); then
 	print-usage "aoc-submit <session> <year> <day> <level> <answer>"
-	exit
+	exit 1
 fi
 
 session="$1"
@@ -22,12 +22,16 @@ curl_args=()
 curl_args+=(--cookie "session=$session")
 curl_args+=(--data-raw "$data_raw")
 
+request_txt=".request_${now}.txt"
 (
 	echo "$url"
 	echo "$data_raw"
 ) > ".request_${now}.txt"
+ln -fns "$request_txt" '.request.txt'
 
 response_txt=".response_${now}.txt"
 print-cmd curl "${curl_args[@]}" "$url"
-#curl "${curl_args[@]}" "$url" > ".response_${now}.txt"
+touch "$response_txt"
+curl "${curl_args[@]}" "$url" > "$response_txt"
+ln -fns "$response_txt" '.response.txt'
 
