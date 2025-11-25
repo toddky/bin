@@ -64,6 +64,7 @@ while true; do
 
 	# Get latest file
 	latest_file="$(ls -1 -rt ./* ../../todd.rb 2>/dev/null | tail -n 1)"
+	[[ "$(basename "$latest_file")" == 'b.rb' ]] && chmod +x "$latest_file"
 	[[ -x "$latest_file" ]] && script="$latest_file"
 	[[ -x "$script" ]] || continue
 
