@@ -65,6 +65,9 @@ while true; do
 	[[ -x "$latest_file" ]] && script="$latest_file"
 	[[ -x "$script" ]] || continue
 
+	# If the script writes answer.txt, do not trigger a rerun
+	[[ "$latest_file" == 'answer.txt' ]] && continue
+
 	# Get mtime of file
 	if [[ "$OSTYPE" =~ .*darwin.* ]]; then
 		mtime="$(stat -f %m "$latest_file")"
