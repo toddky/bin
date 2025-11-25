@@ -50,6 +50,7 @@ while true; do
 		r)     rerun=1; script_args=();;
 		0)     rerun=1; script_args=();;
 		[1-9]) rerun=1; script_args=("$char");;
+		s)     printf ' \n\n'; aoc-repl-submit;;
 		q)     break;;
 	esac
 
