@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# USAGE: aoc-repl-submit
+# DESCRIPTION: Submits the current directory to AOC
+session_txt="$(git-top)/.session.txt"
+session="$(cat "$session_txt")" || exit $?
+
+answer="$(cat 'answer.txt')" || exit $?
+
+day="$(basename "$PWD")"
+year="$(basename "$(dirname "$PWD")")"
+
+part=1
+[[ -x 'b.rb' ]] && part=2
+print-cmd aoc-submit '<session-key>' "$year" "$day" "$part" "$answer"
+aoc-submit "$session" "$year" "$day" "$part" "$answer"
+perl -0777 -pe 's/.*<main>(.*?)<\/main>.*/$1/s' .response.txt
+
