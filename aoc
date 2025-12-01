@@ -21,9 +21,11 @@ day="$(printf "%02d" "$day")"
 # ==============================================================================
 # SET UP DIRECTORY
 # ==============================================================================
+# Get template
 top="$(git-top)" || exit $?
 cd "$top" || exit $?
-template="$(pwd)/template.rb"
+ls -lrth 'template.rb' >/dev/null || exit $?
+template="$top/template.rb"
 
 mkdir -p "$year/$day" || exit $?
 cd "$year/$day" || exit $?
