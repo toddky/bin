@@ -4,11 +4,15 @@
 # ==============================================================================
 # RESOURCES
 # ==============================================================================
-# https://github.com/anthropics/anthropic-sdk-ruby
-# https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools/
-# https://cthiriet.com/blog/nano-claude-code
-# https://minusx.ai/blog/decoding-claude-code/
-# https://www.alephic.com/writing/the-magic-of-claude-code
+# SDK
+# - https://github.com/anthropics/anthropic-sdk-ruby
+# System Prompts
+# - https://www.alephic.com/writing/the-magic-of-claude-code
+# - https://github.blog/ai-and-ml/github-copilot/how-to-write-a-great-agents-md-lessons-from-over-2500-repositories/
+# Examples
+# - https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools/
+# - https://cthiriet.com/blog/nano-claude-code
+# - https://minusx.ai/blog/decoding-claude-code/
 
 
 # ==============================================================================
@@ -35,10 +39,15 @@ SYSTEM_PROMPT = <<-EOF
 - Be functional and task-oriented, not engaging. Like speaking to an engineer
 </tone>
 
-When printing code, use this format:
+<response>
+When asked for a code example, ONLY PROVIDE ONE example that you think is the most relevant. Describe the example in 1 sentence with no commas.
+</response>
+
+<code_format>
 ```language
 code here
 ```
+</code_format>
 
 IMPORTANT: DO NOT CREATE FILES UNLESS EXPLICITLY INSTRUCTED TO DO SO.
 EOF
