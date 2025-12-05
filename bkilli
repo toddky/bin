@@ -2,10 +2,12 @@
 # USAGE: bjobs [flags] | xbkill
 # DESCRIPTION: bkill jobs
 
-while read line; do
+[[ -p /dev/stdin ]] && input="$(cat)" || input="$(bjobs "$@")"
+
+while IFS= read -r line; do
 	read -r jobid remain <<<"$line"
 	[[ "$jobid" == "JOBID" ]] && continue
 	print-info "$line"
 	yesno "bkill?" && bkill "$jobid"
-done
+done <<< "$input"
 
