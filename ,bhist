@@ -3,18 +3,27 @@
 # DESCRIPTION: Print a history of jobs and write it to a file
 jobid="$1"
 
-work="$(dirname "$LSF_ENVDIR")/work"
-site="$(basename "$(dirname "$LSF_ENVDIR")")"
-print-cmd grep -l "${jobid:?}" "$work/$site/logdir/lsb.events.???"
-matches="$(grep -l "${jobid:?}" "$work/$site/logdir"/lsb.events.???)"
-echo "$matches"
-events="$(grep -Eo '[0-9]+$' <<< "$matches" | sort -n)"
-start_event="$(head -n1 <<< "$events")"
-end_event="$(tail -n1 <<< "$events")"
+# Get number of blocks to search, default=f000
+n=1000
+search=0
+if ((search)); then
+	work="$(dirname "$LSF_ENVDIR")/work"
+	site="$(basename "$(dirname "$LSF_ENVDIR")")"
 
-n="$start_event,$end_event"
-#n=0
+	print-cmd grep -l "${jobid:?}" "$work/$site/logdir/lsb.events.*"
+	matches="$(grep -l "${jobid:?}" "$work/$site/logdir"/lsb.events.*)"
+	echo "$matches"
+	events="$(grep -Eo '[0-9]+$' <<< "$matches" | sort -n)"
+	start_event="$(head -n1 <<< "$events")"
+	end_event="$(tail -n1 <<< "$events")"
 
-print-run bhist -UF "-n$n" "$jobid" \
-	| tee "$jobid.log"
+	n="$start_event,$end_event"
+fi
+
+# Get result
+result="$(bhist -UF "-n$n" "$jobid" 2>&1)"
+
+# Write and/or send result
+echo "$result" | tee "$HOME/lsf.$jobid.log"
+command -v slack-me && slack-me "$result" 2>/dev/null
 
