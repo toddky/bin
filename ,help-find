@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+print-header 'FIND'
+cat <<-EOF
+# Search for files owned by \$USER
+find . -user "\${USER}" -type f
+
+# Exclude hidden directories from search
+find . -path "*/.*/*" -prune
+
+# Print files with modification date
+find . -printf "%TY-%Tm-%Td %p\n"
+EOF
+
