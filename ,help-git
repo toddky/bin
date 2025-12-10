@@ -15,11 +15,11 @@ echo
 print-header 'Merge Conflicts'
 echo -e "$(cat << EOF
 \e[33m<<<<<<< HEAD\e[0m
-These are changes from the current branch.
+These are changes from the \e[31;1mcurrent branch\e[0m.
 \e[33m||||||| <common-ancestor>\e[0m
-These are changes from the common ancestor.
+These are changes from the \e[32;1mcommon ancestor\e[0m.
 \e[33m=======\e[0m
-These are changes from the incoming branch or stash.
+These are changes from the \e[31;1mincoming branch or stash\e[0m.
 \e[33m>>>>>>> feature2\e[0m
 EOF
 )"
