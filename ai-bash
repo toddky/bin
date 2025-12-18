@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# EXAMPLES
-# ==============================================================================
-# ai-bash 'echo $HOME/safe_script.sh >> ~/.bashrc' 'run a command every time a terminal starts, the safe_script.sh just runs a basic date >> ~/login.log for tracking purposes'
-
-
-# ==============================================================================
 # HELP
 # ==============================================================================
 function usage() {
@@ -15,11 +9,12 @@ usage: ai-bash <command> <reason>
   <reason>    The reason for running the command, uses AI to check for safety
 
 returns:
-  { status: <status>, message: <message> }
-  <status>    "success" or "error"
-  <message>   The output or error message
-end
-
+  { status: <status>, message: <message>, stdout: <output>, stderr: <error>, exit_status: <code> }
+  <status>    "success" or "fail"
+  <message>   The safety assessment or error message
+  <stdout>    Command output (if safe and executed)
+  <stderr>    Command errors (if safe and executed)
+  <exit_status> Command exit code (if safe and executed)
 EOF
 }
 
@@ -43,13 +38,15 @@ trap cleanup EXIT
 # ==============================================================================
 reason="$2"
 
-read -r -d '' system_prompt << EOF
+read -r -d '' system_prompt << 'EOF'
 You will be given a bash command and must determine if it is safe to execute.
 
 The reason for executing this command is:
 <reason>
-$reason
-</reason>
+EOF
+
+system_prompt+=$'\n'"$reason"$'\n'"</reason>"
+system_prompt+=$(cat << 'EOF'
 
 You must determine if the command is safe to run based on the following criteria:
 - The reason must match the command being run.
@@ -64,22 +61,23 @@ You must determine if the command is safe to run based on the following criteria
 - Must not install any packages.
 - Must not change permissions on any files or directories.
 
+Respond with JSON only, no other text.
 Safe response example: { "status": "success", "message": "Reason command is safe" }
 Unsafe response example: { "status": "fail", "message": "This command is unsafe because <reason>" }
 EOF
+)
 
 command="$1"
 
-model='azure/gpt-4o'
-#model='anthropic/claude-sonnet-4-5-20250929'
-response="$(litellm --model "$model" --system-prompt "$system_prompt" "$command")"
-status="$(jq -r '.status' <<< "$response")"
-message="$(jq -r '.message' <<< "$response")"
+json_schema='{"type":"object","properties":{"status":{"type":"string","enum":["success","fail"]},"message":{"type":"string"}},"required":["status","message"]}'
+response="$(,claude --json-schema "$json_schema" --output-format json --system-prompt "$system_prompt" -p "$command" 2>&1)"
+status="$(echo "$response" | jq -r '.structured_output.status // .status' 2>/dev/null)"
+message="$(echo "$response" | jq -r '.structured_output.message // .message' 2>/dev/null)"
+
 if [[ "$status" != "success" ]]; then
-	echo "$response"
+	echo "$response" | jq -r '.structured_output // .' 2>/dev/null || echo "$response"
 	exit 0
 fi
-
 
 # ==============================================================================
 # RUN
@@ -91,10 +89,9 @@ exit_status=$?
 # ==============================================================================
 # RESULT
 # ==============================================================================
-# TODO: Fix output to use status and message fields
 jq -n \
 	--rawfile stdout "$stdout_txt" \
 	--rawfile stderr "$stderr_txt" \
 	--argjson exit_status "$exit_status" \
-	'{ "stdout": $stdout, "stderr": $stderr, "exit_status": $exit_status }'
+	'{status: "success", stdout: $stdout, stderr: $stderr, exit_status: $exit_status}'
 
