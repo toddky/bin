@@ -37,18 +37,18 @@ trap cleanup EXIT
 # SAFETY CHECK
 # ==============================================================================
 reason="$2"
+system_info="$(uname -s)"
+current_date="$(date)"
 
-read -r -d '' system_prompt << 'EOF'
+read -r -d '' system_prompt << EOF
 You will be given a bash command and must determine if it is safe to execute.
 
 The reason for executing this command is:
 <reason>
-EOF
+$reason
+</reason>
 
-system_prompt+=$'\n'"$reason"$'\n'"</reason>"
-system_prompt+=$(cat << 'EOF'
-
-You must determine if the command is safe to run based on the following criteria:
+<criteria>
 - The reason must match the command being run.
 - Must not be obfuscated or encoded in any way.
 - Must not curl then pipe to bash, sh, or any other shell.
@@ -60,12 +60,21 @@ You must determine if the command is safe to run based on the following criteria
 - Can not be an interactive command.
 - Must not install any packages.
 - Must not change permissions on any files or directories.
+</criteria>
 
-Respond with JSON only, no other text.
+<response>
 Safe response example: { "status": "success", "message": "Reason command is safe" }
 Unsafe response example: { "status": "fail", "message": "This command is unsafe because <reason>" }
+</response>
+
+<system_information>
+$system_info
+</system_information>
+
+<date>
+$current_date
+</date>
 EOF
-)
 
 command="$1"
 
@@ -78,6 +87,7 @@ if [[ "$status" != "success" ]]; then
 	echo "$response" | jq -r '.structured_output // .' 2>/dev/null || echo "$response"
 	exit 0
 fi
+
 
 # ==============================================================================
 # RUN
