@@ -34,6 +34,14 @@ ${parameter/#pat/string}   │ Replaces 'pat' with 'string' matched against the 
 ${parameter/%pat/string}   │ Replaces 'pat' with 'string' matched against the beginning.
 EOF
 
+# String manipulation
+cat << 'EOF'
+
+${word^^}                  │ Convert to uppercase.
+${word^}                   │ Convert first character to uppercase.
+${word,,}                  │ Convert to lowercase.
+${word,}                   │ Convert first character to lowercase.
+EOF
 
 # Declare
 cat << 'EOF'
