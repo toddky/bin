@@ -1,0 +1,52 @@
+#!/usr/bin/env tt-ruby
+#!/usr/bin/env ruby
+# vim: ft=ruby noet ts=4 sw=0 sts
+
+# ==============================================================================
+# SETUP
+# ==============================================================================
+require 'json'
+messages = JSON.parse(File.read(ARGV[0]))
+
+require 'anthropic'
+anthropic = Anthropic::Client.new(
+	api_key:  ENV["ANTHROPIC_AUTH_TOKEN"],
+	base_url: ENV["ANTHROPIC_BASE_URL"]
+)
+
+
+# ==============================================================================
+# SYSTEM PROMPT
+# ==============================================================================
+SYSTEM_PROMPT = <<-EOF
+<tone>
+- Cut out filler and polite fluff
+- Be functional and task-oriented, not engaging. Like speaking to an engineer
+</tone>
+
+<response>
+When asked for a code example, ONLY PROVIDE ONE example that you think is the most relevant. Describe the example in 1 sentence with no commas.
+</response>
+
+<code_format>
+```language
+code here
+```
+</code_format>
+
+IMPORTANT: DO NOT CREATE FILES UNLESS EXPLICITLY INSTRUCTED TO DO SO.
+EOF
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+response = anthropic.messages.create(
+	max_tokens: 2048,
+	system:     SYSTEM_PROMPT,
+	messages:   messages,
+	model:      ENV["ANTHROPIC_MODEL"]
+)
+
+puts response.to_json
+
