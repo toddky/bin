@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ==============================================================================
+# FUNCTIONS
+# ==============================================================================
+function append {
+	role="$1"
+	json_file="$2"
+	ruby -e "
+		require 'json'
+		messages = JSON.parse(File.read(ARGV[1])) + [{'role'=>ARGV[0], 'content'=>STDIN.read.strip}]
+		File.write(ARGV[1], messages.to_json)
+	" "$role" "$json_file"
+}
+
+function call {
+	json_file="$1"
+	response="$(gum spin --title 'Thinking...' ai-call "$json_file")"
+	echo "$response"
+}
+
+# ==============================================================================
+# SETUP
+# ==============================================================================
+RESET="\e[0m"
+GREEN="\e[38;5;46m"
+
+messages="$(mktemp)"
+function cleanup() { rm -rf "$messages"; }
+trap cleanup EXIT
+echo '[]' > "$messages"
+
+while true; do
+	prompt="$(gum input)" || exit
+	printf "👤$GREEN %s$RESET\n" "$prompt"
+	append 'user' "$messages" <<<"$prompt"
+	#cat "$messages"; exit
+
+	response="$(call "$messages")"
+	text="$(jq -r '.content[0].text' <<<"$response")"
+	gum format --theme tokyo-night <<<"$text"
+	append 'assistant' "$messages" <<<"$text"
+	#cat "$messages"; exi
+
+	#if ((tool_call)); then
+		#call-tool "$response"
+	#else
+		#ai-print-response "$response"
+	#fi
+done
+
