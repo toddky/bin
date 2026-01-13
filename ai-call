@@ -1,4 +1,3 @@
-#!/usr/bin/env tt-ruby
 #!/usr/bin/env ruby
 # vim: ft=ruby noet ts=4 sw=0 sts
 
@@ -7,6 +6,11 @@
 # ==============================================================================
 require 'json'
 messages = JSON.parse(File.read(ARGV[0]))
+if ARGV[1].nil?
+  tools = []
+else
+	tools = JSON.parse(File.read(ARGV[1]))
+end
 
 require 'anthropic'
 anthropic = Anthropic::Client.new(
@@ -45,7 +49,8 @@ response = anthropic.messages.create(
 	max_tokens: 2048,
 	system:     SYSTEM_PROMPT,
 	messages:   messages,
-	model:      ENV["ANTHROPIC_MODEL"]
+	model:      ENV["ANTHROPIC_MODEL"],
+	tools:      tools,
 )
 
 puts response.to_json
