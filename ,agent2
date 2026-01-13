@@ -17,7 +17,9 @@ function append {
 function call {
 	json_file="$1"
 	response="$(gum spin --title 'Thinking...' ai-call "$json_file")"
+	retval=$?
 	echo "$response"
+	return $retval
 }
 
 # ==============================================================================
@@ -31,22 +33,29 @@ function cleanup() { rm -rf "$messages"; }
 trap cleanup EXIT
 echo '[]' > "$messages"
 
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
 while true; do
-	prompt="$(gum input)" || exit
+	prompt="$(gum input --prompt '👤 ')" || exit
 	printf "👤$GREEN %s$RESET\n" "$prompt"
 	append 'user' "$messages" <<<"$prompt"
 	#cat "$messages"; exit
 
 	response="$(call "$messages")"
-	text="$(jq -r '.content[0].text' <<<"$response")"
-	gum format --theme tokyo-night <<<"$text"
-	append 'assistant' "$messages" <<<"$text"
+	response_type="$(jq -r '.content[0].type' <<<"$response")"
+	if [[ "$response_type" == text ]]; then
+		text="$(jq -r '.content[0].text' <<<"$response")"
+		gum format --theme tokyo-night <<<"$text"
+		append 'assistant' "$messages" <<<"$text"
+	else
+		tool_name="$(jq -r '.content[0].name' <<<"$response")"
+		input="$(jq -r '.content[0].input' <<<"$response")"
+		gum format --theme tokyo-night "🛠️ $tool_name $input"
+		# TODO: Figure out what the tool is actually supposed to do
+		exit
+	fi
 	#cat "$messages"; exi
-
-	#if ((tool_call)); then
-		#call-tool "$response"
-	#else
-		#ai-print-response "$response"
-	#fi
 done
 
