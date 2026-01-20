@@ -43,4 +43,10 @@ bazel build --profile="$PWD/profile.gz" <target>
 bazel analyze-profile profile.gz
 EOF
 
+echo
+print-header 'INFO'
+cat << 'EOF'
+./infra/bazel-wrap info bazel-bin
+EOF
+
 
