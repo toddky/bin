@@ -260,6 +260,7 @@
 !/pymath
 !/pyserver
 !/py-args
+!/python3-lint
 !/raw.sh
 !/realdir.py
 !/realpath.py

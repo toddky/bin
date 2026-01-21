@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: python3-lint <file(s)>
+# DESCRIPTION: Check if your Python3 files are valid
+print-run python3 -m py_compile regress_plugins.py "$@"
