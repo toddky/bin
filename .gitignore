@@ -183,6 +183,7 @@
 !/dunst-reload
 !/e
 !/echop
+!/env.go
 !/env2json
 !/epoch
 !/eval.py
