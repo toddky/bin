@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# USAGE: ,help-ip
+# DESCRIPTION: Get IP address information
+
+print-cmd dig +short myip.opendns.com @resolver1.opendns.com
+dig +short myip.opendns.com @resolver1.opendns.com
+
+echo
+print-cmd curl ifconfig.me
+curl ifconfig.me
+echo
+
+echo
+print-header IP
+echo 'Replaces ifconfig'
+print-cmd ip address
+print-cmd ip route
+
+echo
+print-header NETSTAT
+echo 'To show open connections on your machine:'
+print-cmd sudo netstat
+
+echo
+print-header SS
+echo 'ss is used to dump socket statistics. Shows information similar to netstat.'
+
+echo
+
+print-header dig
+echo 'DNS lookup utility'
+
+echo
+print-heder whois
+echo 'Retrieves domain registration info, ownership details, dates, and nameservers.'
+
+echo
+
