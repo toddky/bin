@@ -21,6 +21,10 @@ claude --print "your prompt here"
 # Commands
 \`/init\` create CLAUDE.md file for codebase
 \`/model\` to switch which model
+\`/context\` to show context usage
+\`/cost\` to show cost
+\`/plugin\` for plugins
+\`/rewind\` to go back in time
 EOF
 
 echo
