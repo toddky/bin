@@ -1,0 +1,80 @@
+/*usr/bin/env c-run "$0" "$@"; exit; */
+
+// vim: ft=c noet ts=4 sw=0 sts
+#include <sys/inotify.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define EVENT_BUF_LEN (1024 * (sizeof(struct inotify_event) + 256))
+
+int main(int argc, char *argv[]) {
+	if (argc < 3) {
+		fprintf(stderr, "usage: %s file [file ...] -- command\n", argv[0]);
+		return 1;
+	}
+
+	// Find the -- separator
+	int separator_idx = -1;
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--") == 0) {
+			separator_idx = i;
+			break;
+		}
+	}
+	if (separator_idx == -1 || separator_idx == argc - 1) {
+		fprintf(stderr, "error: -- separator not found or no command specified\n");
+		return 1;
+	}
+
+	// Initialize inotify
+	int fd = inotify_init();
+	if (fd < 0) {
+		perror("inotify_init");
+		return 1;
+	}
+
+	// Watch all files
+	int num_files = separator_idx - 1;
+	for (int i = 0; i < num_files; i++) {
+		int wd = inotify_add_watch(fd, argv[i + 1], IN_MODIFY);
+		if (wd < 0) {
+			perror("inotify_add_watch");
+			return 1;
+		}
+	}
+
+	// Build command string
+	char *cmd = malloc(4096);
+	cmd[0] = '\0';
+	for (int i = separator_idx + 1; i < argc; i++) {
+		if (i > separator_idx + 1)
+			strcat(cmd, " ");
+		strcat(cmd, argv[i]);
+	}
+
+	// Watch for changes
+	char buf[EVENT_BUF_LEN] __attribute__((aligned(__alignof__(struct inotify_event))));
+	while (1) {
+		int len = read(fd, buf, sizeof(buf));
+		if (len <= 0) {
+			perror("read");
+			break;
+		}
+
+		int found_modify = 0;
+		const struct inotify_event *event;
+		for (char *ptr = buf; ptr < buf + len;
+		     ptr += sizeof(struct inotify_event) + event->len) {
+			event = (const struct inotify_event *)ptr;
+			if (event->mask & IN_MODIFY && !found_modify) {
+				system(cmd);
+				found_modify = 1;
+			}
+		}
+	}
+
+	return 0;
+}
+

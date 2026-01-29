@@ -269,6 +269,7 @@
 !/repl
 !/rmrf
 !/run.py
+!/run-file-changed
 !/sbash
 !/set-speaker*
 !/set-title
