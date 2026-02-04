@@ -1,0 +1,44 @@
+#!/bin/bash
+# Claude Code status line with ANSI colors
+
+# Color codes
+CYAN='\033[36m'
+BLUE='\033[34m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+MAGENTA='\033[35m'
+RED='\033[31m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+SEP="${DIM}|${RESET}"
+
+
+# Extract data
+input="$(cat)"
+context_window="$(jq -r '.context_window' <<< "$input")"
+current_usage="$(jq -r '.current_usage' <<< "$context_window")"
+
+MODEL="$(jq -r '.model.display_name // .model.id' <<< "$input")"
+CONTEXT_USED="$(jq -r '.used_percentage // 0' <<< "$context_window")"
+TOKENS_INPUT="$(jq -r '.total_input_tokens // 0' <<< "$context_window")"
+TOKENS_OUTPUT="$(jq -r '.total_output_tokens // 0' <<< "$context_window")"
+TOKENS_CACHED="$(jq -r '.cache_read_input_tokens // 0' <<< "$current_usage")"
+COST="$(jq -r '.cost.total_cost_usd // 0' <<< "$input")"
+
+# Format status line with colors
+printf "${DIM}[${RESET}"
+printf " ${BOLD}${BLUE}%s${RESET}" "$MODEL"
+printf " $SEP"
+printf " ${BOLD}${RED}\$%.2f${RESET}" "$COST"
+printf " $SEP"
+printf " ${BOLD}${MAGENTA}%s%%${RESET}" "$CONTEXT_USED"
+printf " $SEP"
+printf " ${BLUE}in${DIM}:${RESET}${BLUE}%s${RESET}" "$TOKENS_INPUT"
+printf " ${GREEN}out${DIM}:${RESET}${GREEN}%s${RESET}" "$TOKENS_OUTPUT"
+printf " ${DIM}]${RESET}"
+printf " ${DIM}%s${RESET}" "$(pwd)"
+
+#cat <<< "$input" > example.json
+
