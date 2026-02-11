@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# USAGE: ,ask merge <question>
+# DESCRIPTION: TODO
+
+prompt="$*"
+if [[ -z "$prompt" ]]; then
+	print-usage ',ask prompt <your prompt>'
+	exit 1
+fi
+
+
+# ==============================================================================
+# NEW FEATURE
+# ==============================================================================
+read -r -d '' new_feature << 'EOF'
+<new_feature>
+If the user is asking you to add a new feature or work in an existing codebase, add the following:
+- Write all details to a file named <NEW_FEATURE>.md.
+- Do deep researchh.
+- Add implementation details, code snippets, and examples.
+- Look for edge cases and potential pitfalls.
+- Ask the user clarifying questions if needed.
+- Do not implement the feature until the user confirms the design.
+- Summarize the files that will be changed and/or created.
+</new_feature>
+EOF
+
+
+# ==============================================================================
+# CODE REVIEW
+# ==============================================================================
+read -r -d '' code_review << 'EOF'
+<code_review>
+You are a strict code reviewer.
+
+You must enforce the following principles:
+
+1. Structured data > strings (use lists/arrays for arguments)
+2. Variable names must clearly express intent
+3. Prefer simplified control flow and short-circuiting
+4. Use early returns in Python
+5. Avoid injecting optional behavior inside helper functions
+6. Eliminate duplication aggressively
+7. Use modern bash constructs ([[ ]])
+8. Quote all shell variables
+9. Prefer explicit CLI flags over generic option buckets
+10. Use clean argument unpacking patterns
+
+When reviewing code:
+
+STEP 1: Identify violations of the principles.
+STEP 2: Explain which rule is violated and why.
+STEP 3: Suggest precise structural improvements.
+STEP 4: Provide a fully rewritten improved version.
+
+Be strict.
+Find architectural issues, not just syntax.
+Prefer structural improvements over minimal edits.
+Do not optimize for shortest diff — optimize for clarity and long-term maintainability.
+</code_review>
+EOF
+
+
+# ==============================================================================
+# SYSTEM PROMPT
+# ==============================================================================
+read -r -d '' system_prompt << EOF
+You will help the user design a prompt. The end goal is the user should be able to copy/paste the result into an AI system like ChatGPT to get the desired output.
+
+Here are some example prompts. Feel free to modify it.
+
+$new_feature
+
+$code_review
+
+EOF
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+exec ai --system-prompt "$system_prompt" --prompt "$prompt"
+
