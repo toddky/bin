@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# USAGE: gitlab-pipeline <project_id>
+# USAGE: gitlab-get-pipeline <project_id>
 # DESCRIPTION: Get every single pipeline job in the past 7 days and print as JSON
 
 import json
@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from python_lib import gitlab
 
 if len(sys.argv) != 2:
-    print("Usage: gitlab-pipeline <project_id>", file=sys.stderr)
+    print("Usage: gitlab-get-pipeline <project_id>", file=sys.stderr)
     sys.exit(1)
 
 project_id = sys.argv[1]
