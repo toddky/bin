@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# USAGE: supercmd-help
+# DESCRIPTION: Show help for all subcommands with their usage and description
+
+# Get supercmd from environment or derive from script name
+if [[ -n "$SUPERCMD" ]]; then
+	supercmd="$SUPERCMD"
+else
+	# When called as gitlab-help, extract 'gitlab'
+	script_name="$(basename "${BASH_SOURCE[0]}")"
+	if [[ "$script_name" == *-help ]]; then
+		supercmd="${script_name%-help}"
+	else
+		supercmd="$script_name"
+	fi
+fi
+
+# Find all commands matching the pattern
+readarray -t commands < <(while read -r dir; do
+	(cd "$dir" && ls "$supercmd"-*) 2>/dev/null
+done < <(echo $PATH | tr ':' $'\n') | sort | uniq | sed "s/^$supercmd-//" | sort)
+
+if [[ ${#commands[@]} -eq 0 ]]; then
+	echo "No subcommands found for $supercmd"
+	exit 1
+fi
+
+for cmd in "${commands[@]}"; do
+
+	# Get path
+	full_cmd="$supercmd-$cmd"
+	path="$(command -v "$full_cmd" 2>/dev/null)"
+	[[ -x "$path" ]] || continue
+
+	# Extract USAGE and DESCRIPTION from the file
+	usage="$(sed -n 's/^# USAGE: //p' "$path" | head -n 1)"
+	description="$(sed -n 's/^# DESCRIPTION: //p' "$path" | head -n 1)"
+
+	printf "\033[1m%-20s\033[0m \033[38;5;153m%s\033[0m %s\n" "$cmd" "$usage" "$description"
+done
+
