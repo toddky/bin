@@ -15,7 +15,7 @@ while IFS= read -r line; do
 	path="${BASH_REMATCH[1]}"
 	if [[ "$(basename "$path")" == "__pycache__" ]]; then
 		echo "Auto-deleting $path"
-		rm -rf "$path" || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
+		rm -rf "$path" 2>/dev/null || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
 	else
 		paths_to_clean+=("$path")
 		echo "$line"
@@ -24,10 +24,13 @@ done <<< "$(git clean -n "${args[@]}")"
 
 echo
 
+[[ ${#paths_to_clean[@]} -eq 0 ]] && exit 0
+
 yesno 'Continue?' || exit $?
 
 # Delete remaining files
 for path in "${paths_to_clean[@]}"; do
-	rm -rf "$path" || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
+	echo "Deleting $path"
+	rm -rf "$path" 2>/dev/null || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
 done
 
