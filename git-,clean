@@ -8,9 +8,26 @@ if [[ -z "${args[@]}" ]]; then
 fi
 
 print-cmd git clean -n "${args[@]}"
-git clean -n "${args[@]}"
+
+paths_to_clean=()
+while IFS= read -r line; do
+	[[ "$line" =~ ^Would\ remove\ (.+)$ ]] || continue
+	path="${BASH_REMATCH[1]}"
+	if [[ "$(basename "$path")" == "__pycache__" ]]; then
+		echo "Auto-deleting $path"
+		rm -rf "$path" || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
+	else
+		paths_to_clean+=("$path")
+		echo "$line"
+	fi
+done <<< "$(git clean -n "${args[@]}")"
+
 echo
 
 yesno 'Continue?' || exit $?
-print-run git clean "${args[@]}"
+
+# Delete remaining files
+for path in "${paths_to_clean[@]}"; do
+	rm -rf "$path" || { chmod -R +w "$path" 2>/dev/null && rm -rf "$path"; }
+done
 
