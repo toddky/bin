@@ -19,3 +19,10 @@
 - Use guard clauses (early continue/return) to reduce nesting
 - Use [[ ]] instead of [ ] in Bash
 
+# New Script
+When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
+```bash
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+```
