@@ -75,7 +75,6 @@
 !/mk*
 !/my-*
 !/nnn-*
-!/organize-downloads
 !/print-*
 !/rand*
 !/sbar-*
@@ -243,6 +242,7 @@
 !/nobash
 !/now
 !/nvimdiff
+!/organize-downloads
 !/nvim-profile
 !/nvim-terminal
 !/open-xls
