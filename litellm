@@ -88,6 +88,8 @@ def ask(question, system_prompt, model, stream=True):
     try:
         timeout = 120
         response = post("chat/completions", json=data, stream=stream, timeout=timeout)
+        #response = post("anthropic/v1/messages", json=data, stream=stream, timeout=timeout)
+        #response = post("v1/messages", json=data, stream=stream, timeout=timeout)
     except requests.exceptions.RequestException as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
@@ -172,10 +174,10 @@ Provide comments for other options rather than printing them outside of code blo
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Ask a question to the AI.')
-    parser.add_argument('--model', default=default_model, help=f'AI model to use (default: {default_model})')
+    parser.add_argument('--model'        , '-m', default=default_model, help=f'AI model to use (default: {default_model})')
     parser.add_argument('--system-prompt', '-s', default=default_system_prompt, help='System prompt to use')
-    parser.add_argument('--streaming', '-i', action='store_true', help='Enable streaming mode (default: False)')
-    parser.add_argument('--list', '-l', action='store_true', help='List available models and exit')
+    parser.add_argument('--streaming'    , '-i', action='store_true', help='Enable streaming mode (default: False)')
+    parser.add_argument('--list'         , '-l', action='store_true', help='List available models and exit')
     parser.add_argument('question', nargs='*', help='Question to ask the AI. Use "-" to read from stdin.')
     args = parser.parse_args()
 
