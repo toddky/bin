@@ -3,6 +3,9 @@
 # DESCRIPTION: Rerun failing pipelines from GitLab
 url="$1"
 
+# ==============================================================================
+# SETUP
+# ==============================================================================
 # Get project ID from URL
 url="${url#https://*/}"
 read -r project pipeline_id <<<"$(sed -e 's:/-/pipelines/:\t:' <<<"$url")"
@@ -14,43 +17,94 @@ data="per_page=100"
 #data="include_retried=true&per_page=100"
 
 all_jobs="$(gitlab curl "projects/$project_id/pipelines/$pipeline_id/jobs?$data")"
-failed_jobs="$(jq -c '.[] | select(.status != "success")' <<<"$all_jobs")"
 
 # Uncomment to debug:
-#echo "$all_jobs" | jq '.[] | {id,name,status}'
-#echo "$failed_jobs" | jq '{id,name,status}'
+#echo "$all_jobs" | jq '.[] | {id,name,status,stage}'
 
 tmpdir="$(mktemp -d)"
 function cleanup { rm -rf "$tmpdir"; }
 trap cleanup EXIT
 cd "$tmpdir"
 
-while IFS= read -r job; do
-	job_id="$(echo "$job" | jq -r .id)"
-	name="$(echo "$job" | jq -r .name)"
-	reason="$(echo "$job" | jq -r .failure_reason)"
-	#echo "$job"; exit
+# Colors
+rst=$'\e[0m'
+dim=$'\e[2m'
+bold=$'\e[1m'
+red=$'\e[31m'
+green=$'\e[32m'
+yellow=$'\e[33m'
+gray=$'\e[90m'
 
-	if [[ "$reason" == 'null' ]]; then
-		status="$(echo "$job" | jq -r .status)"
-		printf "\e[34;1m$name\e[0m - \e[32;1m%s\e[0m\n" "$status"
-		print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
-		echo
-		continue
-	fi
+# Symbols
+dot_pass="${green}●${rst}"
+dot_fail="${red}●${rst}"
+dot_skip="${gray}●${rst}"
+dot_other="${yellow}●${rst}"
 
-	# Reasons:
-	# - job_execution_timeout
-	# - script_failure
+retried_jobs=()
 
-	printf "\e[34;1m$name\e[0m - \e[31;1m%s\e[0m\n" "$reason"
-	if [[ "$reason" == "script_failure" ]]; then
-		print-cmd gitlab curl "projects/$project_id/jobs/$job_id/trace"
-		gitlab curl "projects/$project_id/jobs/$job_id/trace" > "${project_id}_${job_id}.log"
-	fi
-	print-cmd gitlab curl "projects/$project_id/jobs/$job_id/retry" -X POST
+
+# ==============================================================================
+# GITLAB INFO
+# ==============================================================================
+# Get ordered list of stages
+stages="$(jq -r '[.[].stage] | reduce .[] as $s ([]; if (. | index($s)) then . else . + [$s] end) | reverse | .[]' <<<"$all_jobs")"
+
+while IFS= read -r stage; do
+	[[ -z "$stage" ]] && continue
+
+	# Get jobs for this stage
+	stage_jobs="$(jq -c --arg s "$stage" '[.[] | select(.stage == $s)]' <<<"$all_jobs")"
+	job_count="$(jq 'length' <<<"$stage_jobs")"
+
+	printf "\n${bold}%s${rst} ${dim}(%d jobs)${rst}\n" "$stage" "$job_count"
+
+	while IFS= read -r job; do
+		job_id="$(jq -r .id <<<"$job")"
+		name="$(jq -r .name <<<"$job")"
+		status="$(jq -r .status <<<"$job")"
+		reason="$(jq -r .failure_reason <<<"$job")"
+
+		case "$status" in
+			success)
+				printf "  %s %s\n" "$dot_pass" "$name"
+				;;
+			skipped)
+				printf "  %s ${gray}%s${rst}\n" "$dot_skip" "$name"
+				;;
+			failed)
+				printf "  %s %s ${red}(%s)${rst}\n" "$dot_fail" "$name" "$reason"
+				if [[ "$reason" == "script_failure" ]]; then
+					gitlab curl "projects/$project_id/jobs/$job_id/trace" > "${project_id}_${job_id}.log" 2>/dev/null
+					printf "    ${dim}log saved: %s${rst}\n" "${project_id}_${job_id}.log"
+				fi
+				gitlab curl "projects/$project_id/jobs/$job_id/retry" -X POST >/dev/null 2>&1
+				retried_jobs+=("$name|$reason")
+				;;
+			*)
+				printf "  %s %s ${yellow}(%s)${rst}\n" "$dot_other" "$name" "$status"
+				;;
+		esac
+	done < <(jq -c '.[]' <<<"$stage_jobs")
+done <<<"$stages"
+
+# ==============================================================================
+# SUMMARY
+# ==============================================================================
+echo
+if [[ ${#retried_jobs[@]} -gt 0 ]]; then
+	printf "${bold}Retried %d job(s):${rst}\n" "${#retried_jobs[@]}"
+	for entry in "${retried_jobs[@]}"; do
+		name="${entry%%|*}"
+		reason="${entry#*|}"
+		printf "  ${yellow}↻${rst} %s ${red}(%s)${rst}\n" "$name" "$reason"
+	done
+else
+	printf "${green}No jobs to retry.${rst}\n"
+fi
+
+if ls "$tmpdir"/*.log &>/dev/null; then
 	echo
-done < <(jq -c <<<"$failed_jobs")
-
-print-run pwd
+	printf "${dim}Logs saved to: %s${rst}\n" "$tmpdir"
+fi
 
