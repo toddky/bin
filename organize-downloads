@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# USAGE: organize-downloads
+# DESCRIPTION: Organize files in ~/Downloads by extension. Delete files older than 1 year.
+
+DOWNLOADS_DIR="$HOME/Downloads"
+
+if [[ ! -d "$DOWNLOADS_DIR" ]]; then
+	echo "Error: $DOWNLOADS_DIR does not exist"
+	exit 1
+fi
+
+cd "$DOWNLOADS_DIR" || exit 1
+
+# Delete files older than 365 days
+echo "Deleting old files..."
+find . -type f -mtime +365 -delete
+find . -type d -empty -delete
+
+# Organize remaining files by extension
+echo "Organizing files by extension..."
+find . -maxdepth 1 -type f | while read -r file; do
+	filename="${file#./}"
+
+	# Skip hidden files
+	if [[ "$filename" =~ ^\..*$ ]]; then
+		continue
+	fi
+
+	# Get extension, handle files without extension
+	if [[ "$filename" =~ \. ]]; then
+		ext="${filename##*.}"
+	else
+		ext="no-extension"
+	fi
+
+	ext_dir="$ext"
+
+	# Create directory if it doesn't exist
+	if [[ ! -d "$ext_dir" ]]; then
+		mkdir -p "$ext_dir"
+	fi
+
+	# Move file to its extension directory if not already there
+	if [[ "$(dirname "$file")" != "./$ext_dir" ]]; then
+		mv "$file" "$ext_dir/"
+		echo "Moved: $filename → $ext_dir/"
+	fi
+done
+
+echo "Done!"
+
