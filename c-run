@@ -7,7 +7,7 @@ trap finish EXIT
 
 # Compile and run
 in="$1" && shift
-out="$tmpdir/a.out"
-prun gcc -o "$out" "$in" || exit $?
-prun "$out"
+exe="$tmpdir/a.out"
+gcc -o "$exe" -x c "$in" || exit $?
+"$exe" "$@"
 
