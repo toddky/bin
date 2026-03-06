@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+pane_id="${TMUX_PANE#%}"
+notify_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/tmux-notify"
+mkdir -p "$notify_dir"
+
+# Capture pane and find the last command (last line with prompt marker »)
+last_cmd="$(tmux capture-pane -p -t "$TMUX_PANE" | grep 'todd.*»' | tail -1 | sed 's/.*» *//')"
+[[ -z "$last_cmd" ]] && exit 1
+
+printf '#[fg=colour160,bold]»#[fg=white,nobold] %s\n' "$last_cmd" > "$notify_dir/${pane_id}.txt"
