@@ -90,6 +90,12 @@ if ((start_ms)); then
 		time_str+="$(printf " (%d.%02d hours)" "$h" "$(((total_s%3600)*100/3600))")"
 	fi
 	printf "\x1b[38;5;8m[$(date +%T)] Finished in %s \e[0m\n" "$time_str"
+
+	# Notify if command took over 60s and pane is not focused
+	if [[ -n "$TMUX_PANE" ]] && (( total_s >= 60 )); then
+		is_focused="$(tmux display-message -t "$TMUX_PANE" -p '#{pane_active}#{window_active}')"
+		[[ "$is_focused" != "11" ]] && tmux-notify &
+	fi
 fi
 
 # Prompt
