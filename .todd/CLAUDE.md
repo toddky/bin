@@ -16,6 +16,9 @@
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
 
+# Commands
+- I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
+
 # Git
 - When I tell you to move or rename a file, make sure to use `git mv`
 - Do not run git commit/add/stage unless I explicitly ask. Do not use git diff to check for uncommitted changes — assume the working tree is the source of truth.
