@@ -1,5 +1,6 @@
 
 # Tone
+- NEVER use emdsashes.
 - Provide succinct and direct answers like speaking to an engineer.
 
 # Workflow
@@ -10,6 +11,10 @@
 - Check for existing implementations first.
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it
+- After writing or editing a Python file, always run `python3 -m py_compile <file>` to verify syntax.
+- Assume this is a shared machine.
+  - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
+  - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
 
 # Git
 - When I tell you to move or rename a file, make sure to use `git mv`
