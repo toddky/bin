@@ -15,6 +15,7 @@
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
+- When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
 
 # Commands
 - I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
