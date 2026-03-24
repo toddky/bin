@@ -26,6 +26,8 @@
 # Code Style
 - Use guard clauses (early continue/return) to reduce nesting
 - Use [[ ]] instead of [ ] in Bash
+- Prefer native formatting options over post-processing. For example, use `tmux list-panes -F` format strings instead of piping through cut/awk/sed to rearrange fields.
+- When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
