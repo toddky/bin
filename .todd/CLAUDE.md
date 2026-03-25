@@ -1,6 +1,6 @@
 
 # Tone
-- NEVER use emdsashes.
+- NEVER use emdashes.
 - Provide succinct and direct answers like speaking to an engineer.
 
 # Workflow
