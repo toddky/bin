@@ -1,0 +1,269 @@
+#!/usr/bin/env tt-ruby
+# vim: ft=ruby noet ts=4 sw=0 sts
+
+# Standalone CLI for editing files via old_string/new_string replacement.
+# Features: file creation, three-tier matching (exact/whitespace/fuzzy), uniqueness enforcement.
+
+
+# ==============================================================================
+# REQUIRE
+# ==============================================================================
+require 'fileutils'
+require 'optparse'
+require 'set'
+
+
+# ==============================================================================
+# CONSTANTS
+# ==============================================================================
+FUZZY_MATCH_THRESHOLD = 0.95
+FUZZY_HINT_THRESHOLD = 0.6
+MAX_FUZZY_CANDIDATES = 500
+
+
+# ==============================================================================
+# MATCHING
+# ==============================================================================
+
+# SequenceMatcher-like ratio using longest common subsequence.
+def sequence_ratio(a, b)
+	return 1.0 if a == b
+	return 0.0 if a.empty? || b.empty?
+
+	# LCS length via Hunt-Szymanski-style DP (good enough for moderate strings)
+	m = a.size
+	n = b.size
+	# Use the shorter string for the column dimension
+	if m < n
+		a, b = b, a
+		m, n = n, m
+	end
+	prev = Array.new(n + 1, 0)
+	curr = Array.new(n + 1, 0)
+	m.times do |i|
+		n.times do |j|
+			curr[j + 1] = if a[i] == b[j]
+				prev[j] + 1
+			else
+				[curr[j], prev[j + 1]].max
+			end
+		end
+		prev, curr = curr, prev
+		curr.fill(0)
+	end
+	lcs = prev[n]
+	(2.0 * lcs) / (a.size + b.size)
+end
+
+def whitespace_match(content, target)
+	target_lines = target.split("\n", -1)
+	content_lines = content.split("\n", -1)
+	n_target = target_lines.size
+	return nil if n_target == 0 || content_lines.size < n_target
+
+	target_stripped = target_lines.map(&:strip)
+	return nil if target_stripped.all?(&:empty?)
+
+	first_stripped = target_stripped[0]
+	(0..content_lines.size - n_target).each do |i|
+		next unless content_lines[i].strip == first_stripped
+		if (0...n_target).all? { |j| content_lines[i + j].strip == target_stripped[j] }
+			matched = content_lines[i, n_target].join("\n")
+			return matched if content.scan(matched).size == 1
+		end
+	end
+	nil
+end
+
+def find_similar_string(content, target, threshold = 0.6)
+	return nil if target.size < 10
+
+	lines = content.split("\n", -1)
+	target_lines = target.split("\n", -1)
+	n_target = target_lines.size
+	n_windows = lines.size - n_target + 1
+	return nil if n_windows <= 0
+
+	first_target = target_lines[0].strip
+	target_words = target.split.to_set
+
+	candidates = []
+	n_windows.times do |i|
+		fl = lines[i].strip
+		next if first_target.empty? || fl.empty?
+		overlap = (target_words & lines[i].split.to_set).size
+		next if overlap == 0 && sequence_ratio(first_target, fl) < 0.4
+		candidates << i
+		break if candidates.size >= MAX_FUZZY_CANDIDATES
+	end
+
+	best_match = nil
+	best_ratio = threshold
+	candidates.each do |i|
+		chunk = lines[i, n_target].join("\n")
+		ratio = sequence_ratio(target, chunk)
+		if ratio > best_ratio
+			best_ratio = ratio
+			best_match = chunk
+		end
+	end
+	best_match
+end
+
+def resolve_old_string(content, old_string)
+	return [old_string, "exact"] if content.include?(old_string)
+
+	ws = whitespace_match(content, old_string)
+	return [ws, "whitespace"] if ws
+
+	fuzzy = find_similar_string(content, old_string, FUZZY_MATCH_THRESHOLD)
+	return [fuzzy, "fuzzy"] if fuzzy
+
+	[nil, ""]
+end
+
+def find_occurrence_lines(content, target)
+	line_numbers = []
+	pos = 0
+	while (idx = content.index(target, pos))
+		line_num = content[0...idx].count("\n") + 1
+		line_numbers << line_num
+		pos = idx + 1
+		break if line_numbers.size >= 10
+	end
+	line_numbers
+end
+
+
+# ==============================================================================
+# EDIT
+# ==============================================================================
+def edit_file(file_path, old_string, new_string)
+	# File creation
+	if old_string.empty?
+		if File.exist?(file_path)
+			warn "error: file already exists: #{file_path}"
+			return 1
+		end
+		dir = File.dirname(file_path)
+		FileUtils.mkdir_p(dir) unless dir == "." || Dir.exist?(dir)
+		File.write(file_path, new_string, encoding: 'utf-8')
+		puts "created #{file_path}"
+		return 0
+	end
+
+	unless File.exist?(file_path)
+		warn "error: file not found: #{file_path}"
+		return 1
+	end
+
+	content = File.read(file_path, encoding: 'utf-8')
+
+	# Three-tier matching
+	resolved, method = resolve_old_string(content, old_string)
+	if resolved.nil?
+		suggestion = find_similar_string(content, old_string, FUZZY_HINT_THRESHOLD)
+		warn "error: old_string not found in file."
+		if suggestion
+			warn "\nDid you mean:\n#{suggestion}"
+		else
+			warn "\nTip: verify exact content before editing."
+		end
+		return 1
+	end
+
+	# Uniqueness enforcement
+	count = content.scan(resolved).size
+	if count > 1
+		line_numbers = find_occurrence_lines(content, resolved)
+		warn "error: old_string appears #{count} times (lines: #{line_numbers.join(', ')}). " \
+			"Include more context to disambiguate."
+		return 1
+	end
+
+	new_content = content.sub(resolved, new_string)
+	File.write(file_path, new_content, encoding: 'utf-8')
+
+	msg = "edited #{file_path}"
+	msg += " (auto-corrected via #{method} match)" unless method == "exact"
+	puts msg
+	0
+end
+
+
+# ==============================================================================
+# OPTIONS
+# ==============================================================================
+EXAMPLES = <<~EOS
+
+  Examples:
+    # Replace a string in a file
+    #{$PROGRAM_NAME} myfile.sv --old-string 'assign a = b;' --new-string 'assign a = c;'
+
+    # Create a new file
+    #{$PROGRAM_NAME} newfile.sv --create --new-string 'module top; endmodule'
+
+    # Pipe old/new via stdin (separated by --- delimiter)
+    cat <<'EOF' | #{$PROGRAM_NAME} myfile.sv --stdin
+    assign a = b;
+    ---
+    assign a = c;
+    EOF
+
+    # Custom delimiter
+    cat <<'EOF' | #{$PROGRAM_NAME} myfile.sv --stdin --delimiter '==='
+    old text
+    ===
+    new text
+    EOF
+EOS
+
+options = {}
+parser = OptionParser.new do |opts|
+	opts.banner = "Usage: #{$PROGRAM_NAME} FILE [options]"
+
+	opts.on("--old-string STR", "Text to replace") { |v| options[:old_string] = v }
+	opts.on("--new-string STR", "Replacement text") { |v| options[:new_string] = v }
+	opts.on("--stdin", "Read old/new from stdin separated by delimiter") { options[:stdin] = true }
+	opts.on("--delimiter STR", "Delimiter for --stdin mode (default: ---)") { |v| options[:delimiter] = v }
+	opts.on("--create", "Create a new file (content from --new-string or stdin)") { options[:create] = true }
+	opts.on("-h", "--help", "Show help") do
+		puts opts
+		exit
+	end
+	opts.separator EXAMPLES
+end
+parser.parse!
+
+file_path = ARGV[0]
+unless file_path
+	warn parser.banner
+	exit 1
+end
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+delimiter = options[:delimiter] || "---"
+
+if options[:create]
+	new_string = options[:new_string] || $stdin.read
+	exit edit_file(file_path, "", new_string)
+elsif options[:stdin]
+	blob = $stdin.read
+	parts = blob.split("#{delimiter}\n", 2)
+	if parts.size != 2
+		warn "error: stdin must contain old and new sections separated by '#{delimiter}'"
+		exit 1
+	end
+	old_str = parts[0].chomp
+	new_str = parts[1]
+	exit edit_file(file_path, old_str, new_str)
+elsif options[:old_string] && options[:new_string]
+	exit edit_file(file_path, options[:old_string], options[:new_string])
+else
+	warn "error: provide --old-string and --new-string, or use --stdin"
+	exit 1
+end
+
