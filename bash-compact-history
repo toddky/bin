@@ -1,49 +1,42 @@
 #!/usr/bin/env bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
 
 # Compact bash history files: global dedup, preserve timestamps, sort by time.
 # Multi-line commands are preserved. When duplicates exist, keeps the latest.
-# Reads all *.txt files in HIST_DIR and writes a single compacted file.
 # NEVER deletes or modifies the original files.
 
 set -euo pipefail
 
 HIST_DIR="/home/tyamakawa/.bash_histories"
 OUTPUT="$HIST_DIR/compacted-history.txt"
+TMPOUT=$(mktemp "$HIST_DIR/.compacted.XXXXXX")
+trap 'rm -f "$TMPOUT"' EXIT
 
 # Pipeline:
-#   1. Parse history into TAB-separated "epoch\tNUL-joined-command" lines
-#      (strip # from timestamp, trim trailing whitespace from commands)
-#   2. Sort numerically by epoch (chronological)
-#   3. Dedup by command, keeping latest occurrence (tac | awk unique | tac)
-#   4. Restore to history format: #timestamp\ncommand
+#   1. Parse into "epoch\tNUL-joined-command" lines (one per command)
+#   2. Sort by epoch (chronological)
+#   3. Dedup by command, keeping latest (tac | awk first-seen | tac)
+#   4. Restore to bash history format (#epoch\ncommand)
 find "$HIST_DIR" -maxdepth 1 -name '*.txt' ! -name "$(basename "$OUTPUT")" -print0 \
     | sort -z \
     | xargs -0 cat \
-    | awk '
+    | gawk '
 /^#[0-9]+$/ {
     if (cmd != "") {
         gsub(/[[:space:]]+$/, "", cmd)
+        n++
         print ts "\t" cmd
     }
-    ts = substr($0, 2)  # strip leading #
+    ts = substr($0, 2)
     cmd = ""
     next
 }
 {
-    if (cmd == "")
-        cmd = $0
-    else
-        cmd = cmd "\x00" $0
+    cmd = (cmd == "") ? $0 : cmd "\x00" $0
 }
 END {
-    if (cmd != "") {
-        gsub(/[[:space:]]+$/, "", cmd)
-        print ts "\t" cmd
-    }
-}
-' \
+    if (cmd != "") { gsub(/[[:space:]]+$/, "", cmd); n++; print ts "\t" cmd }
+    printf "  Input commands:  %d\n", n > "/dev/stderr"
+}' \
     | sort -t$'\t' -k1,1n \
     | tac \
     | awk -F'\t' '!seen[$2]++' \
@@ -53,11 +46,11 @@ END {
     cmd = $2
     gsub(/\x00/, "\n", cmd)
     print cmd
-}' > "$OUTPUT"
+}' > "$TMPOUT"
 
-input=$(find "$HIST_DIR" -maxdepth 1 -name '*.txt' ! -name "$(basename "$OUTPUT")" -print0 \
-    | sort -z | xargs -0 cat | grep -cv '^#[0-9]*$' || true)
+mv "$TMPOUT" "$OUTPUT"
+trap - EXIT
+
 output=$(grep -c '^#[0-9]*$' "$OUTPUT" || true)
-echo "  Input lines:     $input" >&2
 echo "  Output commands: $output" >&2
 echo "Compacted history written to: $OUTPUT"
