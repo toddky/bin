@@ -198,16 +198,16 @@ EXAMPLES = <<~EOS
 
   Examples:
     # Replace a string in a file
-    #{$PROGRAM_NAME} myfile.sv --old-string 'assign a = b;' --new-string 'assign a = c;'
+    #{$PROGRAM_NAME} utils.py --old-string 'def greet():' --new-string 'def greet(name="world"):'
 
     # Create a new file
-    #{$PROGRAM_NAME} newfile.sv --create --new-string 'module top; endmodule'
+    #{$PROGRAM_NAME} hello.py --create --new-string 'def main(): print("hello")'
 
     # Pipe old/new via stdin (separated by --- delimiter)
-    cat <<'EOF' | #{$PROGRAM_NAME} myfile.sv --stdin
-    assign a = b;
+    cat <<'EOF' | #{$PROGRAM_NAME} utils.py --stdin
+    def greet():
     ---
-    assign a = c;
+    def greet(name="world"):
     EOF
 
     # Custom delimiter
