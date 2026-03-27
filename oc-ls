@@ -23,20 +23,30 @@ done < <(pgrep -x opencode 2>/dev/null || true)
 
 [[ ${#oc_pids[@]} -eq 0 ]] && { echo "No OpenCode instances found" >&2; exit 1; }
 
-# Get session titles from OpenCode's database
+# Get session titles and timestamps from OpenCode's database, ordered by most recent
+# For directories with multiple sessions, use the most recently updated one
 declare -A titles
+declare -A timestamps
+declare -A seen_dir
+declare -a ordered_dirs  # Track order for sorting
 db="$HOME/.local/share/opencode/opencode.db"
 if [[ -f "$db" ]]; then
-    while IFS='|' read -r dir title; do
-        titles["$dir"]="$title"
-    done < <(sqlite3 "$db" "SELECT directory, title FROM session ORDER BY time_updated DESC" 2>/dev/null)
+    while IFS='|' read -r dir title time_updated; do
+        # Track directory order by first appearance (most recent overall)
+        if [[ -z "${seen_dir[$dir]:-}" ]]; then
+            ordered_dirs+=("$dir")
+            seen_dir[$dir]=1
+            titles["$dir"]="$title"
+            timestamps["$dir"]="$time_updated"
+        fi
+    done < <(sqlite3 "$db" "SELECT directory, title, time_updated FROM session ORDER BY time_updated DESC" 2>/dev/null)
 fi
 
 # Get all tmux panes indexed by their shell PID
 declare -A pane_info
-while IFS=$'	' read -r pane_pid pane_id pane dims; do
-    pane_info[$pane_pid]="$pane_id	$pane	$dims"
-done < <(tmux list-panes -a -F "#{pane_pid}	#{pane_id}	#{session_name}:#{window_index}.#{pane_index}	#{pane_width}x#{pane_height}" 2>/dev/null)
+while IFS=$'	' read -r pane_pid pane_id session_name window_name; do
+    pane_info[$pane_pid]="$pane_id	$session_name	$window_name"
+done < <(tmux list-panes -a -F "#{pane_pid}	#{pane_id}	#{session_name}	#{window_name}" 2>/dev/null)
 
 # Build parent map for all processes (one ps call)
 declare -A parents
@@ -44,22 +54,53 @@ while read pid ppid; do
     parents[$pid]=$ppid
 done < <(ps -eo pid,ppid)
 
+# Build a map of directory -> list of PIDs for sorting
+declare -A dir_to_pids
+for pid in "${!oc_pids[@]}"; do
+    cwd="${oc_pids[$pid]}"
+    dir_to_pids["$cwd"]+="$pid "
+done
+
 # For each opencode instance, walk up parents to find its tmux pane
+# Iterate in order of most recently updated sessions
 found=0
-for oc_pid in "${!oc_pids[@]}"; do
-    cwd="${oc_pids[$oc_pid]}"
+declare -A seen_dirs
+for dir in "${ordered_dirs[@]}"; do
+    [[ -n "${seen_dirs[$dir]:-}" ]] && continue
+    seen_dirs[$dir]=1
+    
+    # Process all PIDs for this directory
+    for oc_pid in ${dir_to_pids[$dir]:-}; do
+        cwd="${oc_pids[$oc_pid]}"
     
     # Walk up the process tree until we find a tmux pane
     pid=$oc_pid
     while [[ $pid -gt 1 ]]; do
         if [[ -n "${pane_info[$pid]:-}" ]]; then
-            IFS=$'	' read -r pane_id pane dims <<< "${pane_info[$pid]}"
+            IFS=$'	' read -r pane_id session_name window_name <<< "${pane_info[$pid]}"
             title="${titles[$cwd]:-}"
             
-            if [[ -n "$title" ]]; then
-                printf "%-8s %-20s %-10s %-50s %s\n" "$pane_id" "$pane" "$dims" "$title" "$cwd"
+            # Color codes: pane in bold cyan (1;36), session:window in bold magenta (1;35), title in bold yellow (1;33), age in bold green (1;32)
+            colored_pane_id=$(printf "\033[1;36m%-8s\033[0m" "$pane_id")
+            
+            # Calculate hours ago
+            time_updated="${timestamps[$cwd]:-}"
+            if [[ -n "$time_updated" ]]; then
+                now_ms=$(($(date +%s) * 1000))
+                hours_ago=$(( (now_ms - time_updated) / 3600000 ))
+                colored_age=$(printf "\033[1;32m%-6s\033[0m" "${hours_ago}h")
             else
-                printf "%-8s %-20s %-10s %s\n" "$pane_id" "$pane" "$dims" "$cwd"
+                colored_age=$(printf "%-6s" "")
+            fi
+            
+            session_window_raw="${session_name}:${window_name}"
+            session_window_colored=$(printf "\033[1;35m%-20s\033[0m" "$session_window_raw")
+            
+            if [[ -n "$title" ]]; then
+                colored_title=$(printf "\033[1;33m%s\033[0m" "$title")
+                printf "%s %s %s %s %s\n" "$colored_pane_id" "$colored_age" "$session_window_colored" "$colored_title" "$cwd"
+            else
+                printf "%s %s %s %s\n" "$colored_pane_id" "$colored_age" "$session_window_colored" "$cwd"
             fi
             found=1
             break
