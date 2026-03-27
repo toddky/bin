@@ -3,6 +3,7 @@ ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 AG_VERSION := 1.0.2
 BIN := $(HOME)/bin
+FZF_VERSION := 0.70.0
 TIG_VERSION := 2.4.1
 
 # Useful
@@ -78,15 +79,15 @@ dtach.git:
 	git clone --depth 1 https://github.com/crigler/dtach.git $@
 
 # --- fzf ---
-# TODO: Make this into order only pre-req
-# https://www.gnu.org/software/make/manual/html_node/Prerequisite-Types.html
-fzf: fzf.git/bin/fzf
-	cp $^ $@
-fzf.git/bin/fzf: fzf.git
-	fzf.git/install --no-key-bindings --no-completion --no-update-rc
+FZF_TAR := fzf-$(FZF_VERSION)-linux_amd64.tar.gz
+FZF_URL := https://github.com/junegunn/fzf/releases/download/v$(FZF_VERSION)/$(FZF_TAR)
+fzf:
+	curl -L $(FZF_URL) | tar xz -C $(ROOT_DIR) $@
 	touch $@
-fzf.git:
-	git clone --depth 1 --branch v0.59.0 https://github.com/junegunn/fzf $@
+.PHONY: update-fzf
+update-fzf:
+	rm -f fzf
+	$(MAKE) fzf
 
 # --- Gum ---
 gum: gum.git/gum
