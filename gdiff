@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# USAGE: gdiff [<commit>] [-- <file>]
+# DESCRIPTION: Open git diffs in nvim diffview
+#
+# Examples:
+#   gdiff                    # Unstaged changes
+#   gdiff HEAD               # Staged + unstaged
+#   gdiff HEAD~3             # Changes since 3 commits ago
+#   gdiff <commit>           # Show changes in specific commit
+#   gdiff <commit>~5..<commit>  # Range of commits
+#   gdiff <commit> -- file   # Specific file in commit
+#
+exec nvim -c "Diff $*"

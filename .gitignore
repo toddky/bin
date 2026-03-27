@@ -198,6 +198,7 @@
 !/ftrace
 !/gcc-so
 !/gcp
+!/gdiff
 !/getch.*
 !/getch2.sh
 !/getenv
