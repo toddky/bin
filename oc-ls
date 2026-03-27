@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# USAGE: oc-ls
+# DESCRIPTION: List all tmux panes running OpenCode instances
+
+set -euo pipefail
+
+# Check if a process tree rooted at $1 contains an opencode process.
+has_opencode_process() {
+    local root_pid="$1"
+    local queue=("$root_pid")
+    while (( ${#queue[@]} > 0 )); do
+        local pid="${queue[0]}"
+        queue=("${queue[@]:1}")
+        local cmdline
+        cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+        [[ -z "$cmdline" ]] && continue
+        if [[ "$cmdline" == *opencode* ]] && [[ "$cmdline" != *oc-ls* ]]; then
+            if [[ "$cmdline" != *langserver* ]] && [[ "$cmdline" != *language-server* ]]; then
+                return 0
+            fi
+        fi
+        local children_file="/proc/$pid/task/$pid/children"
+        if [[ -f "$children_file" ]]; then
+            local children_pids=$(cat "$children_file" 2>/dev/null) || true
+            for c in $children_pids; do
+                queue+=("$c")
+            done
+        fi
+    done
+    return 1
+}
+
+# Get the opencode main process PID from a pane's process tree.
+get_opencode_pid() {
+    local root_pid="$1"
+    local queue=("$root_pid")
+    while (( ${#queue[@]} > 0 )); do
+        local pid="${queue[0]}"
+        queue=("${queue[@]:1}")
+        local cmdline
+        cmdline=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+        [[ -z "$cmdline" ]] && continue
+        if [[ "$cmdline" == *opencode* ]] && [[ "$cmdline" != *oc-ls* ]]; then
+            if [[ "$cmdline" != *langserver* ]] && [[ "$cmdline" != *language-server* ]]; then
+                echo "$pid"
+                return 0
+            fi
+        fi
+        local children_file="/proc/$pid/task/$pid/children"
+        if [[ -f "$children_file" ]]; then
+            local children_pids=$(cat "$children_file" 2>/dev/null) || true
+            for c in $children_pids; do
+                queue+=("$c")
+            done
+        fi
+    done
+    return 1
+}
+
+# Get working directory
+get_opencode_cwd() {
+    local pane_pid="$1"
+    local oc_pid
+    oc_pid=$(get_opencode_pid "$pane_pid") || return 1
+    readlink "/proc/$oc_pid/cwd" 2>/dev/null
+}
+
+# Get session title
+get_opencode_title() {
+    local cwd="$1"
+    local db="$HOME/.local/share/opencode/opencode.db"
+    [[ ! -f "$db" ]] && return 1
+    sqlite3 "$db" "SELECT title FROM session WHERE directory = '$cwd' ORDER BY time_updated DESC LIMIT 1" 2>/dev/null
+}
+
+# Main
+format="#{pane_id}	#{session_name}:#{window_index}.#{pane_index}	#{pane_pid}	#{pane_width}x#{pane_height}"
+found=0
+
+while IFS=$'	' read -r pane_id pane pane_pid dims; do
+    if has_opencode_process "$pane_pid"; then
+        cwd=$(get_opencode_cwd "$pane_pid" 2>/dev/null) || cwd="?"
+        title=$(get_opencode_title "$cwd" 2>/dev/null)
+        if [[ -n "$title" ]]; then
+            printf "%-8s %-20s %-10s %-50s %s\n" "$pane_id" "$pane" "$dims" "$title" "$cwd"
+        else
+            printf "%-8s %-20s %-10s %s\n" "$pane_id" "$pane" "$dims" "$cwd"
+        fi
+        found=1
+    fi
+done < <(tmux list-panes -a -F "$format" 2>/dev/null)
+
+if (( found == 0 )); then
+    echo "No OpenCode panes found" >&2
+    exit 1
+fi
