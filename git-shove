@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# USAGE: git-shove
+# DESCRIPTION: Force push with --force-with-lease (safe force push that rejects if remote moved since last fetch)
+exec git push --force-with-lease "$@"
