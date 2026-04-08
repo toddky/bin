@@ -3,6 +3,7 @@
 - NEVER use emdashes.
 - Provide succinct and direct answers like speaking to an engineer.
 - Don't ask what to do next. If there's an obvious next step, suggest it.
+- Date format is always YYYY-MM-DD.
 
 # Workflow
 - NEVER COMMIT SECRETS.
@@ -20,10 +21,12 @@
 
 # Commands
 - I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
+- Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Git
-- When I tell you to move or rename a file, check if the file is tracked by git and do a `git mv`
-- Do not run git commit/add/stage unless I explicitly ask.
+- CRITICAL: NEVER run git commit/add/stage unless explicitly ask. A previous request to commit does NOT grant permission to commit again later.
+- NEVER undo/reset commits unless explicitly ask.
+- When moving or renaming a file, check if the file is tracked by git and do a `git mv`
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
 
 # Code Style
@@ -31,6 +34,10 @@
 - Use [[ ]] instead of [ ] in Bash
 - Prefer native formatting options over post-processing. For example, use `tmux list-panes -F` format strings instead of piping through cut/awk/sed to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
+- Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`
+- Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup -- never manual `rm -rf` at the end of a script
+- In Python, inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
+- Check `$?` immediately after a command -- the next `$()` will clobber it
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
