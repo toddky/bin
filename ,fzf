@@ -141,7 +141,7 @@ case "$config" in
 		#   FZF_HEIGHT   - height (default: 100%)
 		args['height']="--height ${FZF_HEIGHT:-100%}"
 		[[ -n "$FZF_PREVIEW" ]] && args['preview']="--preview '$FZF_PREVIEW'"
-		args['preview-window']="--preview-window right:70%"
+		args['preview-window']="--preview-window ${FZF_PREVIEW_WINDOW:-right:70%}"
 		[[ -n "$FZF_HEADER" ]] && args['header']="--header '$FZF_HEADER'"
 		[[ -n "$FZF_FILTER" ]] && filter="$FZF_FILTER"
 		;;
