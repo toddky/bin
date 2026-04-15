@@ -37,6 +37,13 @@
 - Before committing, run `realpath` on each file to resolve symlinks and ensure you're committing to the correct repo (it may be in a subrepo or symlinked elsewhere).
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
 
+# Comments
+- DO add comments that explain *why* -- intent, gotchas, non-obvious reasons -- things you can't get from reading the code.
+- Do NOT add comments that just narrate what the code does. Avoid obvious, redundant comments.
+- Do NOT remove existing comments when refactoring code.
+- DO update existing comments to match new code behavior.
+- Don't delete existing comments unless they are incorrect or no longer relevant.
+
 # Code Style
 - Use guard clauses (early continue/return) to reduce nesting
 - Use [[ ]] instead of [ ] in Bash
