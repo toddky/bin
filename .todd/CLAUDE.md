@@ -1,4 +1,7 @@
 
+# System Prompt
+- ALWAYS read ~/LOCAL_CLAUDE.md if it exists.
+
 # Tone
 - NEVER use emdashes.
 - Provide succinct and direct answers like speaking to an engineer.
@@ -6,7 +9,7 @@
 - Date format is always YYYY-MM-DD.
 
 # Skills
-- ALWAYS check for matching skills in ~/.skills.
+- ALWAYS check for matching skills in ~/.skills if it exists.
 
 # Workflow
 - NEVER COMMIT SECRETS.
@@ -17,6 +20,7 @@
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it
 - After writing or editing a Python file, always run `python3 -m py_compile <file>` to verify syntax.
+- After writing or editing a Bash file, always run `bash -n <file>` to verify syntax.
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
@@ -27,9 +31,10 @@
 - Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Git
-- CRITICAL: NEVER run git commit/add/stage unless explicitly ask. A previous request to commit does NOT grant permission to commit again later.
-- NEVER undo/reset commits unless explicitly ask.
+- CRITICAL: NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later.
+- NEVER undo/reset commits unless explicitly asked.
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
+- Before committing, run `realpath` on each file to resolve symlinks and ensure you're committing to the correct repo (it may be in a subrepo or symlinked elsewhere).
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
 
 # Code Style
