@@ -5,6 +5,9 @@
 - Don't ask what to do next. If there's an obvious next step, suggest it.
 - Date format is always YYYY-MM-DD.
 
+# Skills
+- ALWAYS check for matching skills in ~/.skills.
+
 # Workflow
 - NEVER COMMIT SECRETS.
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
@@ -46,3 +49,4 @@ When I tell you to write a new script, it usually means that it has to run from 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 ```
+
