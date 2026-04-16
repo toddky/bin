@@ -8,6 +8,9 @@ GITLAB_URL="$(cat "$HOME/.gitlab_url")" || exit $?
 endpoint="${1:-user}"
 shift
 
+# Strip base URL prefix if caller passed a full URL
+endpoint="${endpoint#"$GITLAB_URL"/api/v4/}"
+
 # Create a temporary file for the API token header
 header_file="$(mktemp)"
 function on_exit { rm -f "$header_file"; }
@@ -20,7 +23,7 @@ url="$GITLAB_URL/api/v4/$endpoint"
 # Args
 curl_args=()
 ((debug)) || curl_args+=(-s)
-curl_args+=(--header "Content-Type: application/json" --header @"$header_file" "$@" "$url")
+curl_args+=(--header @"$header_file" "$@" "$url")
 
 # Run
 ((debug)) && print-cmd curl "${curl_args[@]}"
