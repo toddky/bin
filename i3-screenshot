@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# USAGE: i3-screenshot
+# DESCRIPTION: Take a screenshot to clipboard
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if command -v maim > /dev/null && command -v xclip > /dev/null; then
+	maim --select | xclip -selection clipboard -t image/png
+else
+	flameshot gui --clipboard
+fi
