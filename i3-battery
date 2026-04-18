@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# USAGE: i3-battery
+# DESCRIPTION: i3blocks battery block with emoji for charging state
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+/usr/share/i3blocks/battery | sed 's/ CHR/⚡/g; s/ DIS//g; 1s/^/🔋/; 2s/^/🔋/'

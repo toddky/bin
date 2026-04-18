@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# USAGE: i3-bandwidth
+# DESCRIPTION: i3blocks bandwidth block with emoji labels
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+/usr/share/i3blocks/bandwidth | sed 's/IN /⬇️/g; s/OUT /⬆️/g'
