@@ -17,7 +17,16 @@ if [[ -f "$background" ]]; then
 	i3lock_args+=(--image="$background")
 	i3lock_args+=(--tiling)
 fi
-i3lock "${i3lock_args[@]}"
+i3lock "${i3lock_args[@]}" &
+
+# Unlock with fingerprint by killing i3lock on successful fprintd-verify
+if command -v fprintd-verify > /dev/null; then
+	(while pkill -0 i3lock 2>/dev/null; do
+		fprintd-verify "$USER" && pkill i3lock && break
+	done) &
+fi
+
+wait
 
 # Resume Dunst notifications
 # https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
