@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-admin-curl <endpoint>
+# DESCRIPTION: curl GitLab API with admin token
+
+API_KEY="$(cat "$HOME/.gitlab_admin_key")" || exit $?
+GITLAB_URL="$(cat "$HOME/.gitlab_url")" || exit $?
+
+endpoint="${1:-user}"
+shift
+
+# Strip base URL prefix if caller passed a full URL
+endpoint="${endpoint#"$GITLAB_URL"/api/v4/}"
+
+# Create a temporary file for the API token header
+header_file="$(mktemp)"
+function on_exit { rm -f "$header_file"; }
+trap on_exit EXIT
+printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
+url="$GITLAB_URL/api/v4/$endpoint"
+
+#debug=1
+
+# Args
+curl_args=()
+((debug)) || curl_args+=(-s)
+curl_args+=(--header @"$header_file" "$@" "$url")
+
+# Run
+((debug)) && print-cmd curl "${curl_args[@]}"
+curl "${curl_args[@]}"
+
+# gitlab-curl projects/<project>/jobs/<job_id>/trace -o job.log
+#curl -s --header @/tmp/tmp.2T93sqd14t -X post --form admin=true "$url/api/v4/users/700"
+
+#curl --request PUT \
+#  --header "PRIVATE-TOKEN: <your_admin_token>" \
+#  "https://gitlab.example.com/api/v4/users/<user_id>" \
+#  --form "admin=true"
+
