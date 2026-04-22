@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# USAGE: i3-status-bluetooth
+# DESCRIPTION: i3blocks bluetooth block showing power state and connected devices
+
+powered=$(bluetoothctl show 2>/dev/null | grep -c "Powered: yes")
+
+if [[ "$powered" -eq 0 ]]; then
+    echo "🔵 off"
+    exit 0
+fi
+
+connected=$(bluetoothctl devices Connected 2>/dev/null)
+
+if [[ -n "$connected" ]]; then
+    names=$(echo "$connected" | awk '{$1=$2=""; print $0}' | sed 's/^ *//' | paste -sd ', ' -)
+    echo "🔵 $names"
+else
+    echo "🔵"
+fi
