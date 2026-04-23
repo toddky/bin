@@ -47,6 +47,8 @@
 
 # Code Style
 - Use guard clauses (early continue/return) to reduce nesting
+- Inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
+- Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
 
 # Bash
 - Use [[ ]] instead of [ ]
@@ -57,9 +59,7 @@
 - Check `$?` immediately after a command -- the next `$()` will clobber it
 
 # Python
-- Inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
 - In Python, use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
-- Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
