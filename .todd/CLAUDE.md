@@ -12,7 +12,7 @@
 - ALWAYS check for matching skills in ~/.skills if it exists.
 
 # Workflow
-- NEVER COMMIT SECRETS.
+- When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
 - When I ask what changes are required, list each file separately with bullets for each change needed in that file.
 - I often commit changes outside of this tool.
@@ -31,6 +31,7 @@
 - Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Git
+- NEVER COMMIT SECRETS.
 - CRITICAL: NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later.
 - NEVER undo/reset commits unless explicitly asked.
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
@@ -46,13 +47,19 @@
 
 # Code Style
 - Use guard clauses (early continue/return) to reduce nesting
-- Use [[ ]] instead of [ ] in Bash
+
+# Bash
+- Use [[ ]] instead of [ ]
 - Prefer native formatting options over post-processing. For example, use `tmux list-panes -F` format strings instead of piping through cut/awk/sed to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
 - Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`
 - Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup -- never manual `rm -rf` at the end of a script
-- In Python, inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
 - Check `$?` immediately after a command -- the next `$()` will clobber it
+
+# Python
+- Inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
+- In Python, use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
+- Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
