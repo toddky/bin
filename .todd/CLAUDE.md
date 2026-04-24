@@ -41,11 +41,9 @@
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
 
 # Comments
-- DO add comments that explain *why* -- intent, gotchas, non-obvious reasons -- things you can't get from reading the code.
-- Do NOT add comments that just narrate what the code does. Avoid obvious, redundant comments.
-- Do NOT remove existing comments when refactoring code.
-- DO update existing comments to match new code behavior.
-- Don't delete existing comments unless they are incorrect or no longer relevant.
+- Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
+- Comments should explain *why* -- intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
 
 # Code Style
 - No single-letter variable names. Use descriptive names (e.g., `result` instead of `r`).
