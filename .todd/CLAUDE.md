@@ -12,6 +12,7 @@
 - ALWAYS check for matching skills in ~/.skills if it exists.
 
 # Workflow
+- DO NOT ask for permission to do obvious next steps EXCEPT for git commands. Read the Git section.
 - When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
 - When I ask what changes are required, list each file separately with bullets for each change needed in that file.
@@ -19,6 +20,7 @@
 - Check for existing implementations first.
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it
+- When fixing bugs, fix the root cause, not the symptom.
 - After writing or editing a Python file, always run `python3 -m py_compile <file>` to verify syntax.
 - After writing or editing a Bash file, always run `bash -n <file>` to verify syntax.
 - Assume this is a shared machine.
@@ -46,9 +48,12 @@
 - Don't delete existing comments unless they are incorrect or no longer relevant.
 
 # Code Style
+- No single-letter variable names. Use descriptive names (e.g., `result` instead of `r`).
 - Use guard clauses (early continue/return) to reduce nesting
 - Inline single-use helper functions unless they have meaningful reuse or the logic is complex enough to warrant a name
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
+- DO NOT write over-engineered code when a simpler approach works (e.g., writing .sh files to disk and re-reading them instead of pipe stdout to stdin).
+- Prefer inlining single-use helpers unless the logic is genuinely complex or reused meaningfully.
 
 # Bash
 - Use [[ ]] instead of [ ]
