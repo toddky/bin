@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# USAGE: git-analyze
+# DESCRIPTION: TODO
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# https://piechowski.io/post/git-commands-before-reading-code/
+
+echo 'File with the most changes in the past year:'
+#git log --format=format: --name-only --since="1 year ago" | sort | uniq -c | sort -nr | head -20
+git log --format=format: --name-only --since="1 year ago" \
+	| grep -v '^$' \
+	| sort | uniq -c | sort -nr | head -20
+
+
+echo
+echo 'Top 25 bggest contributors:'
+git shortlog -sn --no-merges | head -n 25
+
+
+
