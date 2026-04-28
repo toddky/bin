@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# USAGE: ,time
+# DESCRIPTION: Run time command with simple format
+export TIMEFORMAT="%E %U %S"
+time "$@"
