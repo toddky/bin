@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+window_info="$(tmux display-message -t "$TMUX_PANE" -p '#{session_name} #{window_name}(#{window_index}) #{pane_id}')"
+window_info="${window_info^^}"
+
+if [[ "$1" == "-" ]]; then
+	msg="$(cat)"
+else
+	msg="$*"
+fi
+
+# Skip notifications if this pane is currently active
+is_focused="$(tmux display-message -t "$TMUX_PANE" -p '#{session_attached}#{window_active}#{pane_active}')"
+[[ "$is_focused" == "111" ]] && exit 0
+
+#printf '%s\n%s' "====[ AGENT $window_info ]=====" "$msg" | slack-me -
+
+pane_id="${TMUX_PANE#%}"
+notify_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/tmux-notify"
+mkdir -p "$notify_dir"
+printf '%s\n' "$msg" > "$notify_dir/${pane_id}.txt"
+
