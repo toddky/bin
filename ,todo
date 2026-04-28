@@ -98,7 +98,7 @@ if command == 'list'
 				importance = importances[task['importance'] || -1]
 				urgency = urgencies[task['urgency'] || -1]
 				done = task['finished_at'] ? done : ' '
-				puts "#{urgency.ljust(2)}#{importance.ljust(2)}  #{bold_blue}#{id.rjust(3)}#{reset} #{task['summary']}"
+				puts "#{urgency} #{importance} #{bold_blue}#{id.rjust(3)}#{reset} #{task['summary']}"
 			end
 		end
 	end
