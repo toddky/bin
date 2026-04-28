@@ -59,6 +59,7 @@ while read line; do
 		echo "??? $line"
 	fi
  
-done < "$HOME/todo.txt"
+#done < "$HOME/todo.txt"
+done < <(sort -nr "$HOME/todo.txt")
 
 
