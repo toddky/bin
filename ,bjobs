@@ -6,9 +6,10 @@ format=()
 format+=('jobid:10')
 format+=('stat:5')
 format+=('user:10')
-format+=('queue:9')
+format+=('queue:11')
 format+=('exec_host:15')
-format+=('group')
+format+=('group:30')
+format+=('name')
 
 declare -A opts=(
 	['-o']="${format[*]}"
