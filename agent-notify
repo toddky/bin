@@ -10,7 +10,7 @@ fi
 
 agent_chats="${XDG_DATA_HOME:-$HOME/.local/share}/agent_chats"
 mkdir -p "$agent_chats"
-printf '%s\n' "$msg" > "$agent_chats/$(date +%s%N)_${TMUX_PANE#%}.txt"
+printf '%s\n' "$msg" > "$agent_chats/$(date +%Y%m%d_%H%M%S)_${TMUX_PANE#%}.txt"
 
 # Skip notifications if this pane is currently active
 is_focused="$(tmux display-message -t "$TMUX_PANE" -p '#{session_attached}#{window_active}#{pane_active}')"
