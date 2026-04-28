@@ -15,7 +15,7 @@
 - DO NOT ask for permission to do obvious next steps EXCEPT for git commands. Read the Git section.
 - When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
-- When I ask what changes are required, list each file separately with bullets for each change needed in that file.
+- When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
 - I often commit changes outside of this tool.
 - Check for existing implementations first.
 - Prefer editing existing files.
