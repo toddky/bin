@@ -133,12 +133,21 @@ case "$config" in
 		args['preview-window']="--preview-window $position:50%"
 		filter="awk '{print \$1}'"
 		;;
+	oc|opencode)
+		args['height']='--height 100%'
+		args['ansi']='--ansi'
+		args['preview']="--preview '$preview/opencode-pane {1}'"
+		args['preview-window']="--preview-window right:70%"
+		args['header']="--header 'enter: switch to pane'"
+		filter="awk '{print \$1}'"
+		;;
 	custom)
 		# Generic config driven by environment variables:
 		#   FZF_PREVIEW  - preview command (e.g. 'oc-preview {1}')
 		#   FZF_FILTER   - output filter (e.g. "awk -F. '{print \$2}'")
 		#   FZF_HEADER   - header text
 		#   FZF_HEIGHT   - height (default: 100%)
+		args['ansi']='--ansi'
 		args['height']="--height ${FZF_HEIGHT:-100%}"
 		[[ -n "$FZF_PREVIEW" ]] && args['preview']="--preview '$FZF_PREVIEW'"
 		args['preview-window']="--preview-window ${FZF_PREVIEW_WINDOW:-right:70%}"
