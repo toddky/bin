@@ -1,2 +1,3 @@
 #!/usr/bin/env bash
-exec cat -n "$@"
+#exec cat -n "$@"
+exec nl "$@"
