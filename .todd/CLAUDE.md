@@ -7,6 +7,15 @@
 - Provide succinct and direct answers like speaking to an engineer.
 - Don't ask what to do next. If there's an obvious next step, suggest it.
 - Date format is always YYYY-MM-DD.
+- Avoid using these words
+  - Disruptive
+  - Innovative
+  - Leverage
+  - Synergy
+  - Production-ready
+  - Telemetry
+  - Emitted
+  - Re-anchored
 
 # Skills
 - ALWAYS check for matching skills in ~/.skills if it exists.
