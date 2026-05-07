@@ -9,6 +9,8 @@ bqueues -l <queue-name>
 
 # Resources
 lsinfo -l | awk '($1 == "RESOURCE_NAME:") { print $2 }'
+bjobs -u all -rusage <resource>
+bhosts -s <resource>
 EOF
 
 #echo
@@ -54,7 +56,8 @@ bmod -aps "system=10.00" <jobid>
 bmod -aps "admin=10.00" <jobid>
 bmod -apsn <jobid>
 
-bjobs -l <jobid>
-bhist -l <jobid>
+# Use -UF instead of -l
+bjobs -UF <jobid>
+bhist -UF <jobid>
 EOF
 
