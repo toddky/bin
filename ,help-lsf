@@ -6,6 +6,9 @@ bhist -l -n 0 <jobid>
 
 bparams -l
 bqueues -l <queue-name>
+
+# Resources
+lsinfo -l | awk '($1 == "RESOURCE_NAME:") { print $2 }'
 EOF
 
 #echo
