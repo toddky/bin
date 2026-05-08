@@ -7,6 +7,9 @@ Style rules for all Ruby code.
 - No abbreviated locals. Use `output` not `out`, `last_line` not `last`, `message` not `msg` in new code.
 - Never use the `_path` suffix. Use `_file` or `_dir` for path variables, or the extension as the suffix (`_md`, `_txt`, `_json`). Example: `url_file`, `runtime_dir`, `readme_md`, `config_txt`. Not `url_path` or bare `url`.
 - Name generic helpers after the binary or concept they wrap: a tmux pass-through is `tmux(...)`, not `run_tmux(...)` or `tmux_cmd(...)`.
+
+## Generic Wrappers
+
 - Generic command wrappers take an explicit array of args, not a variadic splat or a string. Call as `tmux([...])`, not `tmux(...)` or `tmux("...")`. This makes it visually obvious that args are a list and avoids accidental shell-style string interpolation:
 
   ```ruby
@@ -20,7 +23,6 @@ Style rules for all Ruby code.
   tmux('send-keys', '-t', pane, message)
   tmux("send-keys -t #{pane} #{message}")
   ```
-
 ## Control Flow
 
 - Use explicit `return` statements in helpers, even when Ruby's implicit return would do the same thing. Multiple `return [nil, false]` / `return [output, true]` paths are preferred over a single trailing expression.
@@ -53,13 +55,47 @@ Style rules for all Ruby code.
   first_line = (message['blocks'] || []).dig(0, 'text', 'text').to_s.lines.first.to_s.chomp
   ```
 
-## Defensive Coercion
+## Arrays Over Concatenation
 
-Apply coercions at the lookup site, not deferred to a later guard clause.
+When building a string from multiple parts (query params, command flags, CSV fields, etc.), collect the parts in an array with `.append` and join. Do not concatenate with `\` line continuations or `+`, and don't build the array as one giant literal.
+
+```ruby
+params = []
+params.append("target_branch=#{target_encoded}")
+params.append('state=all')
+params.append('per_page=100')
+params.append("page=#{page}")
+endpoint = "projects/#{PROJECT_ID}/merge_requests?#{params.join('&')}"
+
+flags = []
+flags.append('-v')
+flags.append('-u', username)
+flags.append('--timeout', timeout.to_s)
+result = run(flags.join(' '))
+```
+
+Not:
+
+```ruby
+endpoint = "projects/#{PROJECT_ID}/merge_requests" \
+           "?target_branch=#{target_encoded}" \
+           "&state=all"
+```
+
+## Defensive Defaults
+
+Apply defaults and conversions at the lookup site, not deferred to a later guard clause.
 
 - `|| []` immediately after a hash lookup that may be nil and is about to be iterated.
 - `.to_s` immediately after `.dig(...)` so subsequent string methods don't blow up on nil.
 - Drop fallbacks when the caller now guarantees the value. `ENV.fetch('XDG_RUNTIME_DIR')` with no default; let it raise.
+- Default and convert at *each* level that can be nil, not once at the end. When chaining lookups, every type transition gets its own guard:
+
+  ```ruby
+  lines = (message['blocks'] || []).dig(0, 'text', 'text').to_s.lines
+  ```
+
+  `|| []` at the array level so `.dig` works; `.to_s` at the string level so `.lines` works. One guard at the end is not enough.
 
 ## Comments and Section Structure
 
