@@ -14,12 +14,9 @@ Style rules for all Python code.
 - Use sensible defaults for optional arguments.
 - Prefer system APIs (e.g. `pwd` module) over environment variables where available.
 
-## Paths
-
-- Use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
-
 ## Control Flow
 
+- Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
 - Use explicit `return` statements in helpers. Multiple `return None, False` / `return output, True` paths are preferred over a single trailing expression.
 - Hoist loop-invariant values out of the loop. If a value doesn't change between iterations, compute it once above the loop:
 
@@ -91,8 +88,21 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 
 - Inline single-use logic instead of creating wrapper functions to keep code simple and avoid unnecessary indirection.
 
+## Paths and Environment
+
+- Use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
+- Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
+
+## Safety
+
+- Never expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
+- Never write directly to `/tmp`. Use `tempfile.mkdtemp()` or `tempfile.NamedTemporaryFile()` and clean up with a `try/finally` or context manager.
+
 ## Comments and Section Structure
 
+- Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
+- Comments should explain *why* -- intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.
 - Standard up-front sections, in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
 - After those, name each remaining section after the step it performs in the code (`GET MESSAGES`, `SEND MESSAGES`, `POLL`, etc.). If the main section is really small, just call it `MAIN` instead of describing what it does.
