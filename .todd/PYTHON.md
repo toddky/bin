@@ -6,6 +6,8 @@ Style rules for all Python code.
 
 - No abbreviated locals. Use `output` not `out`, `last_line` not `last`, `message` not `msg` in new code.
 - Never use the `_path` suffix. Use `_file` or `_dir` for path variables, or the extension as the suffix (`_md`, `_txt`, `_json`). Example: `url_file`, `runtime_dir`, `readme_md`, `config_txt`. Not `url_path` or bare `url`.
+- Use the `num_` prefix for integer counts: `num_passes`, `num_failures`, `num_signatures`. Not `<thing>_count` or `<thing>s_seen`.
+- API field names (server / CSV / JSON keys) keep their original spelling even if they look abbreviated: `jobid`, `sigid`, `sourcecode`. This keeps grep across server and client code trivial. The "no abbreviated locals" rule does not apply to direct field mirrors.
 - Name generic helpers after the binary or concept they wrap: a tmux pass-through is `tmux(...)`, not `run_tmux(...)` or `tmux_cmd(...)`.
 
 ## Arguments
@@ -93,6 +95,11 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 - Use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
 
+## Subprocess
+
+- Prefer `subprocess.run(..., check=True)` and catch `CalledProcessError`. Only inspect `returncode` manually when you need to branch on it (e.g. forwarding a child's exit code to the caller).
+- Always pass `text=True` (or `encoding=...`) when capturing output. Don't work with bytes by default.
+
 ## Safety
 
 - Never expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
@@ -106,7 +113,7 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.
 - Standard up-front sections, in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
 - After those, name each remaining section after the step it performs in the code (`GET MESSAGES`, `SEND MESSAGES`, `POLL`, etc.). If the main section is really small, just call it `MAIN` instead of describing what it does.
-- Headers are all caps and no more than two words.
+- Headers are all caps and no more than three words.
 - Keep header order matching reading order.
 - Each header is a `#` followed by a space and 78 `=` characters, then the title line, then another `#` and 78 `=` characters:
 
