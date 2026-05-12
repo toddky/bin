@@ -5,15 +5,18 @@
 
 # stty -echo -icanon time 0 min 0
 
-while [[ -z "$key" ]]; do
-	key="$(dd bs=1 count=1 2>/dev/null)"
-done
+# read -r -n1 preserves newlines; dd + $() strips them so Enter never matches
+IFS= read -r -n1 key
 
-next='.'
-while [[ -n "$next" ]]; do
-	next="$(dd bs=1 count=1 2>/dev/null)"
-	key+="$next"
-done
+# Only slurp trailing bytes when the first byte is ESC (escape sequence).
+# Otherwise dd blocks waiting for input the user never sent.
+if [[ "$key" == $'\e' ]]; then
+	next='.'
+	while [[ -n "$next" ]]; do
+		IFS= read -r -n1 -t 0.05 next || next=''
+		key+="$next"
+	done
+fi
 
 case "$key" in
 
@@ -25,7 +28,7 @@ case "$key" in
 	$'\e[5~') echo 'pageup'  ;;
 	$'\e[6~') echo 'pagedown';;
 
-	$'\n'   ) echo 'enter'   ;;
+	$'\n'|'') echo 'enter'   ;;
 	$'\r'   ) echo 'enter'   ;;
 
 	' '     ) echo 'space'   ;;
@@ -34,4 +37,3 @@ case "$key" in
 	*       ) echo "$key";;
 	#*       ) echo -n "$key"  | xxd -p ;;
 esac
-
