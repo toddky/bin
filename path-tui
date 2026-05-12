@@ -2,13 +2,24 @@
 
 exec 3>&1 1>&2
 
+old_stty="$(stty -g)"
+stty -icanon -echo
+printf '\e[?25l'
+trap 'stty "$old_stty"; printf "\e[?25h"' EXIT
+
 dir="${1:-$PWD}"
 dir="${dir%\/}"
 
 left="$dir"
 right=''
 
-printf "\r\e[34;1m%s\e[0m/%s" "$left" "$right"
+function redraw {
+	local sep=''
+	[[ -n "$right" ]] && sep='/'
+	printf "\r\e[2K\e[34;1m%s\e[0m%s%s" "$left" "$sep" "$right"
+}
+
+redraw
 while true; do
 	key="$(getch.sh)"
 
@@ -18,19 +29,25 @@ while true; do
 			exit 1
 			;;
 		h)
-			tmp="${left%/*}"
-			right="${left#$tmp}/$right"
-			right="${right#\/}"
-			left="$tmp"
-			printf "\r\e[34;1m%s\e[0m/%s" "$left" "$right"
+			# Shrink highlight: pop last segment of left into right
+			[[ "$left" == */* ]] || continue
+			segment="${left##*/}"
+			left="${left%/*}"
+			right="${right:+${segment}/${right}}"
+			right="${right:-$segment}"
+			redraw
 			;;
 		l)
-			tmp="${right#*/}"
-			append="${right%$tmp}"
-			left="$left/$append"
-			left="${left%\/}"
-			right="$tmp"
-			printf "\r\e[34;1m%s\e[0m/%s" "$left" "$right"
+			# Grow highlight: pop first segment of right into left
+			[[ -n "$right" ]] || continue
+			segment="${right%%/*}"
+			if [[ "$right" == */* ]]; then
+				right="${right#*/}"
+			else
+				right=''
+			fi
+			left="${left}/${segment}"
+			redraw
 			;;
 		enter)
 			printf "\e[2K\r"
@@ -40,4 +57,3 @@ while true; do
 	esac
 
 done
-
