@@ -9,12 +9,36 @@ Style rules for all Python code.
 - Use the `num_` prefix for integer counts: `num_passes`, `num_failures`, `num_signatures`. Not `<thing>_count` or `<thing>s_seen`.
 - API field names (server / CSV / JSON keys) keep their original spelling even if they look abbreviated: `jobid`, `sigid`, `sourcecode`. This keeps grep across server and client code trivial. The "no abbreviated locals" rule does not apply to direct field mirrors.
 - Name generic helpers after the binary or concept they wrap: a tmux pass-through is `tmux(...)`, not `run_tmux(...)` or `tmux_cmd(...)`.
+- For a parsed command line, name the head `command` and the tail `args` (the list of arguments after the command). Not `first`, `first_token`, `head`, or `cmd`.
+
+  ```python
+  command, *args = shlex.split(line)
+  ```
+
+- Prefer `word` / `words` over `token` / `tokens` for shell-split results. Reserve "token" for typed lexer output, not whitespace-split strings.
 
 ## Arguments
 
 - Use argparse instead of manual sys.argv handling.
 - Use sensible defaults for optional arguments.
 - Prefer system APIs (e.g. `pwd` module) over environment variables where available.
+
+## Shell Strings
+
+- Use `shlex.split` to tokenize a shell command line. `str.split` and `str.split(maxsplit=N)` mangle quoted arguments and paths with spaces. Whenever you `shlex.split`, rebuild with `shlex.join` — never `' '.join(...)` or character-offset slicing of the original string. The split/join pair is symmetric and re-quotes anything that needs it.
+
+  ```python
+  words = shlex.split(line)
+  command = words[0]
+  args = words[1:]
+  return shlex.join([replacement] + args)
+  ```
+
+  Not:
+
+  ```python
+  return replacement + line[len(command):]
+  ```
 
 ## Control Flow
 
