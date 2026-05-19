@@ -21,6 +21,10 @@ bwrap_args+=(--ro-bind /etc/hosts /etc/hosts)
 # uid/gid name resolution -- prevents whoami/groups errors inside the sandbox.
 bwrap_args+=(--ro-bind /etc/passwd /etc/passwd)
 bwrap_args+=(--ro-bind /etc/group /etc/group)
+# NSS config -- tells libc which lookup modules to use (files, sss, etc.).
+bwrap_args+=(--ro-bind /etc/nsswitch.conf /etc/nsswitch.conf)
+# LDAP/AD uid/gid lookups go through SSSD -- bind the NSS socket so whoami works for domain users.
+[[ -S /var/lib/sss/pipes/nss ]] && bwrap_args+=(--bind /var/lib/sss/pipes/nss /var/lib/sss/pipes/nss)
 # Drop all namespace sharing (network, IPC, mount points, etc.).
 bwrap_args+=(--unshare-all)
 # Kill the sandbox if the parent process dies to prevent orphaned processes.
