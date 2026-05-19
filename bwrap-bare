@@ -2,6 +2,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# https://patrickmccanna.net/a-better-way-to-limit-claude-code-and-other-coding-agents-access-to-secrets/
 bwrap_args=()
 # Mount host /usr read-only -- bare minimum for binaries and libraries to exist inside the sandbox.
 bwrap_args+=(--ro-bind /usr /usr)
@@ -12,6 +13,14 @@ bwrap_args+=(--symlink usr/bin /bin)
 # /proc and /dev are needed by most programs; many syscalls fail without them.
 bwrap_args+=(--proc /proc)
 bwrap_args+=(--dev /dev)
+# Isolated /tmp so sandbox writes don't leak to host.
+bwrap_args+=(--tmpfs /tmp)
+# DNS and hostname resolution -- needed if --share-net is ever added.
+bwrap_args+=(--ro-bind /etc/resolv.conf /etc/resolv.conf)
+bwrap_args+=(--ro-bind /etc/hosts /etc/hosts)
+# uid/gid name resolution -- prevents whoami/groups errors inside the sandbox.
+bwrap_args+=(--ro-bind /etc/passwd /etc/passwd)
+bwrap_args+=(--ro-bind /etc/group /etc/group)
 # Drop all namespace sharing (network, IPC, mount points, etc.).
 bwrap_args+=(--unshare-all)
 # Kill the sandbox if the parent process dies to prevent orphaned processes.
