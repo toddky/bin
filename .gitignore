@@ -157,6 +157,7 @@
 !/bshell
 !/bsplit
 !/bwhy
+!/bwrap-bare
 !/catn
 !/catw
 !/ccstatusline

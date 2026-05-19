@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+bwrap_args=()
+# Mount host /usr read-only -- bare minimum for binaries and libraries to exist inside the sandbox.
+bwrap_args+=(--ro-bind /usr /usr)
+# Programs expect /lib, /lib64, /bin at the root; these symlinks redirect them into /usr.
+bwrap_args+=(--symlink usr/lib /lib)
+bwrap_args+=(--symlink usr/lib64 /lib64)
+bwrap_args+=(--symlink usr/bin /bin)
+# /proc and /dev are needed by most programs; many syscalls fail without them.
+bwrap_args+=(--proc /proc)
+bwrap_args+=(--dev /dev)
+# Drop all namespace sharing (network, IPC, mount points, etc.).
+bwrap_args+=(--unshare-all)
+# Kill the sandbox if the parent process dies to prevent orphaned processes.
+bwrap_args+=(--die-with-parent)
+
+cmd=("${SHELL:-/bin/sh}")
+[[ $# -gt 0 ]] && cmd=("$@")
+
+exec bwrap "${bwrap_args[@]}" "${cmd[@]}"
