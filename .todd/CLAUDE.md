@@ -37,6 +37,8 @@
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
 - When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
+- To find a file in the current repo, use `git ls-files | grep <filename>` instead of find.
+- If you must search outside the repo, always use `timeout 10 find <path> -name <filename>`.
 
 # Commands
 - I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
