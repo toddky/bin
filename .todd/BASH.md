@@ -57,6 +57,7 @@ git push -u origin "$branch" \
 
 - Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`.
 - Use `basename` and `dirname` for basename/dirname operations. Prefer these over `${var##*/}` and `${var%/*}` shell parameter expansion.
+- Always write stderr redirects as `1>&2`, not `>&2`. Being explicit about the source fd makes the intent obvious.
 
 ## Control Flow
 
@@ -94,6 +95,11 @@ git push -u origin "$branch" \
 
 - Never expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
 - Never run destructive commands (`rm -rf`, `git reset --hard`, etc.) without explicit user instruction.
+
+## Error Handling
+
+- Do not use `set -euo pipefail`. Handle each error explicitly at the call site so failures get a meaningful message instead of a silent abort.
+- Check return codes with `if !`, `||`, or explicit `$?` checks. Print a clear error to `>&2` and exit with a non-zero code when something fails.
 
 ## New Scripts
 
