@@ -1,38 +1,103 @@
-#!/usr/bin/env bash
+#!/usr/bin/env perl
+# ==============================================================================
+# USE
+# ==============================================================================
+use strict;
+use warnings;
+use File::Basename qw(basename dirname);
 
-exec &> >(tee du.txt)
 
-du 2>/dev/null | while read -r size dir; do
-	size_mb="$((size/1024))"
-	((size_mb<100)) && continue
+# ==============================================================================
+# VARIABLES
+# ==============================================================================
+my @units = ('K', 'M', 'G', 'T');
+my %size_kb;
+my %children;
 
-	case "$dir" in
-		*/.git/*)                    continue;;
-		*/.venv/*)                   continue;;
-		*/venv/*)                    continue;;
-		*/logs/*)                    continue;;
-		*/lib/*)                     continue;;
+my @skip_patterns = (
+	qr{/\.git/},
+	qr{/\.venv/},
+	qr{/venv/},
+	qr{/logs/},
+	qr{/lib/},
+	qr{/external/},
+	qr{/execroot/},
+	qr{/bazel_output_user_root/},
+	qr{/frame_0/},
+	qr{/zrci_run/},
+	qr{/backend_default/},
+	qr{\.vdb/},
+	qr{\.zCui\.work/},
+);
 
-		# Bazel
-		*/external/*)                continue;;
-		*/execroot/*)                continue;;
-		*/bazel_output_user_root/*)  continue;;
 
-		# Zebu
-		*/frame_0/*)                 continue;;
-		*/zrci_run/*)                continue;;
-		*/backend_default/*)         continue;;
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+sub format_size {
+	my $size = shift;
+	my $units_idx = 0;
+	while ($size >= 1024 && $units_idx < $#units) {
+		$size /= 1024;
+		$units_idx++;
+	}
+	if ($size >= 100) { return sprintf('%4.0f%s', $size, $units[$units_idx]); }
+	if ($size >= 10)  { return sprintf('%4.1f%s', $size, $units[$units_idx]); }
+	return sprintf('%4.2f%s', $size, $units[$units_idx]);
+}
 
-		# Directory extension
-		*.vdb/*)                     continue;;
-		*.zCui.work/*)               continue;;
-	esac
+sub print_tree {
+	my ($dir, $depth) = @_;
+	my $name = $depth == 0 ? $dir : basename($dir);
+	printf "%6s  %s%s\n", format_size($size_kb{$dir}), '  ' x $depth, $name;
+	my @children_sorted = sort { $size_kb{$b} <=> $size_kb{$a} } @{$children{$dir} || []};
+	print_tree($_, $depth + 1) for @children_sorted;
+}
 
-	size="$(numfmt --from-unit=1024 --to iec $size)"
 
-	printf '%8s  %s\n' "$size" "$dir"
-	#printf '%8s  %s\n' "$size_mb" "$dir"
-	[[ "$(dirname "$dir")" == '.' ]] && echo
-	[[ -d "$dir/.git" ]] && echo
-done
+# ==============================================================================
+# SCAN
+# ==============================================================================
+open(STDERR, '>', '/dev/null') or die;
+open(my $output_fh, '|-', 'tee', 'du.txt') or die "tee: $!";
+select $output_fh;
 
+open(my $du_fh, '-|', 'du') or die "du: $!";
+while (my $line = <$du_fh>) {
+	chomp $line;
+	my ($size, $dir) = split /\t/, $line, 2;
+	next unless defined $dir;
+	next if $size / 1024 < 100;
+	my $skipped = 0;
+	for my $pattern (@skip_patterns) {
+		if ($dir =~ $pattern) { $skipped = 1; last; }
+	}
+	next if $skipped;
+	$size_kb{$dir} = $size;
+}
+close $du_fh;
+
+
+# ==============================================================================
+# BUILD TREE
+# ==============================================================================
+for my $dir (keys %size_kb) {
+	my $parent = dirname($dir);
+	next unless exists $size_kb{$parent};
+	next if $parent eq $dir;
+	push @{$children{$parent}}, $dir;
+}
+
+
+# ==============================================================================
+# PRINT TREE
+# ==============================================================================
+if (exists $size_kb{'.'}) {
+	printf "%6s  .\n\n", format_size($size_kb{'.'});
+}
+my @top_level = grep { dirname($_) eq '.' && $_ ne '.' } keys %size_kb;
+my @roots = sort { $size_kb{$b} <=> $size_kb{$a} } @top_level;
+for my $root (@roots) {
+	print_tree($root, 1);
+	print "\n";
+}
