@@ -85,6 +85,20 @@ git push -u origin "$branch" \
 - Prefer native formatting options over post-processing. Use `tmux list-panes -F` format strings instead of piping through `cut`/`awk`/`sed` to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
 
+## Traps and exec
+
+If you need a cleanup trap, don't use `exec` — it replaces the shell process so the trap never fires:
+
+```bash
+# Good: trap fires when child exits
+trap 'rm -f "$marker"' EXIT
+"$program" "$@"
+
+# Bad: trap never fires because exec replaces the shell
+trap 'rm -f "$marker"' EXIT
+exec "$program" "$@"
+```
+
 ## Command Pipelines
 
 Collect `sed` expressions in an array with `-e` flags instead of piping multiple `sed`s:
