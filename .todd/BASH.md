@@ -85,6 +85,21 @@ git push -u origin "$branch" \
 - Prefer native formatting options over post-processing. Use `tmux list-panes -F` format strings instead of piping through `cut`/`awk`/`sed` to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
 
+## Command Pipelines
+
+Collect `sed` expressions in an array with `-e` flags instead of piping multiple `sed`s:
+
+```bash
+# Good
+sed_args=()
+sed_args+=(-e 's/^ *//')
+sed_args+=(-e 's/  \+v[0-9].*//')
+sed "${sed_args[@]}"
+
+# Bad
+sed 's/^ *//' | sed 's/  \+v[0-9].*//'
+```
+
 ## Paths and Environment
 
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
