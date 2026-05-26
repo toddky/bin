@@ -46,7 +46,8 @@
 
 # Git
 - NEVER COMMIT SECRETS.
-- CRITICAL: NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later.
+- CRITICAL: NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
+- "Update the script", "fix the script", "edit the file" etc. are NOT permission to commit. Only "commit" or "git commit" counts as explicit permission.
 - NEVER undo/reset commits unless explicitly asked.
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
 - Before committing, run `realpath` on each file to resolve symlinks and ensure you're committing to the correct repo (it may be in a subrepo or symlinked elsewhere).
