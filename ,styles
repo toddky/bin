@@ -1,0 +1,52 @@
+#!/bin/bash
+# Show ANSI SGR text style attributes with codes and a sample.
+
+sample="The quick brown fox 0123"
+
+print_style() {
+	local code="$1" name="$2"
+	printf "  \e[%sm%-5s %-22s %s\e[0m\n" "$code" "$code" "$name" "$sample"
+}
+
+echo "Single attributes"
+print_style 0 "reset"
+print_style 1 "bold"
+print_style 2 "dim"
+print_style 3 "italic"
+print_style 4 "underline"
+print_style 7 "reverse"
+print_style 8 "hidden"
+print_style 9 "strikethrough"
+
+echo
+echo "Combinations"
+print_style "1;3"   "bold italic"
+print_style "1;4"   "bold underline"
+print_style "3;4"   "italic underline"
+print_style "1;3;4" "bold italic underline"
+print_style "1;9"   "bold strikethrough"
+print_style "4;7"   "underline reverse"
+
+echo
+echo "Foreground colors (with bold variant)"
+for c in 30 31 32 33 34 35 36 37; do
+	name=$(case $c in
+		30) echo black ;; 31) echo red ;; 32) echo green ;; 33) echo yellow ;;
+		34) echo blue ;; 35) echo magenta ;; 36) echo cyan ;; 37) echo white ;;
+	esac)
+	printf "  \e[%sm%-4s %-9s %s\e[0m   \e[1;%sm%-5s %-13s %s\e[0m\n" \
+		"$c" "$c" "$name" "$sample" \
+		"$c" "1;$c" "bold $name" "$sample"
+done
+
+echo
+echo "Bright foreground colors"
+for c in 90 91 92 93 94 95 96 97; do
+	name=$(case $c in
+		90) echo br-black ;;   91) echo br-red ;;     92) echo br-green ;;   93) echo br-yellow ;;
+		94) echo br-blue ;;    95) echo br-magenta ;; 96) echo br-cyan ;;    97) echo br-white ;;
+	esac)
+	printf "  \e[%sm%-3s %-10s %s\e[0m\n" "$c" "$c" "$name" "$sample"
+done
+
+echo
