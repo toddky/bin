@@ -148,6 +148,18 @@ def list_models():
     for model in models['data']:
         print(f"- {model['id']}" )
 
+def show_spend():
+    from datetime import datetime, timezone
+    import time
+    response = get("key/info", timeout=5)
+    info = response.json()['info']
+    spend = info['spend']
+    max_budget = info['max_budget']
+    reset_utc = datetime.fromisoformat(info['budget_reset_at'])
+    local_tz = datetime.now(timezone.utc).astimezone().tzinfo
+    reset_local = reset_utc.astimezone(local_tz).strftime('%Y-%m-%d %I:%M %p %Z')
+    print(f"Spend: ${spend:.2f} / ${max_budget:.2f} (resets {reset_local})")
+
 
 # ==============================================================================
 # MAIN
@@ -178,11 +190,16 @@ Provide comments for other options rather than printing them outside of code blo
     parser.add_argument('--system-prompt', '-s', default=default_system_prompt, help='System prompt to use')
     parser.add_argument('--streaming'    , '-i', action='store_true', help='Enable streaming mode (default: False)')
     parser.add_argument('--list'         , '-l', action='store_true', help='List available models and exit')
+    parser.add_argument('--spend'        ,       action='store_true', help='Show current spend and budget')
     parser.add_argument('question', nargs='*', help='Question to ask the AI. Use "-" to read from stdin.')
     args = parser.parse_args()
 
     if args.list:
         list_models()
+        sys.exit(0)
+
+    if args.spend:
+        show_spend()
         sys.exit(0)
 
     # Get question from command line or stdin
