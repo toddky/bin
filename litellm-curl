@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# USAGE: litellm-curl <endpoint> [curl args...]
+# DESCRIPTION: curl LiteLLM API with authentication
+
+API_KEY="$(cat "$HOME/.litellm.key")" || exit $?
+LITELLM_URL="$(cat "$HOME/.litellm.url")" || exit $?
+
+endpoint="${1:-models}"
+shift
+
+# Strip base URL prefix if caller passed a full URL
+endpoint="${endpoint#"$LITELLM_URL"/}"
+
+# Create a temporary file for the auth header
+header_file="$(mktemp)"
+trap 'rm -f "$header_file"' EXIT
+printf "Authorization: Bearer %s" "$API_KEY" > "$header_file"
+
+url="$LITELLM_URL/$endpoint"
+
+#debug=1
+
+curl_args=()
+((debug)) || curl_args+=(-s)
+curl_args+=(--header @"$header_file" --header "Content-Type: application/json" "$@" "$url")
+
+((debug)) && echo "curl ${curl_args[*]}" >&2
+curl "${curl_args[@]}"
