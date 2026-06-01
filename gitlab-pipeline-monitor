@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# USAGE: gitlab-pipeline-monitor <project> <pipeline_id>
+# DESCRIPTION: Poll a GitLab pipeline and print a line whenever any job's status changes.
+project="${1:?Usage: gitlab-pipeline-monitor <project> <pipeline_id>}"
+pipeline_id="${2:?Usage: gitlab-pipeline-monitor <project> <pipeline_id>}"
+encoded_project="$(jq -rn --arg p "$project" '$p | @uri')"
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+function fetch_job_states() {
+	gitlab-curl "projects/${encoded_project}/pipelines/${pipeline_id}/jobs?per_page=100" 2>/dev/null \
+		| jq -r '[.[] | "\(.name): \(.status)"] | sort | join("\n")'
+}
+
+function pipeline_is_done() {
+	local states="${1}"
+	echo "${states}" | grep -qE "running|pending|created" && return 1
+	return 0
+}
+
+
+# ==============================================================================
+# POLL
+# ==============================================================================
+echo "[$(date '+%H:%M:%S')] Monitoring pipeline ${pipeline_id}..."
+
+prev_states=""
+while true; do
+	current_states="$(fetch_job_states)"
+
+	if [[ -z "${current_states}" ]]; then
+		echo "[$(date '+%H:%M:%S')] WARNING: no jobs returned, retrying..." 1>&2
+		sleep 30
+		continue
+	fi
+
+	if [[ "${current_states}" != "${prev_states}" ]]; then
+		changed_jobs="$(diff <(echo "${prev_states}") <(echo "${current_states}") \
+			| grep '^>' | sed 's/^> //')"
+		if [[ -n "${changed_jobs}" && -n "${prev_states}" ]]; then
+			while IFS= read -r line; do
+				echo "[$(date '+%H:%M:%S')] ${line}"
+			done <<< "${changed_jobs}"
+		fi
+		prev_states="${current_states}"
+	fi
+
+	if pipeline_is_done "${current_states}"; then
+		num_passed="$(echo "${current_states}" | grep -c ': success')"
+		num_failed="$(echo "${current_states}" | grep -c ': failed')"
+		num_skipped="$(echo "${current_states}" | grep -c ': skipped')"
+		echo "[$(date '+%H:%M:%S')] Pipeline ${pipeline_id} finished: ${num_passed} passed, ${num_failed} failed, ${num_skipped} skipped."
+		break
+	fi
+
+	sleep 30
+done
+
