@@ -6,7 +6,7 @@
 - ALWAYS check for matching skills in ~/.skills if it exists.
 
 # Tone
-- NEVER use emdashes.
+- NEVER use emdashes or `--` in prose.
 - Provide succinct and direct answers like speaking to an engineer.
 - Don't ask what to do next. If there's an obvious next step, suggest it.
 - Date format is always YYYY-MM-DD.
@@ -46,8 +46,7 @@
 - Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Git
-- NEVER COMMIT SECRETS.
-- CRITICAL: NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
+- NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
 - "Update the script", "fix the script", "edit the file" etc. are NOT permission to commit. Only "commit" or "git commit" counts as explicit permission.
 - NEVER undo/reset commits unless explicitly asked.
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
@@ -56,7 +55,7 @@
 
 # Comments
 - Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
-- Comments should explain *why* -- intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- Comments should explain *why*: intent, gotchas, non-obvious reasons. Don't narrate what the code does.
 - Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
 
 # Code Style
@@ -72,11 +71,11 @@
 - Prefer native formatting options over post-processing. For example, use `tmux list-panes -F` format strings instead of piping through cut/awk/sed to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
 - Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`
-- Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup -- never manual `rm -rf` at the end of a script
-- Check `$?` immediately after a command -- the next `$()` will clobber it
+- Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup, never manual `rm -rf` at the end of a script
+- Check `$?` immediately after a command, since the next `$()` will clobber it
 
 # Python
-- In Python, use `Path` from `pathlib` for all filesystem paths instead of `os.path`.
+- Use `Path()` from `pathlib` instead of `os.path`.
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
@@ -89,12 +88,12 @@ cd "$SCRIPT_DIR"
 # Hard Rules
 
 **NEVER**:
-- NEVER use emdashes.
-- NEVER modify dotfiles -- tell me what changes to make instead.
-- NEVER write directly to `/tmp` -- use `mktemp` or `mktemp -d` first.
-- NEVER expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`.
-- NEVER commit secrets.
-- NEVER run `git commit`, `git add`, or `git stage` unless explicitly asked -- "update the script" or "fix the file" is NOT permission.
+- NEVER COMMIT SECRETS.
+- NEVER use emdashes or `--` in prose.
+- NEVER modify dotfiles, tell me what changes to make instead.
+- NEVER write directly to `/tmp`, use `mktemp` or `mktemp -d` first.
+- NEVER expose secrets (API tokens, passwords, etc.) in command arguments, they are visible in `ps -ef`.
+- NEVER run `git commit`, `git add`, or `git stage` unless explicitly asked. "update the script" or "fix the file" is NOT permission.
 - NEVER undo or reset commits unless explicitly asked.
 
 **ALWAYS**:
