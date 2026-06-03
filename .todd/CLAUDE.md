@@ -32,8 +32,6 @@
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it
 - When fixing bugs, fix the root cause, not the symptom.
-- After writing or editing a Python file, always run `python3 -m py_compile <file>` to verify syntax.
-- After writing or editing a Bash file, always run `bash -n <file>` to verify syntax.
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
@@ -75,6 +73,7 @@
 - Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`
 - Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup, never manual `rm -rf` at the end of a script
 - Check `$?` immediately after a command, since the next `$()` will clobber it
+- After writing or editing a Bash file, run `bash -n <file>` to verify syntax.
 
 # Commands
 - I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
@@ -82,6 +81,7 @@
 
 # Python
 - Use `Path()` from `pathlib` instead of `os.path`.
+- After writing or editing a Python file, run `python3 -m py_compile <file>` to verify syntax.
 
 # New Script
 When I tell you to write a new script, it usually means that it has to run from a specific directory so it should start with:
