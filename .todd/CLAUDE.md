@@ -24,7 +24,6 @@
 # Workflow
 - DO NOT ask for permission for obvious next steps that are reversible and have no external side effects (running tests, editing files, building, reading, GET requests, git fetch).
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE requests) actions. "Is X safe to delete?" is a question, not permission.
-- When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
 - When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
 - I often commit changes outside of this tool.
@@ -35,6 +34,9 @@
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
+
+# Searching
+- When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
 - To find a file in the current repo, use `git ls-files | grep <filename>` instead of find.
 - If you must search outside the repo, always use `timeout 10 find <path> -name <filename>`.
