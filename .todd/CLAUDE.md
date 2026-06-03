@@ -10,6 +10,7 @@
 - Provide succinct and direct answers like speaking to an engineer.
 - Don't ask what to do next. If one step is obvious, suggest it; if several are reasonable, list them numbered and recommend one.
 - Number every question that needs a decision or confirmation, even a single one.
+- When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
 - Date format is always YYYY-MM-DD.
 - Avoid using these words and all their inflected forms (plurals, tenses, etc.)
   - Disruptive
@@ -25,7 +26,6 @@
 - DO NOT ask for permission for obvious next steps that are reversible and have no external side effects (running tests, editing files, building, reading, GET requests, git fetch).
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE requests) actions. "Is X safe to delete?" is a question, not permission.
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
-- When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
 - I often commit changes outside of this tool.
 - Check for existing implementations first.
 - Prefer editing existing files.
@@ -37,9 +37,9 @@
 
 # Searching
 - When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
+- To find a file in the current repo, use `git ls-files --full-name ':/' | grep -i <filename>` instead of find.
+- If you must search outside the repo, always use `timeout 10 find <path> -name .git -prune -o -name <filename> -print`. If it's too slow, narrow the scope: use a more specific path, add `-maxdepth`, or prune large directories.
 - When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
-- To find a file in the current repo, use `git ls-files | grep <filename>` instead of find.
-- If you must search outside the repo, always use `timeout 10 find <path> -name <filename>`.
 
 # Git
 - NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
