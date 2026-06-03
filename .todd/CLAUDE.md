@@ -2,6 +2,9 @@
 # System Prompt
 - ALWAYS read ~/LOCAL_CLAUDE.md if it exists.
 
+# Skills
+- ALWAYS check for matching skills in ~/.skills if it exists.
+
 # Tone
 - NEVER use emdashes.
 - Provide succinct and direct answers like speaking to an engineer.
@@ -18,11 +21,9 @@
   - Emitted
   - Re-anchored
 
-# Skills
-- ALWAYS check for matching skills in ~/.skills if it exists.
-
 # Workflow
-- DO NOT ask for permission to do obvious next steps EXCEPT for git commands. Read the Git section.
+- DO NOT ask for permission for obvious next steps that are reversible and have no external side effects (running tests, editing files, building, reading, GET requests, git fetch).
+- ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE requests) actions. "Is X safe to delete?" is a question, not permission.
 - When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - NEVER modify my dotfiles, just tell me what changes to make and I will make them.
 - When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
@@ -84,4 +85,20 @@ When I tell you to write a new script, it usually means that it has to run from 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 ```
+
+# Hard Rules
+
+**NEVER**:
+- NEVER use emdashes.
+- NEVER modify dotfiles -- tell me what changes to make instead.
+- NEVER write directly to `/tmp` -- use `mktemp` or `mktemp -d` first.
+- NEVER expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`.
+- NEVER commit secrets.
+- NEVER run `git commit`, `git add`, or `git stage` unless explicitly asked -- "update the script" or "fix the file" is NOT permission.
+- NEVER undo or reset commits unless explicitly asked.
+
+**ALWAYS**:
+- ALWAYS read `~/LOCAL_CLAUDE.md` if it exists.
+- ALWAYS check for matching skills in `~/.skills` if it exists.
+- ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
 
