@@ -8,17 +8,17 @@
 # Tone
 - NEVER use emdashes or `--` in prose.
 - Provide succinct and direct answers like speaking to an engineer.
-- Don't ask what to do next. If there's an obvious next step, suggest it.
+- Don't ask what to do next. If one step is obvious, suggest it; if several are reasonable, list them numbered and recommend one.
+- Number every question that needs a decision or confirmation, even a single one.
 - Date format is always YYYY-MM-DD.
-- When asking questions that require confirmation or a decision, always number them, even if there is only one question.
-- Avoid using these words
+- Avoid using these words and all their inflected forms (plurals, tenses, etc.)
   - Disruptive
   - Innovative
   - Leverage
   - Synergy
   - Production-ready
   - Telemetry
-  - Emitted
+  - Emit
   - Re-anchored
 
 # Workflow
@@ -40,10 +40,6 @@
 - When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
 - To find a file in the current repo, use `git ls-files | grep <filename>` instead of find.
 - If you must search outside the repo, always use `timeout 10 find <path> -name <filename>`.
-
-# Commands
-- I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
-- Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Git
 - NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
@@ -73,6 +69,10 @@
 - Quote all `$()` command substitutions: `foo="$(bar)"` not `foo=$(bar)`
 - Use `trap 'rm -rf "$tmpdir"' EXIT` for temp dir cleanup, never manual `rm -rf` at the end of a script
 - Check `$?` immediately after a command, since the next `$()` will clobber it
+
+# Commands
+- I have custom scripts prefixed with a comma (e.g. `,claude`). The comma is part of the command name, not a typo.
+- Use `jq` for JSON parsing instead of `python3 -c "import json; ..."`.
 
 # Python
 - Use `Path()` from `pathlib` instead of `os.path`.
