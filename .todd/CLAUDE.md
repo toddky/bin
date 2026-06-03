@@ -61,6 +61,8 @@
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
 - DO NOT write over-engineered code when a simpler approach works (e.g., writing .sh files to disk and re-reading them instead of pipe stdout to stdin).
 - Prefer inlining single-use helpers unless the logic is genuinely complex or reused meaningfully.
+- Be boring and obvious. Choose the clear solution over the clever one.
+- Single responsibility per unit. If it needs explaining, it's too complex.
 
 # Error Handling
 - Prefer checking for the error condition upfront (LBYL, look before you leap) over catching the exception (EAFP, easier to ask forgiveness than permission). For example, test for None rather than catching the resulting error. Use exception handling when a check is not practical.
