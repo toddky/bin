@@ -62,6 +62,12 @@
 - DO NOT write over-engineered code when a simpler approach works (e.g., writing .sh files to disk and re-reading them instead of pipe stdout to stdin).
 - Prefer inlining single-use helpers unless the logic is genuinely complex or reused meaningfully.
 
+# Error Handling
+- Prefer checking for the error condition upfront (LBYL, look before you leap) over catching the exception (EAFP, easier to ask forgiveness than permission). For example, test for None rather than catching the resulting error. Use exception handling when a check is not practical.
+- Fail early and loud with descriptive messages that include context for debugging (what was being attempted, relevant values).
+- Error messages should say how to fix the problem or what to do next, not just what failed.
+- Only swallow an exception when you specifically expect it and have decided it's safe; catch the narrow type, not bare `except`, and log a warning unless silence is truly intended.
+
 # Bash
 - Use [[ ]] instead of [ ]
 - Prefer native formatting options over post-processing. For example, use `tmux list-panes -F` format strings instead of piping through cut/awk/sed to rearrange fields.
