@@ -16,7 +16,7 @@ result = subprocess.run(cmd, capture_output=True)
 pane_contents = result.stdout.decode('utf-8')
 
 prompt_re = r'^todd.*»\s*(.*)$'
-timestamp_re = '\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
+timestamp_re = r'\[\d{2}:\d{2}:\d{2}\] (Started|Finished)'
 exited_re = r'\(exited \d+\)'
 
 in_command = False
