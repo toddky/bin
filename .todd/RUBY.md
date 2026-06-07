@@ -97,6 +97,22 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 
   `|| []` at the array level so `.dig` works; `.to_s` at the string level so `.lines` works. One guard at the end is not enough.
 
+## No Aligned Continuations
+
+Don't align continuation lines under a receiver. Break long chains into separate statements with named locals.
+
+```ruby
+grouped = entries.group_by { |entry| entry.kind }
+counts = grouped.transform_values(&:length)
+```
+
+Not:
+
+```ruby
+counts = entries.group_by { |entry| entry.kind }
+                .transform_values(&:length)
+```
+
 ## Comments and Section Structure
 
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.
