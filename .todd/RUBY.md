@@ -42,6 +42,23 @@ Style rules for all Ruby code.
       ...
   end
   ```
+
+  Same for a guarded collection before iterating. Write:
+
+  ```ruby
+  rows = logs.is_a?(Array) ? logs : []
+  rows.each do |row|
+      ...
+  end
+  ```
+
+  Not:
+
+  ```ruby
+  (logs.is_a?(Array) ? logs : []).each do |row|
+      ...
+  end
+  ```
 - Hoist nested chains into named locals before they're used. Write:
 
   ```ruby
