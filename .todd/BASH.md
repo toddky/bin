@@ -59,6 +59,26 @@ git push -u origin "$branch" \
 - Use `basename` and `dirname` for basename/dirname operations. Prefer these over `${var##*/}` and `${var%/*}` shell parameter expansion.
 - Always write stderr redirects as `1>&2`, not `>&2`. Being explicit about the source fd makes the intent obvious.
 
+## Multiline Strings
+
+Use a heredoc to capture multi-line output into a variable:
+
+```bash
+read -r -d '' result <<EOF
+$first_line
+$second_line
+EOF
+```
+
+Add `IFS=` before `read` to preserve leading/trailing whitespace.
+
+Not:
+
+```bash
+result="$first_line
+$second_line"
+```
+
 ## Control Flow
 
 - Check `$?` immediately after a command -- the next `$()` will clobber it.
