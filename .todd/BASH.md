@@ -12,21 +12,21 @@ Style rules for all Bash code.
 
 ## Functions
 
-- Always use the `function` keyword when declaring functions.
+Always use the `function` keyword when declaring functions.
 
-  ```bash
-  function my_func() {
-  	echo "hello"
-  }
-  ```
+```bash
+function my_func() {
+    echo "hello"
+}
+```
 
-  Not:
+Not:
 
-  ```bash
-  my_func() {
-  	echo "hello"
-  }
-  ```
+```bash
+my_func() {
+    echo "hello"
+}
+```
 
 ## Conditionals
 
@@ -51,6 +51,22 @@ Not:
 git push -u origin "$branch" \
   -o merge_request.create \
   -o "merge_request.target=${target}"
+```
+
+## Argument Parsing
+
+Loop with `while [[ $# -ge 1 ]]` and shift at the top. Match flags with a `case`. Unknown args print an error and exit. Flags that take a value consume `$1` with a second `shift`; boolean flags just set a variable.
+
+```bash
+while [[ $# -ge 1 ]]; do
+    arg="$1" && shift
+    case "$arg" in
+        --dryrun) dryrun=1;;
+        --force) force=1;;
+        --help) print_usage; exit 0;;
+        *) echo "ERROR: unknown argument: $arg" 1>&2; exit 1;;
+    esac
+done
 ```
 
 ## Shell Strings
