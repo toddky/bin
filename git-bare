@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# USAGE: git bare <url> [dir]
+# DESCRIPTION: Clone a bare repo into <dir>/.git, fix fetch refspec, and add a worktree for the default branch
+
+url="$1"
+dir="$2"
+
+if [[ -z "$url" ]]; then
+	print-error "usage: git bare <url> [dir]"
+	exit 1
+fi
+
+if [[ -z "$dir" ]]; then
+	# Derive directory name from URL, stripping .git suffix
+	dir="$(basename "$url" .git)"
+fi
+
+print-run git clone --bare "$url" "$dir/.git" || exit $?
+cd "$dir" || exit $?
+
+print-run git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" || exit $?
+print-run git fetch origin || exit $?
+
+# HEAD is written by the bare clone; no network needed
+default_branch="$(git symbolic-ref --short HEAD)" || exit $?
+
+if [[ -z "$default_branch" ]]; then
+	print-error "could not detect default branch"
+	exit 1
+fi
+
+print-run git worktree add "$default_branch" "$default_branch" || exit $?
+print-run git -C "$default_branch" branch --set-upstream-to="origin/$default_branch" "$default_branch" || exit $?
+print-info "ready — cd $dir/$default_branch"
