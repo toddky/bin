@@ -33,6 +33,32 @@ my_func() {
 - Use `[[ ]]` instead of `[ ]`.
 - Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
 
+## Boolean Flags
+
+Use integer flags checked with `(( ))`, not `true`/`false` strings.
+
+```bash
+needs_rebuild=0
+if [[ ! -d "$cache_dir" ]]; then
+    needs_rebuild=1
+fi
+if (( needs_rebuild )); then
+    rebuild
+fi
+```
+
+Not:
+
+```bash
+needs_rebuild=false
+if [[ ! -d "$cache_dir" ]]; then
+    needs_rebuild=true
+fi
+if [[ "$needs_rebuild" == true ]]; then
+    rebuild
+fi
+```
+
 ## Arrays Over Concatenation
 
 When building a command from multiple parts (flags, arguments, etc.), collect the parts in an array and expand it. Do not concatenate with string interpolation or `\` line continuations.
