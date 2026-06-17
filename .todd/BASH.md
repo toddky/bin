@@ -33,6 +33,24 @@ my_func() {
 - Use `[[ ]]` instead of `[ ]`.
 - Use `(( ))` for integer comparisons (exit codes, counts, flags). Format: `((x == 124))` — spaces around the operator, no spaces inside the parens. Never use `(( ))` for assignment.
 - Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
+- Handle the specific exit code you care about first, then fall through to a single pass-through exit. Test for `== N` (the case you handle), not `!= N`. The `!= N` form inverts the logic and is harder to read:
+
+  ```bash
+  # Good: handle 124, then pass through whatever happened
+  timeout 15 "$cmd" "$@"
+  exit_code=$?
+  if ((exit_code == 124)); then
+      print_timeout_help 1>&2
+  fi
+  exit "$exit_code"
+
+  # Bad: inverted test, duplicate exits
+  if ((exit_code != 124)); then
+      exit "$exit_code"
+  fi
+  print_timeout_help 1>&2
+  exit 124
+  ```
 
 ## Boolean Flags
 
