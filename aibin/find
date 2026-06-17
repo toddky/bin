@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+# Use absolute path to avoid recursive call when aibin/ is in $PATH.
+real_find="/usr/bin/find"
+
+timeout 15 "$real_find" "$@"
+exit_code=$?
+
+if ((exit_code == 124)); then
+    cat 1>&2 <<EOF
+ERROR: find timed out after 15 seconds. Try one of these instead:
+
+  Limit depth:     find <path> -maxdepth 3 -name <pattern>
+  Prune .git:      find <path> -name .git -prune -o -name <pattern> -print
+  Narrower path:   find /more/specific/path -name <pattern>
+  Inside a repo:   git ls-files --full-name ':/' | grep -i <pattern>
+EOF
+fi
+
+exit "$exit_code"
