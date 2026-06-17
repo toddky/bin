@@ -31,7 +31,7 @@ my_func() {
 ## Conditionals
 
 - Use `[[ ]]` instead of `[ ]`.
-- Use `(( ))` for integer comparisons (exit codes, counts, flags). Cleaner than `[[ $x -ne 124 ]]`.
+- Use `(( ))` for integer comparisons (exit codes, counts, flags). Format: `((x == 124))` -- spaces around the operator, no spaces inside the parens. Never use `(( ))` for assignment.
 - Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
 
 ## Boolean Flags
