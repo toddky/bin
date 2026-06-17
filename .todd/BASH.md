@@ -31,7 +31,7 @@ my_func() {
 ## Conditionals
 
 - Use `[[ ]]` instead of `[ ]`.
-- Use `(( ))` for integer comparisons (exit codes, counts, flags). Format: `((x == 124))` -- spaces around the operator, no spaces inside the parens. Never use `(( ))` for assignment.
+- Use `(( ))` for integer comparisons (exit codes, counts, flags). Format: `((x == 124))` — spaces around the operator, no spaces inside the parens. Never use `(( ))` for assignment.
 - Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
 
 ## Boolean Flags
@@ -147,6 +147,23 @@ $second_line"
 
 - Prefer native formatting options over post-processing. Use `tmux list-panes -F` format strings instead of piping through `cut`/`awk`/`sed` to rearrange fields.
 - When a tool supports output formatting (e.g., `-F`, `--format`, `-o`), use it instead of parsing and reassembling the output.
+- Use `cat <<EOF` instead of multiple `echo` calls for multiline output:
+
+  ```bash
+  # Good
+  cat 1>&2 <<EOF
+  ERROR: something went wrong. Try one of these:
+
+    Option 1: ...
+    Option 2: ...
+  EOF
+
+  # Bad
+  echo "ERROR: something went wrong. Try one of these:" 1>&2
+  echo "" 1>&2
+  echo "  Option 1: ..." 1>&2
+  echo "  Option 2: ..." 1>&2
+  ```
 
 ## Traps and exec
 
