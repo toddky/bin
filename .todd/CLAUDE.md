@@ -51,8 +51,9 @@
 
 # Comments
 - Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
-- Comments should explain *why*: intent, gotchas, non-obvious reasons. Don't narrate what the code does.
 - Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
+- Comments should explain *why*: intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- ALWAYS explain arbitrary numbers (timeouts, retries, sizes, thresholds): record where the value came from.
 
 # Code Style
 - No single-letter variable names. Use descriptive names (e.g., `result` instead of `r`).
@@ -110,4 +111,5 @@ cd "$SCRIPT_DIR"
 - ALWAYS read `~/LOCAL_CLAUDE.md` if it exists.
 - ALWAYS check for matching skills in `~/.skills` if it exists.
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
+- ALWAYS add a comment to explain arbitrary numbers.
 
