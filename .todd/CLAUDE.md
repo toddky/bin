@@ -48,6 +48,7 @@
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
 - Before committing, run `realpath` on each file to resolve symlinks and ensure you're committing to the correct repo (it may be in a subrepo or symlinked elsewhere).
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
+- NEVER commit debug scripts, one-off test scripts, or session-specific analysis files (e.g. `debug_*.py`, `test_scratch.sh`, `CODE_REVIEW.md`, `NOTES.md`) unless explicitly asked.
 
 # Comments
 - Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
