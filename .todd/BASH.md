@@ -197,6 +197,21 @@ trap 'rm -f "$marker"' EXIT
 exec "$program" "$@"
 ```
 
+When you must `exec` but still need a temp file cleaned up, open it on a file
+descriptor and unlink it before the `exec`. The kernel reclaims the inode when
+the process exits, and the child reads it via `/dev/fd/N`. This also keeps
+secret contents off disk for the lifetime of the transfer.
+
+```bash
+# Good: file is unlinked up front, fd survives exec, kernel cleans up on exit
+config_file="$(mktemp --tmpdir curl-cfg.XXXXXX)"
+chmod 600 "$config_file"
+printf '%s\n' "${config_lines[@]}" > "$config_file"
+exec {config_fd}<"$config_file"
+rm -f "$config_file"
+exec curl --config "/dev/fd/${config_fd}" "${safe_args[@]}"
+```
+
 ## Command Pipelines
 
 Collect `sed` expressions in an array with `-e` flags instead of piping multiple `sed`s:
@@ -259,3 +274,29 @@ After writing, always run `chmod +x <script>` and verify syntax with `bash -n <s
   # ENVIRONMENT
   # ==============================================================================
   ```
+
+---
+
+Don't restate what the code already says. A comment on a self-explanatory line adds nothing:
+
+Bad: two lines to restate the code below and pad out a "why" that isn't one.
+
+```bash
+# Only count panes that still exist; a gone pane returns an empty session
+# name, which previously left stale notify files inflating this count.
+session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+```
+
+Bad: crammed onto one line via a semicolon, still just narrating the code.
+
+```bash
+# Only count panes that still exist; gone panes left stale files inflating this count.
+session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+```
+
+Good: short, states the intent, lets the code show the how.
+
+```bash
+# Only count panes that still exist
+session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+```
