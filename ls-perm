@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# USAGE: ls-perm <path>
+# DESCRIPTION: Print permissions, owner, and group for each directory base_name leading up to <path>.
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+function print_error() {
+	echo "ERROR: $1" 1>&2
+}
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+if [[ $# -ne 1 ]]; then
+	print_error "USAGE: ls-perm <path>"
+	exit 1
+fi
+target="$1"
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+absolute_target="$(realpath -m "$target")"
+
+base_names=()
+IFS='/' read -r -a base_names <<< "$absolute_target"
+
+built_path=""
+paths=()
+for base_name in "${base_names[@]}"; do
+	[[ -z "$base_name" ]] && continue
+	built_path="$built_path/$base_name"
+	paths+=("$built_path")
+done
+
+ls -ld --color=auto "${paths[@]}"
+
