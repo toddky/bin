@@ -47,6 +47,14 @@ Rules for writing Slack messages, comments, and short-form text that don't read 
 - Avoid the "correct X and Y" parallel-noun construction. It's a classic LLM tell.
 - Save the assertion for when you actually have evidence.
 
+## Asking for Help
+
+- Put the ask first, not your backstory. One sentence of context is enough if it's connected to something the reader already cares about or knows.
+- Make the ask small and specific: a file, ten minutes, a yes or no. Not "can I pick your brain" or an open-ended request.
+- Don't justify why you're asking this particular person. State the ask and let relevance be self-evident from the context you gave.
+- Make it easy to decline. No urgency language ("really need this", "asap"), no guilt, no follow-up pressure if the answer is no.
+- Bound the request. Ask for one thing now, not a standing commitment. If it goes well, a further ask can come later.
+
 ## Red Flags (Things That Sound AI-Generated)
 
 - Numbered lists for things that aren't genuinely enumerable steps.
