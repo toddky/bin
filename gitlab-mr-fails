@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# USAGE: gitlab-mr-fails <MR_URL>
+# DESCRIPTION: Emit JSON of which jobs failed on a GitLab MR (a list of failing job
+# URLs per job name) and who pushed commits after the MR was created.
+
+# ==============================================================================
+# SETUP
+# ==============================================================================
+import argparse
+import json
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+
+import requests
+
+parser = argparse.ArgumentParser()
+parser.add_argument('mr_url')
+args = parser.parse_args()
+
+# gitlab-curl reads these same two files; mirror its config location rather than XDG.
+GITLAB_URL = Path('~/.gitlab_url').expanduser().read_text().strip()
+API_KEY = Path('~/.gitlab_key').expanduser().read_text().strip()
+HEADERS = {'PRIVATE-TOKEN': API_KEY}
+
+MR_URL_PATTERN = re.compile(r'^https?://[^/]+/(.+)/-/merge_requests/(\d+)')
+
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+def gitlab_get(endpoint):
+    response = requests.get(f"{GITLAB_URL}/api/v4/{endpoint}", headers=HEADERS)
+    response.raise_for_status()
+    return response.json()
+
+
+# ==============================================================================
+# PARSE URL
+# ==============================================================================
+match = MR_URL_PATTERN.match(args.mr_url)
+if not match:
+    sys.exit(f"ERROR: cannot parse URL: {args.mr_url} (expected .../merge_requests/IID)")
+project = match.group(1)
+iid = match.group(2)
+encoded_project = project.replace('/', '%2F')
+
+
+# ==============================================================================
+# COLLECT FAILURES
+# ==============================================================================
+failing_jobs = defaultdict(list)
+pipelines = gitlab_get(f"projects/{encoded_project}/merge_requests/{iid}/pipelines") or []
+for pipeline in pipelines:
+    jobs = gitlab_get(f"projects/{encoded_project}/pipelines/{pipeline['id']}/jobs?per_page=100") or []
+    for job in jobs:
+        if job['status'] != 'failed':
+            continue
+        failing_jobs[job['name']].append(job['web_url'])
+
+# ==============================================================================
+# COLLECT PUSHES
+# ==============================================================================
+versions = gitlab_get(f"projects/{encoded_project}/merge_requests/{iid}/versions") or []
+versions_sorted = sorted(versions, key=lambda version: version['created_at'])
+pushes_after_creation = []
+for version in versions_sorted[1:]:
+    sha = version['head_commit_sha']
+    commit = gitlab_get(f"projects/{encoded_project}/repository/commits/{sha}")
+    pushes_after_creation.append({
+        'pushed_at': version['created_at'],
+        'commit_sha': sha,
+        'author_name': commit['author_name'],
+        'author_email': commit['author_email'],
+        'title': commit['title'],
+    })
+
+
+# ==============================================================================
+# OUTPUT
+# ==============================================================================
+mr = gitlab_get(f"projects/{encoded_project}/merge_requests/{iid}")
+author = mr.get('author') or {}
+result = {
+    'iid': int(iid),
+    'project': project,
+    'title': mr['title'],
+    'author': author.get('username'),
+    'created_at': mr['created_at'],
+    'failing_jobs': dict(failing_jobs),
+    'pushes_after_creation': pushes_after_creation,
+}
+print(json.dumps(result, indent=2))
