@@ -22,6 +22,7 @@ Style rules for all Python code.
 - Use argparse instead of manual sys.argv handling.
 - Use sensible defaults for optional arguments.
 - Prefer system APIs (e.g. `pwd` module) over environment variables where available.
+- One `parser.add_argument(...)` call per line. Do not wrap a single call across multiple lines.
 
 ## Shell Strings
 
@@ -126,13 +127,15 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 
 ## Safety
 
-- Never expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
+- Never expose secrets (API tokens, passwords, etc.) in command arguments; they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
 - Never write directly to `/tmp`. Use `tempfile.mkdtemp()` or `tempfile.NamedTemporaryFile()` and clean up with a `try/finally` or context manager.
 
 ## Comments and Section Structure
 
 - Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
-- Comments should explain *why* -- intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- Comments should explain *why*: intent, gotchas, non-obvious reasons. Don't narrate what the code does.
+- If a comment only restates what the code plainly does, delete it; don't just trim it.
+- When code reproduces another tool's behavior, add a one-line comment linking the exact upstream source (file + pinned commit SHA + line).
 - Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.
 - Standard up-front sections, in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
