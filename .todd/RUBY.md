@@ -23,6 +23,25 @@ Style rules for all Ruby code.
   tmux('send-keys', '-t', pane, message)
   tmux("send-keys -t #{pane} #{message}")
   ```
+
+- Generic command wrappers return the raw `Open3.capture3` triple untouched. You never know how a downstream caller will use it, so don't pre-digest stdout/stderr/status into a narrower shape:
+
+  ```ruby
+  def git(repo_dir, arguments)
+      return Open3.capture3('git', '-C', repo_dir, *arguments)
+  end
+
+  stdout, _stderr, status = git(repo_dir, ['ls-files'])
+  ```
+
+  Not:
+
+  ```ruby
+  def git(repo_dir, arguments)
+      stdout, _stderr, status = Open3.capture3('git', '-C', repo_dir, *arguments)
+      return [stdout, status.success?]
+  end
+  ```
 ## Control Flow
 
 - Use explicit `return` statements in helpers, even when Ruby's implicit return would do the same thing. Multiple `return [nil, false]` / `return [output, true]` paths are preferred over a single trailing expression.
