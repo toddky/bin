@@ -42,6 +42,42 @@ Style rules for all Ruby code.
       return [stdout, status.success?]
   end
   ```
+## Argument Parsing
+
+- Use stdlib `OptionParser` instead of hand-rolled ARGV loops, mirroring the argparse rule in PYTHON.md.
+- Always assign it to a local named `parser` via `parser = OptionParser.new`.
+- Collect values with `parser.parse!(into: options)` where `options` is a hash literal named `options` (the community convention). No handler blocks. The hash key comes from the long flag name, so every option needs a `--long` form.
+- Each `parser.on(...)` call is a single line. One option per line, like the one-`add_argument`-per-line rule in PYTHON.md:
+
+  ```ruby
+  options = {}
+  parser = OptionParser.new
+  parser.banner = 'usage: myscript [options] [input_file]'
+  parser.on('-v', '--verbose', 'print progress to stderr')
+  parser.on('-o', '--output FILE', 'write results to FILE')
+  parser.on('-r', '--retries COUNT', Integer, 'retry failed requests COUNT times')
+  parser.parse!(into: options)
+
+  input_file = ARGV.first
+  options[:verbose]  # true when -v was passed
+  options[:output]   # value of --output FILE
+  options[:retries]  # Integer, coerced by OptionParser
+  ```
+
+  Not:
+
+  ```ruby
+  arguments = ARGV.dup
+  until arguments.empty?
+      argument = arguments.shift
+      if argument == '-v' || argument == '--verbose'
+          verbose = true
+      elsif argument == '-o' || argument == '--output'
+          output_file = arguments.shift
+      end
+  end
+  ```
+
 ## Control Flow
 
 - Use explicit `return` statements in helpers, even when Ruby's implicit return would do the same thing. Multiple `return [nil, false]` / `return [output, true]` paths are preferred over a single trailing expression.
