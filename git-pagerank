@@ -1,0 +1,184 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Rank the files in a git repo by structural centrality. Builds a directed
+# reference graph (edge A -> B means "A mentions B by name"), then runs
+# power-iteration PageRank so the files everything depends on float to the top.
+# Language-agnostic on purpose: instead of parsing per-language import syntax,
+# a file links to any other tracked file whose basename or extension-less stem
+# it mentions. That covers JS/Python imports, Verilog/SystemVerilog includes,
+# Ruby requires, and plain scripts calling other scripts with no extension.
+
+require 'set'
+require 'open3'
+require 'optparse'
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+
+# The repo to analyze, defaulting to the current directory. A -n/--top N flag
+# limits how many ranked files print (default: all).
+options = {}
+parser = OptionParser.new
+parser.banner = 'usage: git-pagerank [repo_dir] [-n TOP]'
+parser.on('-n', '--top TOP', Integer, 'print only the top N files')
+parser.parse!(into: options)
+
+top_count = options[:top]
+repo_dir = ARGV.first || '.'
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+
+MAX_FILE_BYTES = 1_000_000 # skip giant generated/minified files, matches wtfismyrepo's scan.mjs
+MIN_STEM_LENGTH = 3 # 1-2 char stems ("a", "ls") collide with ordinary prose too often
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+
+# Generic git pass-through: takes an explicit array of args, returns the raw
+# Open3.capture3 triple [stdout, stderr, status] so callers can use any of it.
+def git(repo_dir, arguments)
+	return Open3.capture3('git', '-C', repo_dir, *arguments)
+end
+
+# Read tracked text files into a { relative_file => content } hash. Binary
+# files (null byte in content) and oversized files are skipped.
+def read_sources(repo_dir, files)
+	sources = {}
+	files.each do |relative|
+		full_file = File.join(repo_dir, relative)
+		next unless File.file?(full_file)
+		next if File.size(full_file) > MAX_FILE_BYTES
+
+		content = File.read(full_file, encoding: 'BINARY')
+		next if content.include?("\0")
+
+		sources[relative] = content.force_encoding('UTF-8').scrub
+	end
+	return sources
+end
+
+# Map every referenceable name to the tracked files that own it. A file owns
+# its basename ("pagerank.rb") and, when long enough, its extension-less stem
+# ("pagerank") so `import pagerank` / `require_relative 'pagerank'` count too.
+# Several files can own one name (same basename in different directories).
+def build_name_index(files)
+	name_to_files = Hash.new { |hash, key| hash[key] = [] }
+	files.each do |file|
+		basename = File.basename(file)
+		name_to_files[basename].append(file)
+
+		stem = File.basename(file, '.*')
+		next if stem == basename
+		next if stem.length < MIN_STEM_LENGTH
+
+		name_to_files[stem].append(file)
+	end
+	return name_to_files
+end
+
+# Build the directed reference graph: { file => Set[files it mentions] }.
+# Tokenize each file into word-ish runs (letters, digits, "_", "-", ".") and
+# hash-look-up each unique token in the name index. A dotted token also checks
+# its dot-parts so "pkg.util" credits "util" the way dotted imports expect.
+# Token boundaries mean "subgraph" never matches the name "graph". This is
+# hash-speed per token; a union regex over all names dies on 10k-file repos.
+def build_graph(sources, name_to_files)
+	graph = {}
+	sources.each do |file, content|
+		edges = Set.new
+		seen_tokens = Set.new
+		content.scan(/[\w.-]+/) do |token|
+			next unless seen_tokens.add?(token)
+
+			candidates = [token]
+			candidates.concat(token.split('.')) if token.include?('.')
+			candidates.each do |candidate|
+				owners = name_to_files[candidate]
+				next unless owners
+
+				owners.each do |owner|
+					edges.add(owner) unless owner == file
+				end
+			end
+		end
+		graph[file] = edges
+	end
+	return graph
+end
+
+# Power-iteration PageRank with damping and dangling-node handling. Ported
+# verbatim in behavior from wtfismyrepo's src/pagerank.mjs.
+def page_rank(graph, damping: 0.85, epsilon: 1e-8, max_iter: 200)
+	nodes = graph.keys.to_set
+	graph.each_value { |targets| targets.each { |target| nodes << target } }
+
+	node_count = nodes.size
+	return {} if node_count.zero?
+
+	node_list = nodes.to_a
+	initial = 1.0 / node_count
+	rank = node_list.map { |node| [node, initial] }.to_h
+	out_degree = node_list.map { |node| [node, graph[node]&.size || 0] }.to_h
+
+	max_iter.times do
+		next_rank = node_list.map { |node| [node, 0.0] }.to_h
+
+		# Dangling mass: nodes with no outgoing edges spread their rank evenly
+		# across all nodes, otherwise rank leaks out of the system.
+		dangling = node_list.sum { |node| out_degree[node].zero? ? rank[node] : 0.0 }
+		dangling_share = (damping * dangling) / node_count
+		teleport = (1 - damping) / node_count
+
+		node_list.each { |node| next_rank[node] = teleport + dangling_share }
+
+		graph.each do |source, targets|
+			degree = out_degree[source]
+			next if degree.zero?
+
+			share = (damping * rank[source]) / degree
+			targets.each { |target| next_rank[target] += share }
+		end
+
+		delta = node_list.sum { |node| (next_rank[node] - rank[node]).abs }
+		rank = next_rank
+		break if delta < epsilon
+	end
+
+	return rank
+end
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+
+abort("not a directory: #{repo_dir}") unless File.directory?(repo_dir)
+
+output, _error_output, status = git(repo_dir, ['ls-files'])
+abort("not a git repo: #{repo_dir} (file list comes from `git ls-files`)") unless status.success?
+
+files = output.split("\n").reject(&:empty?)
+sources = read_sources(repo_dir, files)
+if sources.empty?
+	abort("no readable text files found in #{repo_dir}")
+end
+
+name_to_files = build_name_index(sources.keys)
+graph = build_graph(sources, name_to_files)
+ranks = page_rank(graph)
+
+ordered = ranks.sort_by { |_file, score| -score }
+ordered = ordered.first(top_count) if top_count && top_count > 0
+
+longest = ordered.map { |file, _score| file.length }.max
+width = [longest, 4].max
+
+puts format("%-#{width}s  rank", 'file')
+puts "#{'-' * width}  ------"
+ordered.each do |file, score|
+	puts format("%-#{width}s  %.4f", file, score)
+end
