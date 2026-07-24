@@ -142,15 +142,17 @@ if [[ -n "$permission" ]]; then
 
 	if ((ismac)); then
 		owner="$(stat -f %Su .)"
-		group="$(stat -f %Sg .)"
+		dir_gid="$(stat -f %g .)"
 	else
 		owner="$(stat -c %U .)"
-		group="$(stat -c %G .)"
+		dir_gid="$(stat -c %g .)"
 	fi
 
 	prompt+=" "
 	[[ "$(whoami)" == "$owner" ]] && prompt+="$green$p1" || prompt+="$red$p1"
-	groups | grep -q "$group" && prompt+="$green$p2" || prompt+="$red$p2"
+	# $GROUPS is the bash builtin GID list. Avoids forking groups(1), which
+	# blocks on SSSD group lookups here (~5s per prompt).
+	[[ " ${GROUPS[*]} " == *" $dir_gid "* ]] && prompt+="$green$p2" || prompt+="$red$p2"
 	prompt+="$green$p3"
 fi
 
