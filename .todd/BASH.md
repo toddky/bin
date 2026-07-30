@@ -251,6 +251,20 @@ find "$SCRIPT_DIR" -name '*.go' -newer "$SCRIPT_DIR/mybin" -print -quit
 (cd "$SCRIPT_DIR" && find . -name '*.go' -newer mybin -print -quit)
 ```
 
+## Contain State Changes in a Subshell
+
+When a command genuinely needs a changed cwd, `umask`, or other process state that no flag can pass, run it inside a `( ... )` subshell. The change dies with the subshell, so the rest of the script keeps the original state.
+
+```bash
+# Good: umask and cwd changes stay inside the subshell
+(umask 077 && cd "$build_dir" && ./configure && make)
+
+# Bad: umask leaks into every later file the script creates
+umask 077
+cd "$build_dir"
+./configure && make
+```
+
 ## Paths and Environment
 
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
