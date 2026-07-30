@@ -227,6 +227,30 @@ sed "${sed_args[@]}"
 sed 's/^ *//' | sed 's/  \+v[0-9].*//'
 ```
 
+## Prefer Directory Arguments Over Subshell cd
+
+Many tools take the target directory as an argument. Use it instead of wrapping the call in a `(cd "$dir" && ...)` subshell. The subshell exists only to keep the caller's cwd unchanged, which the flag does for free.
+
+`go build -C <dir>` changes into the directory before building, so `-o` is relative to it and the binary lands in `<dir>`, not the caller's cwd:
+
+```bash
+# Good
+go build -C "$SCRIPT_DIR" -o mybin .
+
+# Bad
+(cd "$SCRIPT_DIR" && go build -o mybin .)
+```
+
+`find` takes the search root as its first operand, so pass the directory directly:
+
+```bash
+# Good
+find "$SCRIPT_DIR" -name '*.go' -newer "$SCRIPT_DIR/mybin" -print -quit
+
+# Bad
+(cd "$SCRIPT_DIR" && find . -name '*.go' -newer mybin -print -quit)
+```
+
 ## Paths and Environment
 
 - Use `XDG_CONFIG_HOME` (defaulting to `~/.config`) instead of hardcoding home-relative config paths.
