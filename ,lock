@@ -7,7 +7,9 @@
 # https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
 killall -SIGUSR1 dunst
 
-i3lock_args=(--show-failed-attempts)
+# nofork so $! below is the real lock process, not a forked-away launcher.
+i3lock_args=(--nofork)
+i3lock_args+=(--show-failed-attempts)
 i3lock_args+=(--ignore-empty-password)
 i3lock_args+=(--color=101030)
 
@@ -18,15 +20,26 @@ if [[ -f "$background" ]]; then
 	i3lock_args+=(--tiling)
 fi
 i3lock "${i3lock_args[@]}" &
+i3lock_pid=$!
 
-# Unlock with fingerprint by killing i3lock on successful fprintd-verify
-if command -v fprintd-verify > /dev/null; then
-	(while pkill -0 i3lock 2>/dev/null; do
+# Unlock with fingerprint by killing i3lock on successful fprintd-verify.
+# Guard + sleep prevent a busy-loop when the reader fails to init (see ~/FINGERPRINTS.md, Jun 8 2026).
+if command -v fprintd-verify > /dev/null && fprintd-list "$USER" >/dev/null 2>&1; then
+	(while kill -0 "$i3lock_pid" 2>/dev/null; do
 		fprintd-verify "$USER" && pkill i3lock && break
+		sleep 1   # backoff so a failing/instant verify can never busy-loop
 	done) &
+	fploop_pid=$!
 fi
 
-wait
+# Wait for i3lock only — on a password unlock the fingerprint loop blocks forever holding the device claim.
+# The kill below releases it, else later fprintd calls fail with "already claimed" (Jul 31 2026, ~/FREEZE.md).
+wait "$i3lock_pid"
+
+if [[ -n "${fploop_pid:-}" ]]; then
+	kill "$fploop_pid" 2>/dev/null
+	pkill -x fprintd-verify 2>/dev/null
+fi
 
 # Resume Dunst notifications
 # https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
