@@ -14,6 +14,10 @@ my @units = ('K', 'M', 'G', 'T');
 my %size_kb;
 my %children;
 
+# du echoes the argument verbatim, so a trailing slash would break dirname() parent matching.
+my $root_dir = @ARGV ? $ARGV[0] : '.';
+$root_dir =~ s{/+$}{} unless $root_dir eq '/';
+
 my @skip_patterns = (
 	qr{/\.git/},
 	qr{/\.venv/},
@@ -62,7 +66,7 @@ open(STDERR, '>', '/dev/null') or die;
 open(my $output_fh, '|-', 'tee', 'du.txt') or die "tee: $!";
 select $output_fh;
 
-open(my $du_fh, '-|', 'du') or die "du: $!";
+open(my $du_fh, '-|', 'du', $root_dir) or die "du: $!";
 while (my $line = <$du_fh>) {
 	chomp $line;
 	my ($size, $dir) = split /\t/, $line, 2;
@@ -92,10 +96,10 @@ for my $dir (keys %size_kb) {
 # ==============================================================================
 # PRINT TREE
 # ==============================================================================
-if (exists $size_kb{'.'}) {
-	printf "%6s  .\n\n", format_size($size_kb{'.'});
+if (exists $size_kb{$root_dir}) {
+	printf "%6s  %s\n\n", format_size($size_kb{$root_dir}), $root_dir;
 }
-my @top_level = grep { dirname($_) eq '.' && $_ ne '.' } keys %size_kb;
+my @top_level = grep { dirname($_) eq $root_dir && $_ ne $root_dir } keys %size_kb;
 my @roots = sort { $size_kb{$b} <=> $size_kb{$a} } @top_level;
 for my $root (@roots) {
 	print_tree($root, 1);
