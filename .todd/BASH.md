@@ -317,24 +317,45 @@ After writing, always run `chmod +x <script>` and verify syntax with `bash -n <s
 
 Don't restate what the code already says. A comment on a self-explanatory line adds nothing:
 
-Bad: two lines to restate the code below and pad out a "why" that isn't one.
+Bad: narrates what the code plainly does.
 
 ```bash
-# Only count panes that still exist; a gone pane returns an empty session
-# name, which previously left stale notify files inflating this count.
-session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+# Loop over every pane and print its title.
+for pane_id in $(tmux list-panes -F '#{pane_id}'); do
+	tmux display-message -t "%${pane_id}" -p '#{pane_title}'
+done
 ```
 
-Bad: crammed onto one line via a semicolon, still just narrating the code.
+Bad: same narration, shortened. Trimming a restatement still leaves a restatement.
 
 ```bash
-# Only count panes that still exist; gone panes left stale files inflating this count.
-session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+# Print each pane title.
+for pane_id in $(tmux list-panes -F '#{pane_id}'); do
+	tmux display-message -t "%${pane_id}" -p '#{pane_title}'
+done
 ```
 
-Good: short, states the intent, lets the code show the how.
+Good: the comment is deleted, because no *why* was hiding in it.
 
 ```bash
-# Only count panes that still exist
-session_name="$(tmux display-message -t "%${pane_id}" -p '#{session_name}' 2>/dev/null)"
+for pane_id in $(tmux list-panes -F '#{pane_id}'); do
+	tmux display-message -t "%${pane_id}" -p '#{pane_title}'
+done
+```
+
+Shortening applies only to a real *why* that runs long. Bad: four lines to land one idea.
+
+```bash
+# We sleep here before checking the lock file because the NFS client caches
+# directory entries for a short window, so a lock created by another host may
+# not be visible yet. Without this the check below sometimes sees no lock and
+# two jobs start at once.
+sleep 5
+```
+
+Good: same *why*, one line, and the number is accounted for.
+
+```bash
+# NFS dentry cache can hide a lock made on another host; 5s is the observed max staleness.
+sleep 5
 ```
