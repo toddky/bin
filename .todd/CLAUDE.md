@@ -83,6 +83,23 @@ Good, records what the code cannot say for itself:
 timeout 30 "$fetch_cmd"
 ```
 
+Shortening is for a real *why* that runs long. Bad, four lines to land one idea:
+
+```bash
+# We sleep here before checking the lock file because the NFS client caches
+# directory entries for a short window, so a lock created by another host may
+# not be visible yet. Without this the check below sometimes sees no lock and
+# two jobs start at once.
+sleep 5
+```
+
+Good, same *why*, one line, and the number is accounted for:
+
+```bash
+# NFS dentry cache can hide a lock made on another host; 5s is the observed max staleness.
+sleep 5
+```
+
 # Code Style
 - No single-letter variable names. Use descriptive names (e.g., `result` instead of `r`).
 - Use guard clauses (early continue/return) to reduce nesting
