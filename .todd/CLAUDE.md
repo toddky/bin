@@ -51,10 +51,37 @@
 - NEVER commit debug scripts, one-off test scripts, or session-specific analysis files (e.g. `debug_*.py`, `test_scratch.sh`, `CODE_REVIEW.md`, `NOTES.md`) unless explicitly asked.
 
 # Comments
-- Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
+- Default to NO comment. Add one only when the *why* is non-obvious: a hidden constraint, a subtle invariant, a workaround for a specific bug, or behavior that would surprise a reader.
+- If a comment only restates what the code plainly does, DELETE it. Do not rewrite it shorter, and do not pad it into a "why" that isn't one.
+- Max 2 lines is a ceiling, not a target. One line is the normal case. One sentence per line, 120 columns.
+- ALWAYS explain arbitrary numbers (timeouts, retries, sizes, thresholds): record where the value came from, or say it's a guess.
+- When code reproduces another tool's behavior, add a one-line comment linking the upstream source (file + pinned commit SHA + line).
+- Never reference the current task, fix, or callers ("used by X", "added for Y flow"). That belongs in the commit message and rots in the source.
 - Don't delete existing comments unless they're incorrect or no longer relevant. Update them to match new code behavior.
-- Comments should explain *why*: intent, gotchas, non-obvious reasons. Don't narrate what the code does.
-- ALWAYS explain arbitrary numbers (timeouts, retries, sizes, thresholds): record where the value came from.
+
+Bad, narrates what the code plainly does:
+
+```bash
+# Loop over every pane and print its title.
+for pane_id in $(tmux list-panes -F '#{pane_id}'); do
+	tmux display-message -t "%${pane_id}" -p '#{pane_title}'
+done
+```
+
+Good, the comment is gone. Deleted, not shortened, because no *why* was hiding in it:
+
+```bash
+for pane_id in $(tmux list-panes -F '#{pane_id}'); do
+	tmux display-message -t "%${pane_id}" -p '#{pane_title}'
+done
+```
+
+Good, records what the code cannot say for itself:
+
+```bash
+# 30s covers the slowest cold-cache fetch measured on <hostname> (~22s).
+timeout 30 "$fetch_cmd"
+```
 
 # Code Style
 - No single-letter variable names. Use descriptive names (e.g., `result` instead of `r`).
