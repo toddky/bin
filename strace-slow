@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+	echo "Usage: strace-slow <command> [args...]"
+	echo "       strace-slow -p <PID>"
+	exit 1
+}
+
+[[ $# -eq 0 ]] && usage
+
+logfile="$(mktemp /tmp/strace-slow.XXXXXX.log)"
+echo "Logging to: $logfile" >&2
+
+if [[ "$1" == "-p" ]]; then
+    [[ -z "$2" ]] && usage
+    strace -p "$2" -tt -T -f -o "$logfile"
+else
+    strace -tt -T -f -o "$logfile" -- "$@"
+fi
+
+echo "" >&2
+echo "Top slow syscalls:" >&2
+awk 'match($0, /<([0-9]+\.[0-9]+)>/, arr) && arr[1]+0 >= 0.01 {print arr[1] "\t" $0}' "$logfile" \
+	| sort -rn \
+	| head -20 \
+	| cut -f2- \
+	| nl >&2
+
+echo "" >&2
+echo "Full log: $logfile" >&2
+

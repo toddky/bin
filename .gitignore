@@ -296,6 +296,7 @@
 !/ssh.rb
 !/ssh2ssh
 !/stdin2qrcode
+!/strace-slow
 !/supercmd
 !/supercmd-help
 !/svn-url
