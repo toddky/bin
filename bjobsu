@@ -14,6 +14,7 @@ hl_args+=('Done successfully\.')
 
 hl_args+=(--red)
 hl_args+=('Exited')
+hl_args+=('TERM_MEMLIMIT')
 
 hl_args+=(--blue)
 hl_args+=('^Job Name' '^Job Description' '^Job Group' '^Job Priority')
@@ -23,7 +24,7 @@ hl_args+=('Allocated' 'Resource usage collected')
 hl_args+=('^Output File' '^Error File')
 hl_args+=('^Execution Home' '^Execution CWD' 'CWD')
 hl_args+=('Requested Resources' 'PENDING REASONS')
-hl_args+=(RUNLIMIT ESTIMATED_RUNTIME MEMLIMIT 'MEMORY USAGE' 'CPU USAGE')
+hl_args+=(RUNLIMIT ESTIMATED_RUNTIME '^MEMLIMIT' 'MEMORY USAGE' 'CPU USAGE')
 hl_args+=('SCHEDULING PARAMETERS' 'RESOURCE REQUIREMENT DETAILS')
 #
 exec bjobs -UF "$@" \
