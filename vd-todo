@@ -1,0 +1,201 @@
+#!/tools_soc/opensrc/python/python-3.12.10/bin/python3
+# USAGE: vd-todo <dashboard.yaml>
+# DESCRIPTION: Open a todo dashboard YAML in VisiData. Jira/GitLab columns show
+# short labels (HWINFRA-985, !35190, sha8) but `y` yanks the full URL via OSC 52.
+
+import base64
+import re
+import sys
+
+import yaml
+from visidata import vd, CellColorizer, Column, ColumnColorizer, RowColorizer, TableSheet
+
+
+def clean_text(text):
+    if not text:
+        return ''
+    text = re.sub(r'<a\s[^>]*>(.*?)</a>', r'\1', text)
+    return text.replace('&mdash;', '-')
+
+
+def url_label(url):
+    if not url:
+        return ''
+    last_segment = url.rstrip('/').split('/')[-1]
+    if '/-/merge_requests/' in url:
+        return '!' + last_segment
+    if '/-/commit/' in url:
+        return last_segment[:8]
+    return last_segment
+
+
+def as_url_list(value):
+    if not value:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+class UrlColumn(Column):
+    'Cell value is a full URL (or list of URLs); display is the short label.'
+    def formatValue(self, typedval, width=None):
+        if not typedval:
+            return ''
+        if isinstance(typedval, list):
+            return ' '.join(url_label(url) for url in typedval)
+        return url_label(typedval)
+
+
+class TaskColumn(Column):
+    'Highlights [tags] via the "full" displayer, which renders inline [:color]...[:] markup.'
+    def __init__(self, name, **kwargs):
+        super().__init__(name, displayer='full', **kwargs)
+
+    def formatValue(self, typedval, width=None):
+        if not typedval:
+            return ''
+        return re.sub(r'\[([^\]:]+)\]',
+                      lambda m: f'[:{vd.options.color_todo_tag}][{m.group(1)}][:]',
+                      str(typedval))
+
+
+def copy_osc52(text):
+    encoded_text = base64.b64encode(text.encode()).decode()
+    sys.stdout.write(f"\033]52;c;{encoded_text}\a")
+    sys.stdout.flush()
+    vd.status(f'copied: {text}')
+
+
+# Sort order: in-progress first, done last; unknown values sort after everything.
+STATE_RANK = {'⌛': 0, '⚪': 1, '📌': 2, '✅': 3}
+# 🔵 is not in the YAML; iterload assigns it to epic rows.
+PRI_RANK = {'🔴': 0, '🟡': 1, '🔵': 2}
+
+# vd is curses-based: ANSI escapes inside cell text are not interpreted, so
+# glyphs are plain text and the cell colorizers below paint them.
+# The YAML keeps the emoji vocabulary; only the rendering is plain glyphs.
+STATE_DISPLAY = {'⌛': '◐', '⚪': '○', '📌': '◆', '✅': '●'}
+# in-progress yellow 220, unstarted gray 242, epic purple 98 (ela-perfect
+# accent #A783F8). Done uses 118, brighter than the ela-perfect green 106,
+# which was too dim; the solid circle carries more ink than a checkmark.
+STATE_COLORS = {'⌛': 'bold 220', '⚪': '242', '📌': '98', '✅': 'bold 118'}
+
+PRI_DISPLAY = {'🔴': '●', '🟡': '●', '🔵': '●'}
+# ela-perfect red (#F4005F->161), orange (#E3A15A->172), blue (#5496DD->32).
+PRI_COLORS = {'🔴': '161 bold', '🟡': '172', '🔵': '32'}
+
+
+class RankedColumn(Column):
+    'Sorts by rank_map order ([ and ] use getTypedValue); displays display_map value or the raw value.'
+    def __init__(self, name, rank_map, display_map=None, **kwargs):
+        self._value_by_rank = {rank: value for value, rank in rank_map.items()}
+        self._rank_map = rank_map
+        self._display_map = display_map or {}
+        super().__init__(name, type=self.rank, **kwargs)
+
+    def rank(self, value):
+        return self._rank_map.get(value, len(self._rank_map))
+
+    def formatValue(self, typedval, width=None):
+        value = self._value_by_rank.get(typedval, '')
+        return self._display_map.get(value, value)
+
+
+class TodoSheet(TableSheet):
+    rowtype = 'tasks'
+    columns = [
+        Column('Group', getter=lambda col, row: row['group']),
+        RankedColumn('S', STATE_RANK, display_map=STATE_DISPLAY, width=3,
+                     getter=lambda col, row: row['state']),
+        RankedColumn('P', PRI_RANK, display_map=PRI_DISPLAY, width=3,
+                     getter=lambda col, row: row['pri']),
+        TaskColumn('Task', width=60, getter=lambda col, row: row['text']),
+        UrlColumn('Jira', getter=lambda col, row: row['jira']),
+        UrlColumn('GitLab', getter=lambda col, row: row['gitlab']),
+    ]
+    # Precedence 1 keeps these below the cursor colorizers (current_col=2,
+    # current_row=2, current_cell=3): fg and bg merge independently, so these
+    # fg-only colors still render while the cursor bg wins on top of them.
+    colorizers = [
+        CellColorizer(1, None, lambda s, c, r, v: r and c and c.name == 'S'
+                      and STATE_COLORS.get(r['state'])),
+        CellColorizer(1, None, lambda s, c, r, v: r and c and c.name == 'P'
+                      and PRI_COLORS.get(r['pri'])),
+        ColumnColorizer(1, 'color_todo_jira', lambda s, c, r, v: c and c.name == 'Jira'),
+        ColumnColorizer(1, 'color_todo_gitlab', lambda s, c, r, v: c and c.name == 'GitLab'),
+    ]
+
+    def iterload(self):
+        with open(str(self.source)) as yaml_file:
+            groups = yaml.safe_load(yaml_file)
+
+        for group in groups or []:
+            group_title = group.get('title', '')
+            if group.get('epic'):
+                yield {
+                    'group': group_title,
+                    'state': '📌',
+                    'pri': '🔵',
+                    'text': '(epic)',
+                    'jira': group.get('jira'),
+                    'gitlab': as_url_list(group.get('gitlab')),
+                }
+            for task in group.get('tasks', []):
+                yield {
+                    'group': group_title,
+                    'state': task.get('state', ''),
+                    'pri': task.get('pri', ''),
+                    'text': clean_text(task.get('text', '')),
+                    'jira': task.get('jira'),
+                    'gitlab': as_url_list(task.get('gitlab')),
+                }
+
+
+@TodoSheet.api
+def yank_raw(sheet, col, row):
+    value = col.getValue(row)
+    if not value:
+        vd.warning('nothing to yank')
+        return
+    if isinstance(value, list):
+        copy_osc52('\n'.join(value))
+    else:
+        copy_osc52(str(value))
+
+
+# From the llm-agent ela-perfect theme (tui/themes.py), hex mapped to xterm-256
+# via visidata.color.css_to_xterm256: blue #5496DD->32, orange #E3A15A->172,
+# green #90D64F->106, red #F4005F->161, cyan #66C6E3->74, purple #A783F8->98.
+vd.option('color_todo_jira', '32', 'color of the Jira column in vd-todo')
+vd.option('color_todo_gitlab', '172', 'color of the GitLab column in vd-todo')
+vd.option('color_todo_tag', 'bold 106', 'color of [tags] in the Task column in vd-todo')
+
+# The stock cursor row is 'reverse' (interface.py); use a subtle background
+# instead: 237 = #3A3A3A, one step above the ela-perfect panel color #2E2E2E.
+# No whole-column highlight; the cursor cell alone gets an underline, which
+# merges as an attribute so per-column fg colors still show.
+TodoSheet.options.color_current_row = 'on 237'
+TodoSheet.options.color_current_col = ''
+# current_cell merges at precedence 3, above current_row's 2; that blocks the
+# row bg from applying to this one cell, so repeat the bg here explicitly.
+TodoSheet.options.color_current_cell = 'underline on 237'
+
+# Override the global `y` binding from config.py (which yanks cursorDisplay):
+# here `y` yanks the raw cell value, so URL columns copy the full URL.
+TodoSheet.addCommand('y', 'yank-raw', 'yank_raw(cursorCol, cursorRow)',
+                     'yank raw cell value (full URL) to system clipboard via OSC 52')
+
+
+def main():
+    if len(sys.argv) != 2:
+        print(__doc__ or 'USAGE: vd-todo <dashboard.yaml>', file=sys.stderr)
+        print('USAGE: vd-todo <dashboard.yaml>', file=sys.stderr)
+        sys.exit(1)
+
+    vd.loadConfigFile()
+    vd.run(TodoSheet('todo', source=sys.argv[1]))
+
+
+if __name__ == '__main__':
+    main()
