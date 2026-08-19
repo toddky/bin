@@ -1,7 +1,4 @@
 
-# System Prompt
-- ALWAYS read ~/LOCAL_CLAUDE.md if it exists.
-
 # Skills
 - ALWAYS check for matching skills in ~/.skills if it exists.
 
@@ -153,7 +150,6 @@ cd "$SCRIPT_DIR"
 - NEVER undo or reset commits unless explicitly asked.
 
 **ALWAYS**:
-- ALWAYS read `~/LOCAL_CLAUDE.md` if it exists.
 - ALWAYS check for matching skills in `~/.skills` if it exists.
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
 - ALWAYS add a comment to explain arbitrary numbers.
