@@ -4,6 +4,7 @@
 # short labels (HWINFRA-985, !35190, sha8) but `y` yanks the full URL via OSC 52.
 
 import base64
+import functools
 import re
 import sys
 
@@ -76,40 +77,79 @@ PRI_RANK = {'🔴': 0, '🟡': 1, '🔵': 2}
 # glyphs are plain text and the cell colorizers below paint them.
 # The YAML keeps the emoji vocabulary; only the rendering is plain glyphs.
 STATE_DISPLAY = {'⌛': '◐', '⚪': '○', '📌': '◆', '✅': '●'}
+# Text names shown on derived sheets (freq table, pivot), where the colorizers
+# don't apply and identical glyphs like the priority dots are indistinguishable.
+STATE_NAMES = {'⌛': 'in-progress', '⚪': 'not-started', '📌': 'epic', '✅': 'done'}
 # in-progress yellow 220, unstarted gray 242, epic purple 98 (ela-perfect
 # accent #A783F8). Done uses 118, brighter than the ela-perfect green 106,
 # which was too dim; the solid circle carries more ink than a checkmark.
 STATE_COLORS = {'⌛': 'bold 220', '⚪': '242', '📌': '98', '✅': 'bold 118'}
 
 PRI_DISPLAY = {'🔴': '●', '🟡': '●', '🔵': '●'}
+PRI_NAMES = {'🔴': 'high', '🟡': 'low', '🔵': 'epic'}
 # ela-perfect red (#F4005F->161), orange (#E3A15A->172), blue (#5496DD->32).
 PRI_COLORS = {'🔴': '161 bold', '🟡': '172', '🔵': '32'}
 
 
+@functools.total_ordering
+class Rank:
+    '''Typed value for RankedColumn: sorts/groups by rank. Derived sheets
+    (freq table, pivot) group and display getTypedValue via str(), which
+    returns the text name; the main sheet's formatValue shows the glyph.'''
+    def __init__(self, rank, glyph, name):
+        self.rank = rank
+        self.glyph = glyph
+        self.name = name
+
+    def __eq__(self, other):
+        return isinstance(other, Rank) and self.rank == other.rank
+
+    def __lt__(self, other):
+        return self.rank < other.rank
+
+    def __hash__(self):
+        return hash(self.rank)
+
+    def __str__(self):
+        return self.name
+
+
 class RankedColumn(Column):
-    'Sorts by rank_map order ([ and ] use getTypedValue); displays display_map value or the raw value.'
-    def __init__(self, name, rank_map, display_map=None, **kwargs):
-        self._value_by_rank = {rank: value for value, rank in rank_map.items()}
+    'Sorts by rank_map order ([ and ] use getTypedValue); displays display_map glyph.'
+    def __init__(self, name, rank_map, display_map=None, name_map=None, **kwargs):
         self._rank_map = rank_map
         self._display_map = display_map or {}
-        super().__init__(name, type=self.rank, **kwargs)
+        self._name_map = name_map or {}
+        super().__init__(name, type=self.rank, displayer='glyph', **kwargs)
 
     def rank(self, value):
-        return self._rank_map.get(value, len(self._rank_map))
+        glyph = self._display_map.get(value, value or '')
+        name = self._name_map.get(value, glyph)
+        return Rank(self._rank_map.get(value, len(self._rank_map)), glyph, name)
 
     def formatValue(self, typedval, width=None):
-        value = self._value_by_rank.get(typedval, '')
-        return self._display_map.get(value, value)
+        # Must return the distinct text name, not the glyph: pivot/freq sheets
+        # group bins by the formatted value (pivot.py groupRows), and the
+        # priority glyphs are identical so they would collapse into one bin.
+        return typedval.name if isinstance(typedval, Rank) else (typedval or '')
+
+    def displayer_glyph(self, dw, width=None):
+        'Draw the glyph on this sheet; derived sheets use plain columns and show the name.'
+        typedval = getattr(dw, 'typedval', None)
+        if isinstance(typedval, Rank):
+            yield ('', typedval.glyph)
+        else:
+            yield ('', dw.text)
 
 
 class TodoSheet(TableSheet):
     rowtype = 'tasks'
     columns = [
         Column('Group', getter=lambda col, row: row['group']),
-        RankedColumn('S', STATE_RANK, display_map=STATE_DISPLAY, width=3,
-                     getter=lambda col, row: row['state']),
-        RankedColumn('P', PRI_RANK, display_map=PRI_DISPLAY, width=3,
-                     getter=lambda col, row: row['pri']),
+        RankedColumn('S', STATE_RANK, display_map=STATE_DISPLAY, name_map=STATE_NAMES,
+                     width=3, getter=lambda col, row: row['state']),
+        RankedColumn('P', PRI_RANK, display_map=PRI_DISPLAY, name_map=PRI_NAMES,
+                     width=3, getter=lambda col, row: row['pri']),
         TaskColumn('Task', width=60, getter=lambda col, row: row['text']),
         UrlColumn('Jira', getter=lambda col, row: row['jira']),
         UrlColumn('GitLab', getter=lambda col, row: row['gitlab']),
