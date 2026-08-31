@@ -32,6 +32,13 @@
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
 
+# Parallel Work
+- I do parallel work on a single repo. Untracked files, new commits, and modified files you did not touch are EXPECTED. Do not list them, do not ask about them, and do not describe them as unexpected, new, or having "appeared".
+- NEVER stage, commit, revert, or clean anything you did not touch this session.
+- NEVER commit a file you did not touch this session.
+- Unexpected changes INSIDE a file you touched are fine to commit. I try to keep my parallel work out of files you are working in, so extra changes there are mine and meant to go along; include them and tell me.
+- ALWAYS verify a commit after making it. Run `git show --stat`, confirm only the files you touched are in it, and tell me if it included a file you did not touch this session.
+
 # Searching
 - When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
 - To find a file in the current repo, use `git ls-files --full-name ':/' | grep -i <filename>` instead of find.
