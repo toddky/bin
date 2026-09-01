@@ -2,6 +2,7 @@
 print-header 'apptainer'
 cat << 'EOF'
 apptainer output.sif input.def
+apptainer inspect --deffile image.sif
 apptainer run output.sif bash
 EOF
 
