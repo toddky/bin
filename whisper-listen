@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# USAGE: whisper-listen
+# DESCRIPTION: Stream the built-in laptop mic through whisper-stream and save
+# the transcript to a timestamped file under XDG_RUNTIME_DIR.
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+
+whisper_stream_bin="${HOME}/whisper.cpp/build/bin/whisper-stream"
+model_bin="${HOME}/whisper.cpp/models/ggml-base.en.bin"
+
+# Capture device #1 is the built-in digital mic array; confirmed working
+# 2026-08-28 (device #2, the SDL2 default, picks up a different USB device).
+capture_device=1
+
+# Matches the streaming window whisper.sh originally suggested.
+num_threads=8
+step_ms=500
+length_ms=5000
+
+runtime_dir="${XDG_RUNTIME_DIR:-}"
+if [[ -z "$runtime_dir" ]]; then
+    runtime_dir="$(mktemp -d)"
+fi
+
+timestamp_dir="${runtime_dir}/whisper-listen/$(date +%Y%m%dT%H%M%S)"
+transcript_txt="${timestamp_dir}/transcript.txt"
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+
+if [[ ! -x "$whisper_stream_bin" ]]; then
+    echo "ERROR: whisper-stream not found at $whisper_stream_bin. Run whisper.sh first." 1>&2
+    exit 1
+fi
+
+if [[ ! -f "$model_bin" ]]; then
+    echo "ERROR: model file not found: $model_bin" 1>&2
+    exit 1
+fi
+
+if ! mkdir -p "$timestamp_dir"; then
+    echo "ERROR: failed to create output dir: $timestamp_dir" 1>&2
+    exit 1
+fi
+
+echo "Writing transcript to: $transcript_txt"
+
+whisper_stream_args=()
+whisper_stream_args+=(-m "$model_bin")
+whisper_stream_args+=(-c "$capture_device")
+whisper_stream_args+=(-t "$num_threads")
+whisper_stream_args+=(--step "$step_ms")
+whisper_stream_args+=(--length "$length_ms")
+whisper_stream_args+=(-f "$transcript_txt")
+
+"$whisper_stream_bin" "${whisper_stream_args[@]}"

@@ -91,6 +91,7 @@
 !/vd-*
 !/volume-*
 !/vnc-*
+!/whisper-*
 !/yabai-*
 
 !/*-json
