@@ -185,6 +185,25 @@ counts = entries.group_by { |entry| entry.kind }
                 .transform_values(&:length)
 ```
 
+## Errors
+
+Write failures to stderr with `warn`, and use `abort` when the script must stop. `abort` writes to stderr and exits 1 in a single call, so never pair a `warn` with a separate `exit 1`. Never report a failure with `puts`; stdout is for results the caller may pipe.
+
+Prefix every message with an all-caps severity, `ERROR:` for failures and `WARNING:` for non-fatal notices. Say how to fix the problem, not just what broke.
+
+```ruby
+warn 'WARNING: no reviewers configured, falling back to CODEOWNERS'
+abort 'ERROR: set CHECKIN_TOKEN or GITLAB_API_TOKEN, or create ~/.gitlab_key'
+```
+
+Not:
+
+```ruby
+puts 'Error: no token found'
+$stderr.puts 'error: no token found'
+exit 1
+```
+
 ## Comments and Section Structure
 
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.
