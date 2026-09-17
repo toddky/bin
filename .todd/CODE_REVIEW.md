@@ -392,6 +392,9 @@ def summarize_failures(results):
 log_file.write_text(summarize_failures(results))
 ```
 
+### CR-D-8: Stay In Scope
+Keep unrelated changes out of the change set. A bug fix does not need surrounding cleanup, and moving or renaming code you are not fixing buries the real change in the diff.
+
 ### CR-E-1: Guard Clauses
 Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
 
@@ -518,6 +521,61 @@ def load_config(config_file):
 
 def run_step(config):
     ...
+```
+
+### CR-E-7: Narrow Excepts
+Never swallow an error you depend on succeeding. Catch the specific exception you expect, then exit or re-raise; a bare `except` hides the real failure and the next symptom shows up somewhere unrelated.
+
+Prefer checking the condition upfront. Reach for `try` only when a check is not practical, as with a parse.
+
+Bad:
+```python
+try:
+    config = yaml.safe_load(config_file.read_text())
+except Exception:
+    config = {}
+```
+
+Good:
+Malformed YAML can only be detected by parsing, so here the `except` is the check:
+```python
+try:
+    config = yaml.safe_load(config_file.read_text())
+except yaml.YAMLError as error:
+    sys.exit(f"ERROR: {config_file} is not valid YAML: {error}")
+```
+
+Bad:
+A missing file can be tested for, so an `except` is the wrong tool:
+```python
+try:
+    config = yaml.safe_load(config_file.read_text())
+except FileNotFoundError:
+    sys.exit(f"ERROR: {config_file} not found")
+```
+
+Good:
+```python
+if not config_file.exists():
+    sys.exit(f"ERROR: {config_file} not found, create it or pass --config")
+
+config = yaml.safe_load(config_file.read_text())
+```
+
+### CR-E-8: Always Timeout
+Set an explicit timeout on every network call. Most clients default to waiting forever, so one unresponsive server hangs the job until somebody notices and kills it.
+
+Bad:
+```python
+response = requests.get(url)
+```
+
+Good:
+```python
+# 30s is roughly double the slowest response measured against this endpoint (~14s).
+REQUEST_TIMEOUT_SECONDS = 30
+
+response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
 ```
 
 ### CR-F-1: Argument Grouping
