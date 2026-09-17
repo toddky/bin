@@ -145,6 +145,29 @@ sig_id = path_tokens[0]
 job_id = path_tokens[1]
 ```
 
+### CR-B-5: Vertical Spacing
+Use one blank line between functions and keep related assignments aligned. Stacked blank lines and ragged columns make a file harder to scan than the code in it.
+
+Bad:
+```python
+def load_config():
+    ...
+
+
+
+def save_config():
+    ...
+```
+
+Good:
+```python
+def load_config():
+    ...
+
+def save_config():
+    ...
+```
+
 ### CR-C-1: Specific Verbs
 Name functions and helpers after specific, concrete actions or outputs rather than generic software abstractions.
 
@@ -233,6 +256,37 @@ def commit(message, git_args=None):
 
 ### CR-D-3: Delete Dead Code
 Delete unused imports, commented-out blocks, and leftover scaffolding instead of leaving them behind. Do not keep code that nothing calls.
+
+### CR-D-4: No Step Machinery
+Run the steps in order under named section headers. Do not build a step table, dispatcher, or registry to drive a fixed sequence that only ever runs one way.
+
+Bad:
+```python
+steps = [("fetch", fetch_sources), ("build", run_build), ("publish", upload_results)]
+for name, step in steps:
+    print(f"=== {name} ===")
+    step()
+```
+
+Good:
+```python
+# ==============================================================================
+# FETCH
+# ==============================================================================
+fetch_sources()
+
+
+# ==============================================================================
+# BUILD
+# ==============================================================================
+run_build()
+
+
+# ==============================================================================
+# PUBLISH
+# ==============================================================================
+upload_results()
+```
 
 ### CR-E-1: Guard Clauses
 Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
@@ -353,7 +407,8 @@ parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=Tr
 ```
 
 ### CR-F-3: Argument Types
-Declare `type=` on every argument that is not a string. Without it argparse hands back a string and numeric comparisons silently do the wrong thing.
+Declare `type=` on every value-taking argument that is not a string, since argparse otherwise hands back a string and numeric comparisons silently do the wrong thing.
+Boolean flags are exempt: their action already produces a bool, and `type=bool` is wrong because `bool("False")` is `True`.
 
 Bad:
 ```python
@@ -366,6 +421,26 @@ Good:
 parser.add_argument("--timeout", type=int, default=30, help="Seconds to wait before giving up")
 parser.add_argument("--config", type=Path, help="Config file to read")
 ```
+
+### CR-G-1: Useful Tests
+Delete tests that only prove the language works or repeat coverage another test already has. A test earns its place by failing when the new behavior breaks.
+
+Bad:
+This only proves Python dicts work, not that anything you wrote works:
+```python
+def test_config_lookup():
+    config = {"timeout": 30}
+    assert config["timeout"] == 30
+```
+
+Good:
+```python
+def test_parse_rejects_unknown_field():
+    with pytest.raises(ValueError, match="unknown field 'retrys'"):
+        parse_config(config_with_typo)
+```
+
+
 
 
 
