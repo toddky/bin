@@ -395,6 +395,44 @@ log_file.write_text(summarize_failures(results))
 ### CR-D-8: Stay In Scope
 Keep unrelated changes out of the change set. A bug fix does not need surrounding cleanup, and moving or renaming code you are not fixing buries the real change in the diff.
 
+### CR-D-9: One Source
+Define a value once. A constant declared in two files, or a default set in both the parser and the function it feeds, will drift, and the copy you forgot to change becomes the bug.
+
+Bad:
+The same default lives in two places:
+```python
+parser.add_argument("--timeout", type=int, default=30)
+
+def fetch_report(timeout=30):
+    ...
+```
+
+Good:
+```python
+DEFAULT_TIMEOUT_SECONDS = 30
+
+parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_SECONDS)
+
+def fetch_report(timeout=DEFAULT_TIMEOUT_SECONDS):
+    ...
+```
+
+### CR-D-10: No Speculation
+Build what the change needs, not what it might need later. An option nobody passes and a hook nobody calls are pure cost, and the guess is usually wrong by the time a caller shows up.
+
+Bad:
+No caller passes `dry_run`, `retries`, or `mirror_url`:
+```python
+def upload_report(report_file, dry_run=False, retries=0, mirror_url=None):
+    ...
+```
+
+Good:
+```python
+def upload_report(report_file):
+    ...
+```
+
 ### CR-E-1: Guard Clauses
 Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
 
@@ -702,6 +740,41 @@ parser.add_argument("--token", help="API token for the upload")
 Good:
 ```python
 parser.add_argument("--token-file", type=Path, help="File holding the API token; defaults to $API_TOKEN")
+```
+
+### CR-H-4: Secret Storage
+Never persist a secret to a file your program creates. Reading one from an existing credential file is fine; writing one leaves it on disk after the run, where it can be committed, logged, or left world-readable.
+
+Bad:
+Caching the token to skip the next login leaves it on disk:
+```python
+token_cache.write_text(api_token)
+```
+
+Good:
+Read it fresh each run and keep it in memory:
+```python
+api_token = os.environ["API_TOKEN"]
+```
+
+Exception: a short-lived temp file is the right way to keep a secret off the command line, since `mktemp` creates it with owner-only permissions. Clean it up in a trap rather than at the end of the script.
+
+```bash
+header_file="$(mktemp)"
+trap 'rm -f "$header_file"' EXIT
+printf 'PRIVATE-TOKEN: %s\n' "$api_key" > "$header_file"
+curl --silent --header @"$header_file" "$url"
+```
+
+When the script must `exec`, the trap never fires, so unlink the file up front and pass it by descriptor. The kernel reclaims the inode on exit:
+
+```bash
+config_file="$(mktemp --tmpdir curl-cfg.XXXXXX)"
+chmod 600 "$config_file"
+printf '%s\n' "${config_lines[@]}" > "$config_file"
+exec {config_fd}<"$config_file"
+rm -f "$config_file"
+exec curl --config "/dev/fd/${config_fd}" "${safe_args[@]}"
 ```
 
 
