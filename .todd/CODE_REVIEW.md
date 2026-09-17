@@ -78,7 +78,23 @@ def setup_logging():
     logging.basicConfig(level=logging.INFO)
 ```
 
-### CR-A-5: External Permalinks
+### CR-A-5: Usage Examples
+Put a usage example at the very top of any function whose inputs or outputs are not obvious from the signature. Show one real call and what it returns.
+
+Bad:
+```python
+def parse_duration(text):
+    ...
+```
+
+Good:
+```python
+def parse_duration(text):
+    # parse_duration("1h30m") -> 5400
+    ...
+```
+
+### CR-A-6: External Permalinks
 When reusing logic from an upstream project or reproducing behavior from another repository, include the pinned commit SHA and line number along with a permalink.
 
 Bad:
@@ -92,6 +108,19 @@ Good:
 # Reuses config resolution logic (upstream/tool@a1b2c3d4 line 142)
 # https://github.com/example/tool/blob/a1b2c3d4/bin/tool#L142
 resolve_config()
+```
+
+### CR-A-7: Trim Help Text
+Keep help strings and descriptions short. If an example already shows the behavior, delete the prose restating it, and cut anything that only states common sense.
+
+Bad:
+```python
+parser.add_argument("--format", help="The output format to use when writing the report. This controls whether the report comes out as JSON or as CSV. JSON is the default because most consumers expect it.")
+```
+
+Good:
+```python
+parser.add_argument("--format", choices=["json", "csv"], default="json", help="Report output format")
 ```
 
 ### CR-B-1: Break Expressions
@@ -199,7 +228,27 @@ def load_config(config_file):
     return yaml.safe_load(config_file.read_text())
 ```
 
-### CR-B-7: Plain Conditions
+### CR-B-7: Section Headers
+Name each section after the step the code performs, in all caps, three words maximum. Standard up-front sections come first in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
+
+Bad:
+```python
+# ==============================================================================
+# THIS SECTION PARSES THE BUILD LOG AND PULLS OUT THE ERRORS
+# ==============================================================================
+```
+
+Good:
+```python
+# ==============================================================================
+# BUILD LOG PARSING
+# ==============================================================================
+```
+
+### CR-B-8: Match The File
+Follow the conventions already in the file you are editing. If every other function there returns a dict, do not introduce a dataclass for yours; consistency within one file beats your preferred style.
+
+### CR-B-9: Plain Conditions
 Test the value directly. Comparing against `True` or `False` adds noise and breaks the moment the value is `None` or an empty string instead of the literal you compared to.
 
 Bad:
@@ -433,6 +482,42 @@ def upload_report(report_file):
     ...
 ```
 
+### CR-D-11: No Nested Functions
+Define functions at module level. A function nested inside another is invisible to tests and callers, and it usually only exists to reach a local it could have taken as a parameter. If it is genuinely reused, hoist it; if it is single-use, inline it per CR-D-1.
+
+Bad:
+```python
+def build_report(rows):
+    def format_row(row):
+        return f"{row.name}: {row.status}"
+
+    return "\n".join(format_row(row) for row in rows)
+```
+
+Good:
+```python
+def build_report(rows):
+    return "\n".join(f"{row.name}: {row.status}" for row in rows)
+```
+
+### CR-D-12: Parameterize Reuse
+When a second caller needs the same code or data with a different value, take that value as an input instead of copying the file. Do this the moment the second caller exists, not speculatively (CR-D-10).
+
+Bad:
+The URL is baked in, so the next consumer has to copy the whole file:
+```python
+API_URL = "https://reports.example.com/api/v4"
+
+def upload(report_file):
+    requests.post(f"{API_URL}/reports", files={"report": report_file.read_bytes()})
+```
+
+Good:
+```python
+def upload(report_file, api_url):
+    requests.post(f"{api_url}/reports", files={"report": report_file.read_bytes()})
+```
+
 ### CR-E-1: Guard Clauses
 Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
 
@@ -661,6 +746,23 @@ Good:
 ```python
 parser.add_argument("--timeout", type=int, default=30, help="Seconds to wait before giving up")
 parser.add_argument("--config", type=Path, help="Config file to read")
+```
+
+### CR-F-4: Group Derived Flags
+Derive related state from the parsed arguments in one place near the top. Scattering the assignments through the script leaves the reader hunting for what turned a mode on.
+
+Bad:
+The two flags belong together but sit far apart:
+```python
+use_scheduler = args.scheduler is not None
+...
+use_remote = args.host is not None
+```
+
+Good:
+```python
+use_scheduler = args.scheduler is not None
+use_remote = args.host is not None
 ```
 
 ### CR-G-1: Useful Tests
