@@ -160,6 +160,213 @@ def extract_build_errors(log_file):
     ...
 ```
 
+### CR-C-2: Plain Names
+Avoid software buzzwords and abstract jargon in names. Use plain terms that describe the actual thing.
+
+Bad:
+```python
+def orchestrate_artifact_pipeline(payload):
+    ...
+```
+
+Good:
+```python
+def upload_build_artifacts(files):
+    ...
+```
+
+### CR-C-3: Named Constants
+Give limits, thresholds, and fixed keys an uppercase constant at the top of the file. Do not leave bare literals inline.
+
+Bad:
+```python
+if len(fields) > 20:
+    fields = fields[:20]
+```
+
+Good:
+```python
+MAX_METADATA_FIELDS = 20
+
+if len(fields) > MAX_METADATA_FIELDS:
+    fields = fields[:MAX_METADATA_FIELDS]
+```
+
+### CR-D-1: Inline Helpers
+Inline single-use helpers into the caller. Do not create a function for logic that runs in exactly one place and is short enough to read inline.
+
+Bad:
+```python
+def is_prebuilt(source_file):
+    return source_file.suffix in (".elf", ".axf")
+
+for source_file in sources:
+    if is_prebuilt(source_file):
+        copy_source(source_file)
+```
+
+Good:
+```python
+for source_file in sources:
+    if source_file.suffix in (".elf", ".axf"):
+        copy_source(source_file)
+```
+
+### CR-D-2: Direct Passthrough
+Pass flags straight through to the underlying tool. Do not invent a custom boolean that maps onto a flag the tool already accepts.
+
+Bad:
+```python
+def commit(message, skip_hooks=False):
+    extra = ["--no-verify"] if skip_hooks else []
+    run_git(["commit", "-m", message] + extra)
+```
+
+Good:
+```python
+def commit(message, git_args=None):
+    cmd = ["commit"]
+    cmd.extend(["-m", message])
+    cmd.extend(git_args or [])
+    run_git(cmd)
+```
+
+### CR-D-3: Delete Dead Code
+Delete unused imports, commented-out blocks, and leftover scaffolding instead of leaving them behind. Do not keep code that nothing calls.
+
+### CR-E-1: Guard Clauses
+Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
+
+Bad:
+```python
+for log_file in log_files:
+    if log_file.exists():
+        if log_file.stat().st_size > 0:
+            error = parse_log_error(log_file)
+            if error:
+                return error
+            process_log_file(log_file)
+```
+
+Good:
+```python
+for log_file in log_files:
+    if not log_file.exists():
+        continue
+    if log_file.stat().st_size == 0:
+        continue
+    error = parse_log_error(log_file)
+    if error:
+        return error
+    process_log_file(log_file)
+```
+
+### CR-E-2: Bounded Retries
+Retry a fixed number of attempts instead of looping forever. Print the reason on each retry so a stuck job is diagnosable from the log.
+
+Bad:
+```python
+while True:
+    try:
+        run_build()
+        break
+    except TransientError:
+        time.sleep(2)
+```
+
+Good:
+```python
+# 3 attempts covers the transient fetch failures seen in CI; beyond that it is a real break.
+MAX_ATTEMPTS = 3
+
+for attempt in range(1, MAX_ATTEMPTS + 1):
+    try:
+        run_build()
+        break
+    except TransientError as error:
+        print(f"Attempt {attempt} of {MAX_ATTEMPTS} failed: {error}")
+        if attempt == MAX_ATTEMPTS:
+            raise
+        time.sleep(2)
+```
+
+### CR-E-3: Loud Failures
+Validate conflicting flags and missing prerequisites upfront and exit with a one-line message. Never let a bad configuration limp along silently.
+
+Bad:
+```python
+if not config_file.exists():
+    print("WARNING: config file not found, continuing without a config")
+```
+
+Good:
+```python
+if not config_file.exists():
+    sys.exit(f"ERROR: config file {config_file} not found, create it or pass --config")
+```
+
+### CR-E-4: Debug Context
+Print the identifiers needed to debug a failure: job id, host, path, and command. A bare exit code or message with no context forces a second debugging round.
+
+Bad:
+```python
+if "No space left on device" in log_text:
+    sys.exit("ERROR: job failed, disk full")
+```
+
+Good:
+The job runs on a remote node, so the host and mount are the only way to tell which disk filled:
+```python
+if "No space left on device" in log_text:
+    sys.exit(f"ERROR: no space left on {hostname}:{mount_dir}, clean up that mount or rerun on another host")
+```
+
+### CR-F-1: Argument Grouping
+Define every flag in `parse_args()` at the top of the file. Do not scatter argument handling into helpers or set defaults at the call site.
+
+Bad:
+```python
+def fetch_report(timeout=None):
+    if timeout is None:
+        timeout = 30
+```
+
+Good:
+```python
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--timeout", type=int, default=30, help="Seconds to wait before giving up")
+    return parser.parse_args()
+```
+
+### CR-F-2: Useful Defaults
+Default a flag to whatever the tool is normally used for, and give the opposite a `--no-` form. Do not make the common case opt-in.
+
+Bad:
+```python
+parser.add_argument("--debug", action="store_true", help="Keep the debug artifacts")
+```
+
+Good:
+```python
+parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=True, help="Keep the debug artifacts")
+```
+
+### CR-F-3: Argument Types
+Declare `type=` on every argument that is not a string. Without it argparse hands back a string and numeric comparisons silently do the wrong thing.
+
+Bad:
+```python
+parser.add_argument("--timeout", default=30, help="Seconds to wait before giving up")
+parser.add_argument("--config", help="Config file to read")
+```
+
+Good:
+```python
+parser.add_argument("--timeout", type=int, default=30, help="Seconds to wait before giving up")
+parser.add_argument("--config", type=Path, help="Config file to read")
+```
+
 
 
 
