@@ -48,21 +48,21 @@ Prefer concise comments over multiline docstrings for simple functions or script
 
 Bad:
 ```python
-def configure_container():
+def setup_logging():
     """
-    Configures and initializes container settings.
-    
-    This function sets up the default container runtime environment
+    Configures and initializes logging settings.
+
+    This function sets up the default log format and level
     and verifies that all prerequisites are satisfied.
     """
-    init_runtime()
+    logging.basicConfig(level=logging.INFO)
 ```
 
 Good:
 ```python
-def configure_container():
-    # Container runtime is required across all execution targets.
-    init_runtime()
+def setup_logging():
+    # Every subcommand writes to the same log, so the format is set once here.
+    logging.basicConfig(level=logging.INFO)
 ```
 
 ### CR-A-5: External Permalinks
@@ -134,15 +134,15 @@ Split text and path parsing into clean, sequential steps rather than building mo
 
 Bad:
 ```python
-sig_id, job_id = re.match(r".*?/sigs/([^/]+)/.*?/jobs/([^/]+).*", full_url).groups()
+group_id, item_id = re.match(r".*?/groups/([^/]+)/.*?/items/([^/]+).*", full_url).groups()
 ```
 
 Good:
 ```python
-url_path = full_url.split("/sigs/", 1)[-1]
+url_path = full_url.split("/groups/", 1)[-1]
 path_tokens = url_path.split("/")
-sig_id = path_tokens[0]
-job_id = path_tokens[1]
+group_id = path_tokens[0]
+item_id = path_tokens[1]
 ```
 
 ### CR-B-5: Vertical Spacing
@@ -166,6 +166,39 @@ def load_config():
 
 def save_config():
     ...
+```
+
+### CR-B-6: Top Imports
+Put every import at the top of the file. An import buried in a function or halfway down the file hides a dependency and is usually a leftover from adding the code in a hurry.
+
+Bad:
+```python
+def load_config(config_file):
+    import yaml
+    return yaml.safe_load(config_file.read_text())
+```
+
+Good:
+```python
+import yaml
+
+def load_config(config_file):
+    return yaml.safe_load(config_file.read_text())
+```
+
+### CR-B-7: Plain Conditions
+Test the value directly. Comparing against `True` or `False` adds noise and breaks the moment the value is `None` or an empty string instead of the literal you compared to.
+
+Bad:
+```python
+if args.verbose is not False:
+    print_details()
+```
+
+Good:
+```python
+if args.verbose:
+    print_details()
 ```
 
 ### CR-C-1: Specific Verbs
@@ -288,6 +321,64 @@ run_build()
 upload_results()
 ```
 
+### CR-D-5: Existing Helpers
+Look for an existing helper before writing a new one. If the repo already wraps this call, use the wrapper; a second copy drifts from the first and both have to be fixed later.
+
+Bad:
+```python
+def current_branch():
+    result = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, check=True)
+    return result.stdout.strip()
+```
+
+Good:
+```python
+import shell
+
+def current_branch():
+    return shell.run(["git", "branch", "--show-current"])
+```
+
+### CR-D-6: Cohesive Functions
+Put the setup a function needs inside that function. If every caller has to remember a preparation step first, the step belongs in the function that owns the work.
+
+Bad:
+```python
+def parse_build_errors(log_text):
+    ...
+
+log_text = build_log.read_text(errors="replace")
+errors = parse_build_errors(log_text)
+```
+
+Good:
+```python
+def parse_build_errors(build_log):
+    log_text = build_log.read_text(errors="replace")
+    ...
+
+errors = parse_build_errors(build_log)
+```
+
+### CR-D-7: Fewer Parameters
+Do not take a parameter the caller already controls. Return the result instead of writing it somewhere, so the caller decides the destination and the function is testable without a filesystem.
+
+Bad:
+```python
+def summarize_failures(results, log_file):
+    lines = [f"{name}: {reason}" for name, reason in results]
+    log_file.write_text("\n".join(lines))
+```
+
+Good:
+```python
+def summarize_failures(results):
+    lines = [f"{name}: {reason}" for name, reason in results]
+    return "\n".join(lines)
+
+log_file.write_text(summarize_failures(results))
+```
+
 ### CR-E-1: Guard Clauses
 Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
 
@@ -375,6 +466,21 @@ if "No space left on device" in log_text:
     sys.exit(f"ERROR: no space left on {hostname}:{mount_dir}, clean up that mount or rerun on another host")
 ```
 
+### CR-E-5: Name The Cause
+Say what kind of failure it was, not just that something failed. A run that started and never finished is an interrupted run, not a bad result, and the message should say so.
+
+Bad:
+```python
+if not result_file.exists():
+    sys.exit("ERROR: run failed")
+```
+
+Good:
+```python
+if not result_file.exists():
+    sys.exit(f"ERROR: {run_name} started but never wrote {result_file} (it may have died before finishing)")
+```
+
 ### CR-F-1: Argument Grouping
 Define every flag in `parse_args()` at the top of the file. Do not scatter argument handling into helpers or set defaults at the call site.
 
@@ -438,6 +544,26 @@ Good:
 def test_parse_rejects_unknown_field():
     with pytest.raises(ValueError, match="unknown field 'retrys'"):
         parse_config(config_with_typo)
+```
+
+### CR-G-2: Reachable Features
+When you add a variant, update the place that enumerates the allowed values in the same change. Otherwise the code is unreachable and the argument parser rejects the value before your branch ever runs.
+
+Bad:
+`--format yaml` exits with "invalid choice", so the new branch is dead code:
+```python
+parser.add_argument("--format", choices=["json", "csv"], default="json")
+
+if args.format == "yaml":
+    return yaml.safe_dump(report)
+```
+
+Good:
+```python
+parser.add_argument("--format", choices=["json", "csv", "yaml"], default="json")
+
+if args.format == "yaml":
+    return yaml.safe_dump(report)
 ```
 
 
