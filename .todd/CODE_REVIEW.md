@@ -407,7 +407,7 @@ for log_file in log_files:
 ```
 
 ### CR-E-2: Bounded Retries
-Retry a fixed number of attempts instead of looping forever. Print the reason on each retry so a stuck job is diagnosable from the log.
+Retry a fixed number of attempts instead of looping forever, and back off exponentially rather than sleeping the same amount each time. Print the reason on every attempt so a stuck job is diagnosable from the log.
 
 Bad:
 ```python
@@ -423,6 +423,7 @@ Good:
 ```python
 # 3 attempts covers the transient fetch failures seen in CI; beyond that it is a real break.
 MAX_ATTEMPTS = 3
+BACKOFF_BASE_SECONDS = 2
 
 for attempt in range(1, MAX_ATTEMPTS + 1):
     try:
@@ -432,7 +433,8 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
         print(f"Attempt {attempt} of {MAX_ATTEMPTS} failed: {error}")
         if attempt == MAX_ATTEMPTS:
             raise
-        time.sleep(2)
+        backoff = BACKOFF_BASE_SECONDS * 2 ** (attempt - 1)
+        time.sleep(backoff)
 ```
 
 ### CR-E-3: Loud Failures
@@ -564,6 +566,47 @@ parser.add_argument("--format", choices=["json", "csv", "yaml"], default="json")
 
 if args.format == "yaml":
     return yaml.safe_dump(report)
+```
+
+### CR-H-1: Secret Passing
+Never pass a secret as a command-line argument. It is visible to every user on the box in `ps -ef` and it lands in shell history. Pass it through the environment or stdin instead.
+
+Bad:
+```python
+shell.run(["report-tool", "--token", api_token, "--upload", str(report_file)])
+```
+
+Good:
+```python
+env = os.environ | {"API_TOKEN": api_token}
+shell.run(["report-tool", "--upload", str(report_file)], env=env)
+```
+
+### CR-H-2: No Shell True
+Call subprocesses with a list and no `shell=True`. With a shell in the middle, any value you interpolate can inject its own commands.
+
+Bad:
+An `author` of `x; rm -rf ~` runs as a second command:
+```python
+subprocess.run(f"git log --author={author}", shell=True, check=True)
+```
+
+Good:
+```python
+subprocess.run(["git", "log", f"--author={author}"], check=True, text=True)
+```
+
+### CR-H-3: No Secret Flags
+Do not give your own tool an option that takes a secret as its value, or every caller ends up leaking it in `ps -ef`. Accept a file path or read it from the environment instead.
+
+Bad:
+```python
+parser.add_argument("--token", help="API token for the upload")
+```
+
+Good:
+```python
+parser.add_argument("--token-file", type=Path, help="File holding the API token; defaults to $API_TOKEN")
 ```
 
 
