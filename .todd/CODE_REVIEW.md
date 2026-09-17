@@ -1,5 +1,18 @@
 # Code Review Rules
 
+Rules are grouped by letter:
+
+| Section | Covers |
+|---|---|
+| CR-A | Comments and documentation |
+| CR-B | Formatting and readability |
+| CR-C | Naming |
+| CR-D | Simplicity and structure |
+| CR-E | Errors and failure handling |
+| CR-F | Arguments and CLI design |
+| CR-G | Tests |
+| CR-H | Security |
+
 ### CR-A-1: Short Comments
 Comments must be 2 lines maximum, 1 sentence per line. Keep comments short and direct. Never write paragraphs or multi-sentence explanations. If a comment exceeds 2 lines, shorten it or delete it.
 
@@ -483,6 +496,30 @@ if not result_file.exists():
     sys.exit(f"ERROR: {run_name} started but never wrote {result_file} (it may have died before finishing)")
 ```
 
+### CR-E-6: Boundary Validation
+Validate external input once, where it enters the program. Re-checking the same thing in every function that receives it adds noise and still leaves the real entry point unguarded.
+
+Bad:
+Every caller re-checks what the loader should have guaranteed:
+```python
+def run_step(config):
+    if "timeout" not in config:
+        sys.exit("ERROR: missing timeout")
+    ...
+```
+
+Good:
+```python
+def load_config(config_file):
+    config = yaml.safe_load(config_file.read_text())
+    if "timeout" not in config:
+        sys.exit(f"ERROR: {config_file} is missing required field 'timeout'")
+    return config
+
+def run_step(config):
+    ...
+```
+
 ### CR-F-1: Argument Grouping
 Define every flag in `parse_args()` at the top of the file. Do not scatter argument handling into helpers or set defaults at the call site.
 
@@ -608,6 +645,10 @@ Good:
 ```python
 parser.add_argument("--token-file", type=Path, help="File holding the API token; defaults to $API_TOKEN")
 ```
+
+
+
+
 
 
 
