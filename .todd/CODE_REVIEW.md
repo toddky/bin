@@ -15,7 +15,7 @@ Rules are grouped by letter:
 | CR-I | Security |
 | CR-J | Files |
 
-Per-language mechanics live in CODING.md, BASH.md, and PYTHON.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
+Per-language mechanics live in BASH.md, PYTHON.md, GO.md, and RUBY.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
 
 ## CR-A: Comments and documentation
 
