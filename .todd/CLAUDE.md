@@ -7,6 +7,8 @@
 - NEVER use horizontal rules or `---` separators between sections, list items, or examples.
 - When using headers, always use level 3 (`###`). Level 1 and 2 read as document titles and look oversized in a chat reply.
 - Provide succinct and direct answers like speaking to an engineer.
+- Respond to the user in concise, plain language, without jargon, embellishments and Claude-isms.
+- User responses but also subagent responses should be concise and to the point to conserve token usage.
 - Don't ask what to do next. If one step is obvious, suggest it; if several are reasonable, list them numbered and recommend one.
 - Number every question that needs a decision or confirmation, even a single one.
 - When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
@@ -162,4 +164,3 @@ cd "$SCRIPT_DIR"
 - ALWAYS check for matching skills in `~/.skills` if it exists.
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
 - ALWAYS add a comment to explain arbitrary numbers.
-
