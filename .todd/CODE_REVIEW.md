@@ -283,7 +283,7 @@ def load_config(config_file):
 ```
 
 ### CR-B8: Section Headers
-Name each section after the step the code performs, in all caps, three words maximum. Standard up-front sections come first in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
+Name each section after the step the code performs, in all caps, three words maximum. Standard up-front sections come first in this order when present: `IMPORTS` (CR-B7), `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`. When the section that does the work is small enough that a name would only restate it, call it `MAIN`. After those, the headers run in the order the code runs, so the list of headers reads as the sequence of steps.
 
 Bad:
 ```python
@@ -298,6 +298,8 @@ Good:
 # BUILD LOG PARSING
 # ==============================================================================
 ```
+
+The banner is the language's own comment marker followed by 78 `=` characters, the title line, then the marker and 78 `=` again. Languages with their own documented convention do not get a banner: Go uses package and function doc comments instead.
 
 ### CR-B9: Match The File
 Follow the conventions already in the file you are editing. If every other function there returns a dict, do not introduce a dataclass for yours; consistency within one file beats your preferred style. When the file's existing convention conflicts with a rule here, the file wins for this change; bring the file in line in a separate change (CR-E3).
@@ -1018,4 +1020,32 @@ Good:
 ```python
 with tempfile.TemporaryDirectory() as temp_dir:
     ...
+```
+
+### CR-J4: Resolve Symlinks
+Resolve a path before you act on it or report it. On a shared machine the interesting directories are symlinks into someone's scratch or another repo, and the name the caller typed does not say where the write actually lands.
+
+Bad:
+```python
+print(f"writing report to {report_dir}")
+```
+
+Good:
+```python
+print(f"writing report to {report_dir.resolve()}")
+```
+
+### CR-J5: Self Locating Scripts
+A script that only works from its own directory resolves its location and changes there before doing anything else. Depending on the caller's cwd makes the script work from one terminal and fail from another, and the failure names a missing file rather than the real cause. See BASH.md under New Scripts for the header to copy.
+
+Bad:
+```bash
+make -C . release
+```
+
+Good:
+```bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+make release
 ```
