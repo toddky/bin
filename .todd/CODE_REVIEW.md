@@ -210,7 +210,7 @@ item_id = path_tokens[path_tokens.index("items") + 1]
 ```
 
 ### CR-B5: Vertical Spacing
-Use one blank line between functions and keep related assignments aligned. Stacked blank lines and ragged columns make a file harder to scan than the code in it.
+Do not stack blank lines. If a formatter such as black or ruff runs on the file, let it decide the spacing around functions; otherwise use one blank line between functions and within a block, and two blank lines only before a section header (CR-B7, CR-D9).
 
 Bad:
 ```python
@@ -309,6 +309,73 @@ MAX_METADATA_FIELDS = 20
 
 if len(fields) > MAX_METADATA_FIELDS:
     fields = fields[:MAX_METADATA_FIELDS]
+```
+
+### CR-C3: Spell Names Out
+Spell names out in new code. An abbreviation saves the writer three keystrokes and costs every reader a guess.
+
+This covers single letters too: `result`, not `r`. A plain index loop (`i`, `j`) is the only place one is acceptable.
+
+Exception: a name that mirrors an API, JSON, or CSV field keeps the field's own spelling, however abbreviated. `jobid` stays `jobid` so the same string greps across server and client.
+
+Bad:
+```python
+out = run_build(cfg)
+msg = out.splitlines()[-1]
+for r in out.splitlines():
+    ...
+```
+
+Good:
+```python
+output = run_build(config)
+last_line = output.splitlines()[-1]
+jobid = response["jobid"]
+```
+
+### CR-C4: File And Dir Suffixes
+Name a filesystem path after what it points at: a `_file` or `_dir` suffix, or the extension when it matters (`readme_md`, `config_json`). A `path` suffix says nothing about whether the code can read it, list it, or write into it.
+
+Bad:
+```python
+config_path = Path.home() / ".config" / "tool" / "config.yaml"
+log_path = args.log_path
+```
+
+Good:
+```python
+config_yaml = Path.home() / ".config" / "tool" / "config.yaml"
+log_dir = args.log_dir
+```
+
+### CR-C5: Count Prefix
+Prefix integer counts with `num_`. A `_count` suffix or a phrase like `failures_seen` reads as a collection until the reader finds the assignment.
+
+Bad:
+```python
+failure_count = len(failed_jobs)
+jobs_seen = 0
+```
+
+Good:
+```python
+num_failures = len(failed_jobs)
+num_jobs = 0
+```
+
+### CR-C6: Name The Wrapper After The Tool
+Name a pass-through helper after the binary or concept it wraps. A `run_` or `_cmd` decoration on the name repeats what the body already shows and makes the call site read like plumbing.
+
+Bad:
+```python
+def run_tmux_cmd(args):
+    return shell.run(["tmux", *args])
+```
+
+Good:
+```python
+def tmux(args):
+    return shell.run(["tmux", *args])
 ```
 
 ## CR-D: Function design
@@ -585,7 +652,25 @@ for log_file in log_files:
     process_log_file(log_file)
 ```
 
-### CR-F2: Bounded Retries
+### CR-F2: Handle Then Pass Through
+Test for the case you actually handle, then fall through to one pass-through path. A negated test inverts the logic and forces a second exit point that has to repeat the value the fall-through already had.
+
+Bad:
+```python
+if exit_code != TIMEOUT_EXIT_CODE:
+    sys.exit(exit_code)
+print_timeout_help()
+sys.exit(TIMEOUT_EXIT_CODE)
+```
+
+Good:
+```python
+if exit_code == TIMEOUT_EXIT_CODE:
+    print_timeout_help()
+sys.exit(exit_code)
+```
+
+### CR-F3: Bounded Retries
 Retry a fixed number of attempts instead of looping forever, and back off exponentially rather than sleeping the same amount each time. Print the reason to stderr on every attempt so a stuck job is diagnosable from the log.
 
 Bad:
@@ -616,7 +701,7 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
         time.sleep(BACKOFF_BASE_SECONDS * 2 ** (attempt - 1))
 ```
 
-### CR-F3: Loud Failures
+### CR-F4: Loud Failures
 Validate conflicting flags and missing prerequisites upfront and exit with a one-line message. Never let a bad configuration limp along silently.
 
 Bad:
@@ -631,7 +716,7 @@ if not config_file.exists():
     sys.exit(f"ERROR: config file {config_file} not found, create it or pass --config")
 ```
 
-### CR-F4: Debug Context
+### CR-F5: Debug Context
 Say what kind of failure it was and print the identifiers needed to debug it: job id, host, path, command. A bare "run failed" forces a second debugging round, and a run that started and never finished is an interrupted run, not a bad result.
 
 Bad:
@@ -653,7 +738,7 @@ if not result_file.exists():
     sys.exit(f"ERROR: {run_name} started but never wrote {result_file} (it may have died before finishing)")
 ```
 
-### CR-F5: Boundary Validation
+### CR-F6: Boundary Validation
 Validate external input once, where it enters the program. Re-checking the same thing in every function that receives it adds noise and still leaves the real entry point unguarded.
 
 Bad:
@@ -680,7 +765,7 @@ def run_step(config):
     ...
 ```
 
-### CR-F6: Check Before Try
+### CR-F7: Check Before Try
 Test for the condition upfront when you can. Reach for `try` only when a check is not practical, as with a parse.
 
 Bad:
@@ -700,7 +785,7 @@ if not config_file.exists():
 config = yaml.safe_load(config_file.read_text())
 ```
 
-### CR-F7: Narrow Excepts
+### CR-F8: Narrow Excepts
 Never swallow an error you depend on succeeding. Catch the specific exception you expect, then exit or re-raise; a bare `except` hides the real failure and the next symptom shows up somewhere unrelated.
 
 Bad:
@@ -720,7 +805,7 @@ except yaml.YAMLError as error:
     sys.exit(f"ERROR: {config_file} is not valid YAML: {error}")
 ```
 
-### CR-F8: Always Timeout
+### CR-F9: Always Timeout
 Set an explicit timeout on every network call. Most clients default to waiting forever, so one unresponsive server hangs the job until somebody notices and kills it.
 
 Bad:
