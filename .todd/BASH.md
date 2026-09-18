@@ -274,6 +274,25 @@ cd "$build_dir"
 ## Safety
 
 - Never expose secrets (API tokens, passwords, etc.) in command arguments -- they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
+- To keep a secret off the command line, write it to a `mktemp` file (created owner-only) and remove it in an exit trap:
+
+  ```bash
+  header_file="$(mktemp)"
+  trap 'rm -f "$header_file"' EXIT
+  printf 'PRIVATE-TOKEN: %s' "$api_key" > "$header_file"
+  curl --silent --header @"$header_file" "$url"
+  ```
+
+- When the script must `exec`, the trap never fires. Unlink the file up front and pass it by descriptor; the kernel reclaims the inode on exit:
+
+  ```bash
+  config_file="$(mktemp --tmpdir curl-cfg.XXXXXX)"
+  printf '%s\n' "${config_lines[@]}" > "$config_file"
+  exec {config_fd}<"$config_file"
+  rm -f "$config_file"
+  exec curl --config "/dev/fd/${config_fd}" "${safe_args[@]}"
+  ```
+
 - Never run destructive commands (`rm -rf`, `git reset --hard`, etc.) without explicit user instruction.
 
 ## Error Handling
