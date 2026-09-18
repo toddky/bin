@@ -13,6 +13,8 @@ Rules are grouped by letter:
 | CR-G | Tests |
 | CR-H | Security |
 
+Per-language mechanics live in BASH.md and PYTHON.md. This file covers the review decisions that apply regardless of language.
+
 ### CR-A-1: Short Comments
 Comments must be 2 lines maximum, 1 sentence per line. Keep comments short and direct. Never write paragraphs or multi-sentence explanations. If a comment exceeds 2 lines, shorten it or delete it.
 
@@ -309,6 +311,9 @@ MAX_METADATA_FIELDS = 20
 if len(fields) > MAX_METADATA_FIELDS:
     fields = fields[:MAX_METADATA_FIELDS]
 ```
+
+### CR-C-4: Prose Extensions
+Use `.md` for prose files. A custom extension like `.prompt` loses syntax highlighting in editors and rendering in the web UI, for no benefit.
 
 ### CR-D-1: Inline Helpers
 Inline single-use helpers into the caller. Do not create a function for logic that runs in exactly one place and is short enough to read inline.
