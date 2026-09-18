@@ -20,9 +20,9 @@ Per-language mechanics live in CODING.md, BASH.md, and PYTHON.md. This file cove
 ## CR-A: Comments and documentation
 
 ### CR-A1: Short Comments
-Comments must be 2 lines maximum, 1 sentence per line. Keep comments short and direct. Never write paragraphs or multi-sentence explanations. If a comment exceeds 2 lines, shorten it or delete it.
+Comments must be 2 lines maximum, 1 sentence per line, each line fitting in 120 columns. Keep comments short and direct. Never write paragraphs or multi-sentence explanations. If a comment exceeds 2 lines, shorten it or delete it.
 
-Exceptions: a regex or parser comment may add lines for concrete example inputs (CR-A3), a usage example may add a line (CR-A5), and a permalink may sit on its own line (CR-A6).
+Exceptions: a regex or parser comment may add lines for concrete example inputs (CR-A3), a usage example may add a line (CR-A6), and a permalink may sit on its own line (CR-A7).
 
 ```python
 # NFS dentry cache can hide a lock made on another host.
@@ -31,7 +31,7 @@ time.sleep(5)
 ```
 
 ### CR-A2: Obvious Comments
-Delete comments that narrate the obvious. If a comment merely restates what the code plainly does, remove it completely. Do not shorten or rephrase it into a superficial explanation.
+A comment explains why: the intent, the gotcha, the reason that is not visible in the code. Delete comments that narrate the obvious. If a comment merely restates what the code plainly does, remove it completely. Do not shorten or rephrase it into a superficial explanation.
 
 Bad:
 ```python
@@ -83,7 +83,22 @@ def setup_logging():
     logging.basicConfig(level=logging.INFO)
 ```
 
-### CR-A5: Usage Examples
+### CR-A5: Update, Do Not Delete
+Leave an existing comment alone unless it is wrong or no longer applies. When your change makes it inaccurate, rewrite it to match the new behavior; deleting it throws away a reason nobody wrote down twice.
+
+Bad:
+The limit was raised and the comment explaining the old one was dropped:
+```python
+MAX_PARALLEL_UPLOADS = 8
+```
+
+Good:
+```python
+# 8 is the per-client connection limit the reports API enforces; more just get refused.
+MAX_PARALLEL_UPLOADS = 8
+```
+
+### CR-A6: Usage Examples
 Put a usage example at the very top of any function whose inputs or outputs are not obvious from the signature. Show one real call and what it returns.
 
 Bad:
@@ -99,7 +114,7 @@ def parse_duration(text):
     ...
 ```
 
-### CR-A6: External Permalinks
+### CR-A7: External Permalinks
 When reusing logic from an upstream project or reproducing behavior from another repository, include the pinned commit SHA and line number along with a permalink.
 
 Bad:
@@ -115,7 +130,7 @@ Good:
 resolve_config()
 ```
 
-### CR-A7: Trim Help Text
+### CR-A8: Trim Help Text
 Keep help strings and descriptions short. If an example already shows the behavior, delete the prose restating it, and cut anything that only states common sense.
 
 Bad:
@@ -128,7 +143,7 @@ Good:
 parser.add_argument("--format", choices=["json", "csv"], default="json", help="Report output format")
 ```
 
-### CR-A8: Explain Numbers
+### CR-A9: Explain Numbers
 Every timeout, retry count, size, and threshold gets a one-line comment saying where the value came from, or that it is a guess. A bare number cannot be tuned safely because nobody knows what it was tuned against.
 
 Bad:
@@ -159,7 +174,24 @@ valid_items = [item for item in test_items if validate(item)]
 results = [process(item, get_config(item)) for item in valid_items]
 ```
 
-### CR-B2: Clean Invocations
+### CR-B2: Hoist Out Of Loops
+Compute a value that does not change between iterations once, above the loop. Inside the loop it hides the cost and reads as though it depends on the iteration.
+
+Bad:
+```python
+for branch in branches:
+    merge_base = shell.run(["git", "merge-base", "--octopus", *branches])
+    print(merge_base, branch)
+```
+
+Good:
+```python
+merge_base = shell.run(["git", "merge-base", "--octopus", *branches])
+for branch in branches:
+    print(merge_base, branch)
+```
+
+### CR-B3: Clean Invocations
 Avoid awkward multi-line splits for short command invocations or simple expressions. Keep them on a single line or extract arguments cleanly.
 
 Bad:
@@ -176,7 +208,7 @@ Good:
 cmd = ["git", "status", "--short"]
 ```
 
-### CR-B3: List Building
+### CR-B4: List Building
 Build longer commands and argument collections by appending or extending a list instead of concatenating strings with line continuations or plus signs.
 
 Bad:
@@ -193,7 +225,7 @@ cmd.extend(f"--exclude={pattern}" for pattern in excludes)
 cmd.extend([source_dir, dest_dir])
 ```
 
-### CR-B4: Step Parsing
+### CR-B5: Step Parsing
 Split text and path parsing into clean, sequential steps rather than building monolithic nested expressions or complex regex chains.
 
 Bad:
@@ -209,8 +241,8 @@ group_id = path_tokens[path_tokens.index("groups") + 1]
 item_id = path_tokens[path_tokens.index("items") + 1]
 ```
 
-### CR-B5: Vertical Spacing
-Do not stack blank lines. If a formatter such as black or ruff runs on the file, let it decide the spacing around functions; otherwise use one blank line between functions and within a block, and two blank lines only before a section header (CR-B7, CR-D9).
+### CR-B6: Vertical Spacing
+Do not stack blank lines. If a formatter such as black or ruff runs on the file, let it decide the spacing around functions; otherwise use one blank line between functions and within a block, and two blank lines only before a section header (CR-B8, CR-D9).
 
 Bad:
 ```python
@@ -232,7 +264,7 @@ def save_config():
     ...
 ```
 
-### CR-B6: Top Imports
+### CR-B7: Top Imports
 Put every import at the top of the file. An import buried in a function or halfway down the file hides a dependency and is usually a leftover from adding the code in a hurry.
 
 Bad:
@@ -250,7 +282,7 @@ def load_config(config_file):
     return yaml.safe_load(config_file.read_text())
 ```
 
-### CR-B7: Section Headers
+### CR-B8: Section Headers
 Name each section after the step the code performs, in all caps, three words maximum. Standard up-front sections come first in this order when present: `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`.
 
 Bad:
@@ -267,7 +299,7 @@ Good:
 # ==============================================================================
 ```
 
-### CR-B8: Match The File
+### CR-B9: Match The File
 Follow the conventions already in the file you are editing. If every other function there returns a dict, do not introduce a dataclass for yours; consistency within one file beats your preferred style. When the file's existing convention conflicts with a rule here, the file wins for this change; bring the file in line in a separate change (CR-E3).
 
 ## CR-C: Naming
@@ -435,7 +467,7 @@ def current_branch():
 ```
 
 ### CR-D4: Cohesive Functions
-Put the setup a function needs inside that function. If every caller has to remember a preparation step first, the step belongs in the function that owns the work.
+Put the setup a function needs inside that function. If every caller has to remember a preparation step first, the step belongs in the function that owns the work. A one-off step with a single caller does not need its own name at all; fold it in and keep the module's public surface to the functions other files actually call.
 
 Bad:
 ```python
@@ -702,7 +734,7 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
 ```
 
 ### CR-F4: Loud Failures
-Validate conflicting flags and missing prerequisites upfront and exit with a one-line message. Never let a bad configuration limp along silently.
+Validate conflicting flags and missing prerequisites upfront and exit with a one-line message. Never let a bad configuration limp along silently. End the message with the way out: what to create, which flag to pass, which value to change. A message that only names the failure leaves the reader to guess the remedy.
 
 Bad:
 ```python
@@ -904,7 +936,7 @@ def test_parse_rejects_unknown_field():
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
-Never pass a secret as a command-line argument, and never give your own tool an option that takes one as its value. Argv is visible to every user on the box in `ps -ef` and lands in shell history. Pass secrets through the environment, stdin, or a file path.
+Never pass a secret as a command-line argument, and never give your own tool an option that takes one as its value. Argv is visible to every user on the box in `ps -ef` and lands in shell history. Pass secrets through the environment, stdin, or a file path. The same applies to anything the program prints: when an error or log line includes a value that embeds a secret, such as a URL with a token in it, redact that portion rather than dropping the value the reader needs (CR-F5).
 
 Bad:
 ```python
@@ -956,3 +988,34 @@ Exception: a temp file from `mktemp` that is removed in an exit trap is the righ
 
 ### CR-J1: Prose Extensions
 Use `.md` for prose files. A custom extension like `.prompt` loses syntax highlighting in editors and rendering in the web UI, for no benefit.
+
+### CR-J2: XDG Locations
+Put config, cache, and runtime files under the matching XDG variable and state the fallback next to it. A hardcoded `~/.config` ignores the one variable a caller has to redirect the tool, and it breaks on any host that sets XDG elsewhere.
+
+Bad:
+```python
+config_yaml = Path.home() / ".config" / "tool" / "config.yaml"
+```
+
+Good:
+```python
+config_home = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+config_yaml = config_home / "tool" / "config.yaml"
+```
+
+### CR-J3: Private Temp Files
+Never write to a fixed path under `/tmp`. Create a private file or directory, and tie its cleanup to the process exiting rather than to the last line of the happy path. A predictable name on a shared machine collides with another user's run, and on most systems it lets them create the file first.
+
+Bad:
+```python
+temp_dir = Path("/tmp/build-report")
+temp_dir.mkdir(exist_ok=True)
+...
+shutil.rmtree(temp_dir)
+```
+
+Good:
+```python
+with tempfile.TemporaryDirectory() as temp_dir:
+    ...
+```
