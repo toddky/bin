@@ -9,10 +9,18 @@ if [[ "$powered" -eq 0 ]]; then
     exit 0
 fi
 
-connected=$(bluetoothctl devices Connected 2>/dev/null)
+# `bluetoothctl devices Connected` is unreliable on bluez 5.72 - it returns
+# nearby BLE scan results instead of actually-connected devices. Check
+# connection status against the (small, stable) paired-devices list instead.
+names=""
+while read -r _ mac name; do
+    [[ -z "$mac" ]] && continue
+    if bluetoothctl info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
+        names+="${names:+, }$name"
+    fi
+done <<< "$(bluetoothctl devices Paired 2>/dev/null)"
 
-if [[ -n "$connected" ]]; then
-    names=$(echo "$connected" | awk '{$1=$2=""; print $0}' | sed 's/^ *//' | paste -sd ', ' -)
+if [[ -n "$names" ]]; then
     echo "🔵 $names"
 else
     echo "🔵"

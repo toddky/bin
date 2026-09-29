@@ -26,6 +26,25 @@ TOKENS_INPUT="$(jq -r '.total_input_tokens // 0' <<< "$context_window")"
 TOKENS_OUTPUT="$(jq -r '.total_output_tokens // 0' <<< "$context_window")"
 TOKENS_CACHED="$(jq -r '.cache_read_input_tokens // 0' <<< "$current_usage")"
 COST="$(jq -r '.cost.total_cost_usd // 0' <<< "$input")"
+API_MS="$(jq -r '.cost.total_api_duration_ms // 0' <<< "$input")"
+
+# Shorten large numbers: 1234 -> 1.2k, 2500000 -> 2.5M
+humanize() {
+    awk -v n="$1" 'BEGIN {
+        if (n >= 1000000)  printf "%.1fM", n / 1000000
+        else if (n >= 1000) printf "%.1fk", n / 1000
+        else printf "%d", n
+    }'
+}
+# Tokens/second: output tokens over API time
+if [ "$API_MS" -gt 0 ] 2>/dev/null; then
+    TPS="$(awk -v t="$TOKENS_OUTPUT" -v ms="$API_MS" 'BEGIN { printf "%.1f", t / (ms / 1000) }')"
+else
+    TPS="0.0"
+fi
+
+TOKENS_INPUT="$(humanize "$TOKENS_INPUT")"
+TOKENS_OUTPUT="$(humanize "$TOKENS_OUTPUT")"
 
 # Format status line with colors
 printf "${DIM}[${RESET}"
@@ -37,6 +56,8 @@ printf " ${BOLD}${MAGENTA}%s%%${RESET}" "$CONTEXT_USED"
 printf " $SEP"
 printf " ${BLUE}in${DIM}:${RESET}${BLUE}%s${RESET}" "$TOKENS_INPUT"
 printf " ${GREEN}out${DIM}:${RESET}${GREEN}%s${RESET}" "$TOKENS_OUTPUT"
+printf " $SEP"
+printf " ${YELLOW}%s${RESET}${DIM}tok/s${RESET}" "$TPS"
 printf " ${DIM}]${RESET}"
 printf " ${DIM}%s${RESET}" "$(pwd)"
 

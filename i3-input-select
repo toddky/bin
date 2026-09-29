@@ -1,2 +1,7 @@
 #!/usr/bin/env bash
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	ws="$(wl-prompt 'Select workspace: ')"
+	[[ -n "$ws" ]] || exit 0
+	exec i3-select "$ws"
+fi
 exec i3-input -F 'exec i3-select %s' -P 'Select workspace: '

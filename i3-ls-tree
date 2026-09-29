@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import subprocess
 
-output = subprocess.check_output(['i3-msg', '-t', 'get_tree'])
+MSG = 'swaymsg' if os.environ.get('WAYLAND_DISPLAY') else 'i3-msg'
+
+output = subprocess.check_output([MSG, '-t', 'get_tree'])
 tree = json.loads(output)
 
 def print_container(tree, path = ''):
@@ -19,4 +22,3 @@ def print_container(tree, path = ''):
         print_container(node, f'  {path}')
 
 print_container(tree)
-

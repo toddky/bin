@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import subprocess
 
+MSG = 'swaymsg' if os.environ.get('WAYLAND_DISPLAY') else 'i3-msg'
+
 # Get tree
-output = subprocess.check_output(['i3-msg', '-t', 'get_tree'])
+output = subprocess.check_output([MSG, '-t', 'get_tree'])
 tree = json.loads(output)
 
 # Check if current window is in a tabbed layout
@@ -27,4 +30,3 @@ def is_tabbed(tree, parent_count = 0):
 
 is_tabbed(tree)
 exit(1)
-

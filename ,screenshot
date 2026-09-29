@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
-if ! (type scrot &>/dev/null); then
-	print-cmd sudo apt install -y scrot
-	exit 2
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	if ! (type grim &>/dev/null && type slurp &>/dev/null); then
+		print-cmd sudo apt install -y grim slurp
+		exit 2
+	fi
+else
+	if ! (type scrot &>/dev/null); then
+		print-cmd sudo apt install -y scrot
+		exit 2
+	fi
 fi
 
 screenshot_dir="${XDG_CONFIG_HOME:-$HOME/.config}/screenshots"
@@ -12,9 +19,12 @@ if ! [[ -d "$screenshot_dir" ]]; then
 fi
 
 cd "$screenshot_dir" || exit $?
-scrot -s
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	grim -g "$(slurp)" "$(date '+%Y-%m-%d-%H%M%S')_grim.png"
+else
+	scrot -s
+fi
 
 # Get screenshot
 screenshot="$screenshot_dir/$(ls -t "$screenshot_dir" | head -n 1)"
 cp-image "$screenshot"
-

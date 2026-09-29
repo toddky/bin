@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-next="$(i3-msg -t get_workspaces \
+msg=i3-msg; [[ -n "$WAYLAND_DISPLAY" ]] && msg=swaymsg
+next="$("$msg" -t get_workspaces \
 	| tr , '\n' \
 	| sort \
 	| awk -F ':' -v start=1 '/num/ {
@@ -17,4 +18,3 @@ next="$(i3-msg -t get_workspaces \
 echo "$next"
 
 print-run i3-select "$next"
-

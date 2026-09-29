@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Layout: [eDP: laptop] [DisplayPort: 2560x1440] [HDMI-A-0: 1920x1080]
+
+internal=$(xrandr | awk '/^(eDP|LVDS)/ { print $1; exit }')
+dp_ext=$(xrandr | awk -v internal="$internal" '/connected/ && $1 != internal && $1 != "HDMI-A-0" && $2 == "connected" { print $1; exit }')
+
+if [[ -z "$dp_ext" ]]; then
+  echo "error: no DisplayPort external monitor found" >&2
+  exit 1
+fi
+
+echo "internal=$internal dp=$dp_ext hdmi=HDMI-A-0"
+
+# Free CRTCs held by disconnected outputs so xrandr doesn't run out
+xrandr | awk '/disconnected/ && $3 != "disconnected" { print $1 }' | \
+  xargs -r -I{} xrandr --output {} --off
+
+# Reset to shrink virtual screen first
+xrandr \
+  --output "$dp_ext"  --off \
+  --output HDMI-A-0   --off \
+  --output "$internal" --mode 1920x1080 --scale 1x1 --pos 0x0 --primary
+
+xrandr \
+  --output "$internal" --mode 1920x1200 --rate 60 --scale 1x1 --pos 0x0    --primary \
+  --output "$dp_ext"   --mode 2560x1440 --rate 99.95 --scale 1x1 --pos 1920x0 \
+  --output HDMI-A-0    --mode 1920x1080 --rate 60 --scale 1x1 --pos 4480x0

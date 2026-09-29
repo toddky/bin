@@ -1,2 +1,7 @@
 #!/usr/bin/env bash
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	name="$(wl-prompt 'Rename workspace: ')"
+	[[ -n "$name" ]] || exit 0
+	exec i3-rename "$name"
+fi
 exec i3-input -F 'exec i3-rename %s' -P 'Rename workspace: '

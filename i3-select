@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
+msg=i3-msg; [[ -n "$WAYLAND_DISPLAY" ]] && msg=swaymsg
 workspace="$1"
-print-run i3-msg "[workspace=$workspace]" move workspace to output current
-#print-run i3-msg workspace --no-auto-back-and-forth "$workspace"
-print-run i3-msg workspace "$workspace"
+print-run "$msg" "[workspace=$workspace]" move workspace to output current
+#print-run "$msg" workspace --no-auto-back-and-forth "$workspace"
+print-run "$msg" workspace "$workspace"

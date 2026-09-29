@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
-if ! (type feh &>/dev/null); then
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	if ! (type swaybg &>/dev/null); then
+		print-cmd sudo apt install -y swaybg
+		exit 2
+	fi
+elif ! (type feh &>/dev/null); then
 	print-cmd sudo apt install -y feh
 	exit 2
 fi
@@ -45,6 +50,18 @@ download https://stsci-opo.org/STScI-01EVT0E6AVV39FZ2S7GTBYDMRY.jpg
 download https://stsci-opo.org/STScI-01EVSZFRKQJGJ166919T712YDF.png
 download https://stsci-opo.org/STScI-01EVT0DJKW6J247K7M6FZRCMQS.png
 download https://stsci-opo.org/STScI-01GF42D0KV99R21EAD1RAZ3JB7.png
+
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	# swaybg has no --randomize; pick one at random ourselves.
+	# Start the new swaybg before killing the old one to avoid a flash of bare desktop.
+	wallpaper="$(find "$wallpaper_dir" -type f \( -name '*.png' -o -name '*.jpg' \) | shuf -n 1)"
+	old_pids="$(pgrep -x swaybg || true)"
+	print-run swaybg --image "$wallpaper" --mode fill &
+	disown
+	sleep 0.5
+	[[ -n "$old_pids" ]] && kill $old_pids 2>/dev/null
+	exit 0
+fi
 
 # https://wiki.archlinux.org/title/feh
 # https://www.reddit.com/r/i3wm/comments/w7u6x9/comment/ihln1xk/

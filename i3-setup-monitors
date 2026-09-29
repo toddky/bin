@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Detects connected monitors and applies the right layout:
+#   work   — dual 4K  [DP 4K] [HDMI 4K] [eDP]
+#   home   — mixed    [eDP] [DP 2560x1440] [HDMI 1080p]
+#   laptop — internal only
+
+set -e
+
+internal=$(xrandr | awk '/^(eDP|LVDS)/ { print $1; exit }')
+[[ -n "$internal" ]] || { echo "error: no internal display found" >&2; exit 1; }
+
+# Turn off every active output not in the given list
+disable_others() {
+    local -A keep
+    for o in "$@"; do keep[$o]=1; done
+    while read -r o; do
+        [[ -n "${keep[$o]+_}" ]] || xrandr --output "$o" --off
+    done < <(xrandr | awk '/^[A-Za-z]/ && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ { print $1 }')
+}
+
+setup_work() {
+    local dp="$1"
+    echo "work: [$dp 4K] [HDMI-A-0 4K] [$internal]"
+    disable_others "$dp" HDMI-A-0 "$internal"
+    # Two-step: reset scale/shrink virtual screen, then apply final layout
+    xrandr --output "$dp" --off --output HDMI-A-0 --off \
+           --output "$internal" --mode 1920x1200 --scale 1x1 --pos 0x0 --primary
+    xrandr \
+      --output "$dp"    --mode 3840x2160 --rate 60 --scale-from 2880x1620 --pos 0x0    --primary \
+      --output HDMI-A-0 --mode 3840x2160 --rate 60 --scale-from 2880x1620 --pos 2880x0 \
+      --output "$internal" --mode 1920x1200 --rate 60 --scale-from 1440x900  --pos 5760x0
+}
+
+setup_home() {
+    local dp="$1"
+    echo "home: [$internal] [$dp 2560x1440] [HDMI-A-0 1080p]"
+    disable_others "$internal" "$dp" HDMI-A-0
+    # Two-step: reset scale/shrink virtual screen, then apply final layout
+    xrandr --output "$dp" --off --output HDMI-A-0 --off \
+           --output "$internal" --mode 1920x1080 --scale 1x1 --pos 0x0 --primary
+    xrandr \
+      --output "$internal" --mode 1920x1200 --rate 60   --scale 1x1 --pos 0x0    --primary \
+      --output "$dp"        --mode 2560x1440 --rate 99.95 --scale 1x1 --pos 1920x0 \
+      --output HDMI-A-0     --mode 1920x1080 --rate 60   --scale 1x1 --pos 4480x0
+}
+
+setup_laptop() {
+    echo "laptop: [$internal native]"
+    local native
+    native=$(xrandr | awk -v d="$internal" '$0~"^"d{found=1;next} found&&/\+/{match($1,/[0-9]+x[0-9]+/);print substr($1,RSTART,RLENGTH);exit}')
+    local others
+    others=$(xrandr | awk -v d="$internal" '/connected/ && $1!=d { printf "--output %s --off ", $1 }')
+    # shellcheck disable=SC2086
+    xrandr --output "$internal" --mode 1920x1080 --scale 1x1 --pos 0x0 --primary $others
+    # shellcheck disable=SC2086
+    xrandr --output "$internal" --mode "$native" --scale 1x1 --pos 0x0 --primary $others
+}
+
+# Point dunst at the physically-middle monitor for the current layout.
+# Computes the middle output by X position (layout-independent), writes its
+# XRandR index into dunstrc, and restarts dunst to apply it.
+set_dunst_monitor() {
+    local rc="$HOME/.config/dunst/dunstrc"
+    [[ -f "$rc" ]] || return 0
+
+    # "<xpos> <index>" for each active monitor, sorted left-to-right
+    local mons
+    mapfile -t mons < <(xrandr --listmonitors | awk 'NR>1{
+        idx=$1; sub(/:/,"",idx);
+        for (i=1;i<=NF;i++) if ($i ~ /\+[0-9]+\+[0-9]+$/) g=$i;
+        match(g,/\+[0-9]+\+/); x=substr(g,RSTART+1,RLENGTH-2);
+        print x, idx
+    }' | sort -n)
+
+    local n=${#mons[@]}
+    [[ $n -gt 0 ]] || return 0
+    local mid=$(( n / 2 ))            # 3 mons -> 1 (middle), 1 mon -> 0
+    local target=${mons[$mid]##* }    # strip "<xpos> " -> index
+    echo "dunst: notifications -> monitor index $target"
+
+    if grep -qE '^[[:space:]]*monitor[[:space:]]*=' "$rc"; then
+        sed -i -E "s/^([[:space:]]*monitor[[:space:]]*=).*/\1 $target/" "$rc"
+    else
+        sed -i -E "s/^(\[global\].*)/\1\n    monitor = $target/" "$rc"
+    fi
+
+    pkill -x dunst 2>/dev/null || true
+    sleep 0.3
+    dunst & disown 2>/dev/null || true
+}
+
+# --- Detection ---
+hdmi_preferred=$(xrandr | awk '/^HDMI-A-0 connected/{f=1;next} f&&/\+/{print $1;exit}')
+dp_ext=$(xrandr | awk -v iface="$internal" '$2=="connected" && $1!=iface && $1!="HDMI-A-0" { print $1; exit }')
+
+if   [[ "$hdmi_preferred" == "3840x2160" && -n "$dp_ext" ]]; then setup_work "$dp_ext"
+elif [[ -n "$hdmi_preferred"             && -n "$dp_ext" ]]; then setup_home "$dp_ext"
+else                                                               setup_laptop
+fi
+
+set_dunst_monitor

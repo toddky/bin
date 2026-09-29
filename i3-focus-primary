@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# USAGE: i3-focus-primary
+# DESCRIPTION: Focus the primary output (i3 + sway).
+# Sway has no "primary output" concept; in every layout (work/home/laptop) the
+# primary monitor is the leftmost one (x=0), so use that.
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	primary="$(swaymsg -t get_outputs | jq -r '[.[] | select(.active)] | sort_by(.rect.x)[0].name')"
+	exec swaymsg focus output "$primary"
+fi
+exec i3-msg focus output primary

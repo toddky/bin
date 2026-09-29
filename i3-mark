@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# USAGE: i3-mark
+# DESCRIPTION: Prompt for a mark name and mark the focused window (i3 + sway).
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	mark="$(wl-prompt 'Mark: ')"
+	[[ -n "$mark" ]] || exit 0
+	exec swaymsg mark -- "$mark"
+fi
+exec i3-input -F 'mark %s' -l 1 -P 'Mark: '

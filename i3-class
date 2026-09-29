@@ -1,3 +1,16 @@
 #!/usr/bin/env bash
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	# No click-to-select on Wayland; reports the focused window instead.
+	# Native Wayland windows have an app_id; XWayland windows still have a class.
+	node="$(swaymsg -t get_tree | jq '.. | select(.focused? == true)')"
+	app_id="$(jq -r '.app_id // empty' <<< "$node")"
+	if [[ -n "$app_id" ]]; then
+		echo "assign [app_id=\"$app_id\"] \$workspace"
+	else
+		class="$(jq -r '.window_properties.class // empty' <<< "$node")"
+		echo "assign [class=\"$class\"] \$workspace"
+	fi
+	exit 0
+fi
 class="$(xprop | sed -n 's/WM_CLASS.*, *//p')"
 echo "assign [class=$class] \$workspace"

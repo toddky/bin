@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Layout: [eDP: laptop only, 1200p native, primary]
+
+# Step 1: Reset scale and shrink virtual screen; xrandr can't go from 7200x1620
+# to 1920x1200 without first clearing the scaled external outputs.
+xrandr \
+  --output DisplayPort-0 --off \
+  --output HDMI-A-0      --off \
+  --output eDP           --mode 1920x1080 --scale 1x1 --pos 0x0 --primary
+
+# Step 2: Set final native resolution
+xrandr \
+  --output eDP           --mode 1920x1200 --rate 60 --scale 1x1 --pos 0x0 --primary \
+  --output HDMI-A-0      --off \
+  --output DisplayPort-0 --off \
+  --output DisplayPort-1 --off \
+  --output DisplayPort-2 --off \
+  --output DisplayPort-3 --off \
+  --output DisplayPort-4 --off \
+  --output DisplayPort-5 --off \
+  --output DisplayPort-6 --off

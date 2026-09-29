@@ -7,34 +7,42 @@
 # https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
 killall -SIGUSR1 dunst
 
-# nofork so $! below is the real lock process, not a forked-away launcher.
-i3lock_args=(--nofork)
-i3lock_args+=(--show-failed-attempts)
-i3lock_args+=(--ignore-empty-password)
-i3lock_args+=(--color=101030)
+# Pick locker for the current session (swaylock's flags mirror i3lock's)
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	locker=swaylock
+	# swaylock runs in the foreground by default (no --nofork needed)
+	lock_args=()
+else
+	locker=i3lock
+	# nofork so $! below is the real lock process, not a forked-away launcher.
+	lock_args=(--nofork)
+fi
+lock_args+=(--show-failed-attempts)
+lock_args+=(--ignore-empty-password)
+lock_args+=(--color=101030)
 
 # Check background image
 background="$HOME/.config/i3/background.png"
 if [[ -f "$background" ]]; then
-	i3lock_args+=(--image="$background")
-	i3lock_args+=(--tiling)
+	lock_args+=(--image="$background")
+	lock_args+=(--tiling)
 fi
-i3lock "${i3lock_args[@]}" &
-i3lock_pid=$!
+"$locker" "${lock_args[@]}" &
+lock_pid=$!
 
-# Unlock with fingerprint by killing i3lock on successful fprintd-verify.
+# Unlock with fingerprint by killing the locker on successful fprintd-verify.
 # Guard + sleep prevent a busy-loop when the reader fails to init (see ~/FINGERPRINTS.md, Jun 8 2026).
 if command -v fprintd-verify > /dev/null && fprintd-list "$USER" >/dev/null 2>&1; then
-	(while kill -0 "$i3lock_pid" 2>/dev/null; do
-		fprintd-verify "$USER" && pkill i3lock && break
+	(while kill -0 "$lock_pid" 2>/dev/null; do
+		fprintd-verify "$USER" && pkill "$locker" && break
 		sleep 1   # backoff so a failing/instant verify can never busy-loop
 	done) &
 	fploop_pid=$!
 fi
 
-# Wait for i3lock only — on a password unlock the fingerprint loop blocks forever holding the device claim.
+# Wait for the locker only — on a password unlock the fingerprint loop blocks forever holding the device claim.
 # The kill below releases it, else later fprintd calls fail with "already claimed" (Jul 31 2026, ~/FREEZE.md).
-wait "$i3lock_pid"
+wait "$lock_pid"
 
 if [[ -n "${fploop_pid:-}" ]]; then
 	kill "$fploop_pid" 2>/dev/null
@@ -44,4 +52,3 @@ fi
 # Resume Dunst notifications
 # https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
 killall -SIGUSR2 dunst
-

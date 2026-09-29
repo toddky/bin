@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 # https://www.reddit.com/r/i3wm/comments/uv9pyg/making_the_modshifte_exit_menu_more_useful/
 # Exit menu
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	exec swaynag --font "Terminus 12" \
+	  -m "Exit sway? This will end your current Wayland session." \
+	  -B "Exit now" "swaymsg exit" \
+	  -B "Suspend" "systemctl suspend && pkill swaynag" \
+	  -B "Reboot" "systemctl reboot" \
+	  -B "Power off" "systemctl poweroff"
+fi
 exec i3-nagbar -f "pango:Terminus 12" \
   -m "Exit i3? This will end your current X session." \
   -B "Exit now" "i3-msg exit" \
   -B "Suspend" "systemctl suspend && pkill i3-nagbar" \
   -B "Reboot" "systemctl reboot" \
   -B "Power off" "systemctl poweroff"
-

@@ -2,14 +2,16 @@
 # Layout: [DisplayPort-0: 4K] [HDMI-A-0: 4K] [eDP: laptop]
 # Adjust order by swapping --pos targets
 
-# Reset to a simple single-output state first; xrandr can't resize the virtual
-# screen from an arbitrary stale size to the target 7200x1620 in one shot.
-xrandr \
-  --output HDMI-A-0 --off \
-  --output eDP --off \
-  --output DisplayPort-0 --mode 1920x1080 --scale 1x1 --pos 0x0 --primary
+WANTED=(DisplayPort-0 HDMI-A-0 eDP)
+
+# Turn off every active output not in WANTED
+while read -r output; do
+    wanted=false
+    for w in "${WANTED[@]}"; do [[ "$output" == "$w" ]] && wanted=true && break; done
+    $wanted || xrandr --output "$output" --off
+done < <(xrandr --query | awk '/^[A-Z].*[0-9]\+[0-9]\+[0-9]/ {print $1}')
 
 xrandr \
-  --output DisplayPort-0 --mode 3840x2160 --rate 60 --scale 0.75x0.75 --pos 0x0    --primary \
-  --output HDMI-A-0      --mode 3840x2160 --rate 60 --scale 0.75x0.75 --pos 2880x0 \
-  --output eDP           --mode 1920x1200 --rate 60 --scale 0.75x0.75 --pos 5760x0
+  --output DisplayPort-0 --mode 3840x2160 --rate 60 --scale-from 2880x1620 --pos 0x0    --primary \
+  --output HDMI-A-0      --mode 3840x2160 --rate 60 --scale-from 2880x1620 --pos 2880x0 \
+  --output eDP           --mode 1920x1200 --rate 60 --scale-from 1440x900  --pos 5760x0

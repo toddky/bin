@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# USAGE: i3-goto-mark
+# DESCRIPTION: Prompt for a mark name and focus the window with that mark (i3 + sway).
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	mark="$(wl-prompt 'Goto: ')"
+	[[ -n "$mark" ]] || exit 0
+	exec swaymsg "[con_mark=\"$mark\"] focus"
+fi
+exec i3-input -F '[con_mark="%s"] focus' -l 1 -P 'Goto: '

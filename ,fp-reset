@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Reset the Synaptics fingerprint reader (06cb:00f9) without a cold shutdown.
+# Needs root: sudo ,fp-reset
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+	echo "run as root: sudo ,fp-reset" >&2
+	exit 1
+fi
+
+sysdev=""
+for d in /sys/bus/usb/devices/*; do
+	[[ -f "$d/idVendor" ]] || continue
+	if [[ "$(cat "$d/idVendor")" == "06cb" && "$(cat "$d/idProduct")" == "00f9" ]]; then
+		sysdev="$d"
+		break
+	fi
+done
+[[ -n "$sysdev" ]] || { echo "reader 06cb:00f9 not found on USB bus" >&2; exit 1; }
+
+name=$(basename "$sysdev")
+echo "found reader at $sysdev"
+
+# Step 1: ioctl USBDEVFS_RESET (like a soft replug)
+bus=$(printf '%03d' "$(cat "$sysdev/busnum")")
+dev=$(printf '%03d' "$(cat "$sysdev/devnum")")
+python3 - "/dev/bus/usb/$bus/$dev" <<'EOF'
+import fcntl, os, sys
+fd = os.open(sys.argv[1], os.O_WRONLY)
+try:
+    fcntl.ioctl(fd, 0x5514, 0)  # USBDEVFS_RESET
+    print("USBDEVFS_RESET ok")
+finally:
+    os.close(fd)
+EOF
+
+# Step 2: deauthorize/reauthorize = full re-enumeration (harder reset)
+echo 0 > "$sysdev/authorized"
+sleep 1
+echo 1 > "$sysdev/authorized"
+sleep 2
+echo "re-enumerated $name"
+
+echo "--- verify (as your user, not root): fprintd-list \$USER ---"

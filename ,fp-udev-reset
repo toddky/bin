@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Called by udev as root when 06cb:00f9 is added. Soft-resets the reader.
+set -uo pipefail
+
+sysdev="/sys$DEVPATH"
+[[ -d "$sysdev" ]] || exit 0
+
+bus=$(printf "%03d" "$(cat "$sysdev/busnum" 2>/dev/null)")
+dev=$(printf "%03d" "$(cat "$sysdev/devnum" 2>/dev/null)")
+[[ -n "$bus" && -n "$dev" ]] || exit 0
+
+logger -t fp-udev-reset "resetting $sysdev ($bus/$dev)"
+
+python3 - "/dev/bus/usb/$bus/$dev" <<'EOF'
+import fcntl, os, sys
+fd = os.open(sys.argv[1], os.O_WRONLY)
+try:
+    fcntl.ioctl(fd, 0x5514, 0)  # USBDEVFS_RESET
+finally:
+    os.close(fd)
+EOF
+
+logger -t fp-udev-reset "USBDEVFS_RESET done for $sysdev"

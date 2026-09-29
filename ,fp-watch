@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Watch for the Synaptics fingerprint reader (06cb:00f9) getting stuck in the
+# "endpoint stalled or request not supported" init failure, and reset it via
+# the existing ,fp-reset script. Meant to run as a systemd service (root).
+#
+# Safety properties:
+#   - Only ever targets 06cb:00f9; never runs a caller-supplied command.
+#   - Only reads journald/sysfs and calls the pre-existing ,fp-reset script.
+#   - Rate-limited: at most one reset per COOLDOWN_SEC, tracked in a state file.
+set -euo pipefail
+
+VENDOR="06cb"
+PRODUCT="00f9"
+POLL_INTERVAL_SEC="${FP_WATCH_POLL_SEC:-60}"
+COOLDOWN_SEC="${FP_WATCH_COOLDOWN_SEC:-600}"
+FP_RESET="/home/tyamakawa/bin/,fp-reset"
+STATE_DIR="/run/fp-watch"
+LAST_RESET_FILE="$STATE_DIR/last-reset"
+
+if [[ $EUID -ne 0 ]]; then
+	echo "run as root (intended to run under systemd)" >&2
+	exit 1
+fi
+
+mkdir -p "$STATE_DIR"
+
+device_present() {
+	for d in /sys/bus/usb/devices/*; do
+		[[ -f "$d/idVendor" ]] || continue
+		if [[ "$(cat "$d/idVendor")" == "$VENDOR" && "$(cat "$d/idProduct")" == "$PRODUCT" ]]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+recent_stall_error() {
+	# True if fprintd logged the init-stall error since our last check window.
+	journalctl -u fprintd --since "-${POLL_INTERVAL_SEC} seconds" 2>/dev/null \
+		| grep -q "initialization error: endpoint stalled or request not supported"
+}
+
+cooldown_active() {
+	[[ -f "$LAST_RESET_FILE" ]] || return 1
+	local last now
+	last=$(cat "$LAST_RESET_FILE")
+	now=$(date +%s)
+	(( now - last < COOLDOWN_SEC ))
+}
+
+echo "fp-watch: monitoring for ${VENDOR}:${PRODUCT} init stalls (poll ${POLL_INTERVAL_SEC}s, cooldown ${COOLDOWN_SEC}s)"
+
+while true; do
+	sleep "$POLL_INTERVAL_SEC"
+
+	device_present || continue
+
+	if recent_stall_error; then
+		if cooldown_active; then
+			echo "fp-watch: stall detected but still in cooldown, skipping reset"
+			continue
+		fi
+		echo "fp-watch: stall detected, running ,fp-reset"
+		if "$FP_RESET"; then
+			date +%s > "$LAST_RESET_FILE"
+			echo "fp-watch: reset complete"
+		else
+			echo "fp-watch: ,fp-reset failed" >&2
+		fi
+	fi
+done

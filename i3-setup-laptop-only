@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Turns off all displays except the internal laptop panel (eDP/LVDS),
+# sets it to its native resolution as primary. Works regardless of
+# what external outputs are connected or what they're named.
+
+internal=$(xrandr | awk '/^(eDP|LVDS)/ { print $1; exit }')
+
+if [[ -z "$internal" ]]; then
+  echo "error: no internal display (eDP/LVDS) found" >&2
+  exit 1
+fi
+
+native=$(xrandr | awk -v disp="$internal" '
+  $0 ~ "^"disp { found=1; next }
+  found && /\+/ { match($0, /[0-9]+x[0-9]+/); print substr($0, RSTART, RLENGTH); exit }
+')
+
+if [[ -z "$native" ]]; then
+  echo "error: could not detect native resolution for $internal" >&2
+  exit 1
+fi
+
+# Build --off args for every other connected output
+others=$(xrandr | awk -v disp="$internal" '/connected/ && $1 != disp { printf "--output %s --off ", $1 }')
+
+# Step 1: reset scale and shrink virtual screen
+xrandr --output "$internal" --mode 1920x1080 --scale 1x1 --pos 0x0 --primary $others
+
+# Step 2: apply native resolution
+xrandr --output "$internal" --mode "$native" --scale 1x1 --pos 0x0 --primary $others

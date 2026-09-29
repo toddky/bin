@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 display="$1"
+
+# Wayland session: with no explicit X display to test, check the Wayland socket
+if [[ -n "$WAYLAND_DISPLAY" && -z "$display" ]]; then
+	[[ -S "${XDG_RUNTIME_DIR:-/run/user/$UID}/$WAYLAND_DISPLAY" ]]
+	exit $?
+fi
+
 type xdpyinfo >/dev/null || exit $?
 xdpyinfo -display "$display" >/dev/null
 exit $?

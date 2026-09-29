@@ -9,7 +9,12 @@ fi
 # Definitely works with .png
 ext="$(extname "$image")"
 
-# Copy to both, one of them should work
-xclip -selection primary   -t "image/$ext" -i "$image"
-xclip -selection clipboard -t "image/$ext" -i "$image"
-
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	# wl-copy serves both the regular clipboard and (with --primary) the primary selection
+	wl-copy --primary -t "image/$ext" < "$image"
+	wl-copy           -t "image/$ext" < "$image"
+else
+	# Copy to both, one of them should work
+	xclip -selection primary   -t "image/$ext" -i "$image"
+	xclip -selection clipboard -t "image/$ext" -i "$image"
+fi

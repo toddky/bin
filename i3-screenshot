@@ -2,7 +2,13 @@
 # USAGE: i3-screenshot
 # DESCRIPTION: Take a screenshot to clipboard
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if command -v maim > /dev/null && command -v xclip > /dev/null; then
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	if command -v grim > /dev/null && command -v slurp > /dev/null; then
+		grim -g "$(slurp)" - | wl-copy -t image/png
+	else
+		flameshot gui --clipboard
+	fi
+elif command -v maim > /dev/null && command -v xclip > /dev/null; then
 	maim --select | xclip -selection clipboard -t image/png
 else
 	flameshot gui --clipboard
