@@ -237,8 +237,12 @@ Good:
 ```python
 # https://gitlab.example.com/api/v4/groups/42/-/items/7
 path_tokens = urlparse(full_url).path.strip("/").split("/")
-group_id = path_tokens[path_tokens.index("groups") + 1]
-item_id = path_tokens[path_tokens.index("items") + 1]
+segments = dict(zip(path_tokens, path_tokens[1:]))
+if "groups" not in segments or "items" not in segments:
+    sys.exit(f"ERROR: {full_url} is not a group item URL, expected /groups/<id>/-/items/<id>")
+
+group_id = segments["groups"]
+item_id = segments["items"]
 ```
 
 ### CR-B6: Vertical Spacing
@@ -560,7 +564,7 @@ if args.verbose:
 ```
 
 ### CR-D9: No Step Machinery
-Run the steps in order under named section headers. Do not build a step table, dispatcher, or registry to drive a fixed sequence that only ever runs one way.
+Run the steps in order under section headers (CR-B8). Do not build a step table, dispatcher, or registry to drive a fixed sequence that only ever runs one way.
 
 Bad:
 ```python
@@ -751,7 +755,7 @@ if not config_file.exists():
 ```
 
 ### CR-F5: Debug Context
-Say what kind of failure it was and print the identifiers needed to debug it: job id, host, path, command. A bare "run failed" forces a second debugging round, and a run that started and never finished is an interrupted run, not a bad result.
+Say what kind of failure it was and print the identifiers needed to debug it: which run, on which host, touching which path. A bare "run failed" forces a second debugging round, and a run that started and never finished is an interrupted run, not a bad result.
 
 Bad:
 ```python
@@ -787,10 +791,7 @@ def run_step(config):
 Good:
 ```python
 def load_config(config_file):
-    try:
-        config = yaml.safe_load(config_file.read_text()) or {}
-    except yaml.YAMLError as error:
-        sys.exit(f"ERROR: {config_file} is not valid YAML: {error}")
+    config = yaml.safe_load(config_file.read_text()) or {}
     if "timeout" not in config:
         sys.exit(f"ERROR: {config_file} is missing required field 'timeout'")
     return config
