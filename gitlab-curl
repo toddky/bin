@@ -15,7 +15,7 @@ endpoint="${endpoint#"$GITLAB_URL"/api/v4/}"
 header_file="$(mktemp)"
 function on_exit { rm -f "$header_file"; }
 trap on_exit EXIT
-printf "PRIVATE-TOKEN: $API_KEY" > "$header_file"
+printf 'PRIVATE-TOKEN: %s' "$API_KEY" > "$header_file"
 url="$GITLAB_URL/api/v4/$endpoint"
 
 #debug=1
