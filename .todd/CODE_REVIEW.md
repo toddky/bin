@@ -17,12 +17,12 @@ Rules are grouped by letter:
 
 Per-language mechanics live in BASH.md, PYTHON.md, GO.md, and RUBY.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
 
+Each rule is written for a reviewer reading one file or one diff. The first sentence says exactly what counts as a violation. The second says when the rule is followed, including when the code has nothing the rule applies to. Then comes why, and the Bad and Good examples.
+
 ## CR-A: Comments and documentation
 
 ### CR-A1: Short Comments
-Comments must be 2 lines maximum, 1 sentence per line, each line fitting in 120 columns. Keep comments short and direct. Never write paragraphs or multi-sentence explanations. If a comment exceeds 2 lines, shorten it or delete it.
-
-Exceptions: a regex or parser comment may add lines for concrete example inputs (CR-A3), a usage example may add a line (CR-A6), and a permalink may sit on its own line (CR-A7).
+A violation is a comment block longer than 2 lines, a comment line wider than 120 columns, or a comment line holding more than one sentence. The rule is followed when every comment is 1 or 2 lines with one sentence per line. Lines that quote an example input (CR-A3), a usage example (CR-A6), a permalink on its own line (CR-A7), section header banners (CR-B8), and a script's USAGE and DESCRIPTION header lines do not count toward the limit. Why: a paragraph of comment stops being read and goes stale first.
 
 ```python
 # NFS dentry cache can hide a lock made on another host.
@@ -31,7 +31,7 @@ time.sleep(5)
 ```
 
 ### CR-A2: Obvious Comments
-A comment explains why: the intent, the gotcha, the reason that is not visible in the code. Delete comments that narrate the obvious. If a comment merely restates what the code plainly does, remove it completely. Do not shorten or rephrase it into a superficial explanation.
+A violation is a comment that restates what the next line of code does, such as `# increment the counter` above a counter increment or `# wait 10 seconds` above `sleep 10`. The rule is followed when every comment gives a reason, gotcha, or intent the code cannot show by itself. The fix is to delete the comment, not to reword it.
 
 Bad:
 ```python
@@ -47,7 +47,7 @@ if process.returncode == 0:
 ```
 
 ### CR-A3: Parser Examples
-Always include concrete example strings for regular expressions and string parsing logic. Provide an exact sample input line showing what is being matched or extracted.
+A violation is a regular expression or string-parsing step, such as `grep -E`, `sed`, `awk`, `=~`, `re.search`, or a split on a delimiter, with no comment directly above it quoting a real input line it handles. The rule is followed when every pattern has an exact sample input line in a comment above it. Code with no regex or text parsing follows the rule. Why: the sample line is the only way to check a pattern without running it.
 
 Bad:
 ```python
@@ -62,7 +62,7 @@ match = re.search(r"Cannot open directory (\S+)", line)
 ```
 
 ### CR-A4: Comments Over Docstrings
-Prefer a short comment over a multiline docstring for simple functions or scripts. If the function is straightforward, explain the reason in a short comment rather than a verbose docstring block.
+A violation is a multiline docstring on a short, simple function where a one-line comment would say the same thing. The rule is followed when simple functions carry at most a short comment. Code with no docstrings follows the rule.
 
 Bad:
 ```python
@@ -84,7 +84,7 @@ def setup_logging():
 ```
 
 ### CR-A5: Update, Do Not Delete
-Leave an existing comment alone unless it is wrong or no longer applies. When your change makes it inaccurate, rewrite it to match the new behavior; deleting it throws away a reason nobody wrote down twice.
+A violation is a change that deletes an existing comment that is still true, or keeps a comment that the change made wrong. The rule is followed when existing comments survive and any the change made inaccurate are rewritten to match. This rule needs a diff; a whole file reviewed without history follows it. Why: a deleted comment throws away a reason nobody writes down twice.
 
 Bad:
 The limit was raised and the comment explaining the old one was dropped:
@@ -99,7 +99,7 @@ MAX_PARALLEL_UPLOADS = 8
 ```
 
 ### CR-A6: Usage Examples
-Put a usage example at the very top of any function whose inputs or outputs are not obvious from the signature. Show one real call and what it returns.
+A violation is a function whose inputs or outputs are not obvious from its name and parameters, with no one-line example call and result as its first comment. The rule is followed when such functions start with a comment like `# parse_duration("1h30m") -> 5400`. Functions whose behavior is obvious from the signature, and code with no functions, follow the rule.
 
 Bad:
 ```python
@@ -115,7 +115,7 @@ def parse_duration(text):
 ```
 
 ### CR-A7: External Permalinks
-When reusing logic from an upstream project or reproducing behavior from another repository, include the pinned commit SHA and line number along with a permalink.
+A violation is code copied from or reproducing another project's behavior with no comment giving the upstream repository, pinned commit SHA, line number, and a permalink. The rule is followed when borrowed logic carries that comment. Code that borrows nothing follows the rule.
 
 Bad:
 ```python
@@ -131,7 +131,7 @@ resolve_config()
 ```
 
 ### CR-A8: Trim Help Text
-Keep help strings and descriptions short. If an example already shows the behavior, delete the prose restating it, and cut anything that only states common sense.
+A violation is a help string or option description longer than a short phrase, or one that restates an example or states common sense. The rule is followed when help text is a few words, like `"Report output format"`. Code with no help text follows the rule.
 
 Bad:
 ```python
@@ -144,7 +144,7 @@ parser.add_argument("--format", choices=["json", "csv"], default="json", help="R
 ```
 
 ### CR-A9: Explain Numbers
-Every timeout, retry count, size, and threshold gets a one-line comment saying where the value came from, or that it is a guess. A bare number cannot be tuned safely because nobody knows what it was tuned against.
+A violation is a number used as a timeout, sleep duration, retry count, size limit, or threshold with no comment saying where the value came from or that it is a guess. A comment that only repeats the number, like `# wait 10 seconds`, does not explain it. The rule is followed when every such number has a one-line comment giving its source. Why: nobody can safely tune a number when they do not know what it was tuned against.
 
 Bad:
 ```python
@@ -160,7 +160,7 @@ MAX_ATTEMPTS = 3
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
-Break long expressions and assign intermediate results to named variables instead of compressing logic into single lines or long list comprehensions.
+A violation is one line that does several things at once: a comprehension that filters, transforms, and calls functions together, a call or command substitution nested inside another, or a chain of three or more calls. The rule is followed when intermediate results are assigned to named variables, one step per line.
 
 Bad:
 ```python
@@ -175,7 +175,7 @@ results = [process(item, get_config(item)) for item in valid_items]
 ```
 
 ### CR-B2: Hoist Out Of Loops
-Compute a value that does not change between iterations once, above the loop. Inside the loop it hides the cost and reads as though it depends on the iteration.
+A violation is a command or assignment inside a loop body whose result does not use the loop variable and so is the same on every pass, such as reading the same file or computing the same value each iteration. The rule is followed when such values are computed once above the loop. Code with no loops follows the rule. Why: inside the loop it hides the cost and reads as though it depends on the iteration.
 
 Bad:
 ```python
@@ -192,7 +192,7 @@ for branch in branches:
 ```
 
 ### CR-B3: Clean Invocations
-Avoid awkward multi-line splits for short command invocations or simple expressions. Keep them on a single line or extract arguments cleanly.
+A violation is a short command, call, or list split one item per line when it would fit on a single line. The rule is followed when short invocations sit on one line and long ones are built per CR-B4.
 
 Bad:
 ```python
@@ -209,7 +209,7 @@ cmd = ["git", "status", "--short"]
 ```
 
 ### CR-B4: List Building
-Build longer commands and argument collections by appending or extending a list instead of concatenating strings with line continuations or plus signs.
+A violation is a command or argument list built by concatenating strings with `+`, `\` line continuations, or one long interpolated string. The rule is followed when the parts are collected in a list or array and appended one at a time. Code that builds no commands or argument lists follows the rule.
 
 Bad:
 ```python
@@ -226,7 +226,7 @@ cmd.extend([source_dir, dest_dir])
 ```
 
 ### CR-B5: Step Parsing
-Split text and path parsing into clean, sequential steps rather than building monolithic nested expressions or complex regex chains.
+A violation is a single regex or nested expression that pulls several fields out of text, a URL, or a path at once. The rule is followed when parsing happens in small sequential steps, such as split, then pick fields, then validate. Code with no text or path parsing follows the rule.
 
 Bad:
 ```python
@@ -246,7 +246,7 @@ item_id = segments["items"]
 ```
 
 ### CR-B6: Vertical Spacing
-Do not stack blank lines. If a formatter such as black or ruff runs on the file, let it decide the spacing around functions; otherwise use one blank line between functions and within a block, and two blank lines only before a section header (CR-B8, CR-D9).
+A violation is two or more blank lines in a row anywhere other than directly before a section header banner (CR-B8). The rule is followed when one blank line separates functions and blocks. When a formatter such as black or ruff owns the file, its spacing wins.
 
 Bad:
 ```python
@@ -269,7 +269,7 @@ def save_config():
 ```
 
 ### CR-B7: Top Imports
-Put every import at the top of the file. An import buried in a function or halfway down the file hides a dependency and is usually a leftover from adding the code in a hurry.
+A violation is an import, `require`, or `source` statement anywhere other than the top of the file, such as inside a function or halfway down. The rule is followed when every import is at the top. Code with no imports follows the rule. Why: a buried import hides a dependency.
 
 Bad:
 ```python
@@ -287,7 +287,7 @@ def load_config(config_file):
 ```
 
 ### CR-B8: Section Headers
-Name each section after the step the code performs, in all caps, three words maximum. Standard up-front sections come first in this order when present: `IMPORTS` (CR-B7), `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`. When the section that does the work is small enough that a name would only restate it, call it `MAIN`. After those, the headers run in the order the code runs, so the list of headers reads as the sequence of steps.
+A violation is a section header banner whose title is not all caps, is longer than three words, or describes the code instead of naming the step; standard sections out of the order `IMPORTS`, `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`; or step sections out of the order the code runs. The rule is followed when every banner is the language's comment marker plus 78 `=`, a short all-caps step name, and 78 `=` again. A small main section is called `MAIN`. Code with no section headers follows the rule, and Go uses doc comments instead of banners.
 
 Bad:
 ```python
@@ -303,15 +303,34 @@ Good:
 # ==============================================================================
 ```
 
-The banner is the language's own comment marker followed by 78 `=` characters, the title line, then the marker and 78 `=` again. Languages with their own documented convention do not get a banner: Go uses package and function doc comments instead.
-
 ### CR-B9: Match The File
-Follow the conventions already in the file you are editing. If every other function there returns a dict, do not introduce a dataclass for yours; consistency within one file beats your preferred style. When the file's existing convention conflicts with a rule here, the file wins for this change; bring the file in line in a separate change (CR-E3).
+A violation is new code written in a different style from the rest of the same file, such as returning a dataclass where every other function returns a dict, or a naming or quoting style the file does not use. The rule is followed when new code matches the file's existing conventions. When the file conflicts with a rule here, the file wins for this change; fix the file in a separate change (CR-E3).
+
+### CR-B10: Multi-line Text
+A violation is fixed multi-line text, such as a help epilog, usage text, or a long message, built by joining a list of string literals with `'\n'.join([...])` or by `+` concatenation. The rule is followed when the text is one triple-quoted string. Joining lines computed at runtime follows the rule. A triple-quoted string reads exactly as it prints, with no quotes, commas, or separators in the way.
+
+Bad:
+```python
+epilog = '\n'.join([
+    'examples:',
+    '  my-tool --input data.csv',
+    '  my-tool --input data.csv --verbose',
+])
+```
+
+Good:
+```python
+epilog = '''
+examples:
+  my-tool --input data.csv
+  my-tool --input data.csv --verbose
+'''
+```
 
 ## CR-C: Naming
 
 ### CR-C1: Specific Plain Names
-Name functions and helpers after the concrete action or output, in plain terms. Generic verbs (`process`, `handle`) and software jargon (`orchestrate`, `pipeline`, `payload`) describe every function and therefore none.
+A violation is a function or helper named with a generic verb such as `process`, `handle`, `do`, or `manage`, or with jargon such as `orchestrate`, `pipeline`, or `payload`. The rule is followed when every name says the concrete action or output, like `extract_build_errors`. Code with no named functions follows the rule.
 
 Bad:
 ```python
@@ -332,7 +351,7 @@ def upload_build_artifacts(files):
 ```
 
 ### CR-C2: Named Constants
-Give limits, thresholds, and fixed keys an uppercase constant at the top of the file. Do not leave bare literals inline. Argparse defaults are the exception: the parser is already the single place that value lives (CR-E4), so a bare default there is fine.
+A violation is a limit, threshold, or fixed key written as a bare literal inside the logic instead of an uppercase constant at the top of the file. The rule is followed when such values are named constants. Argument-parser defaults are exempt, since the parser is already the single place the value lives (CR-E4), and so are 0, 1, and plain exit codes.
 
 Bad:
 ```python
@@ -350,11 +369,7 @@ if len(fields) > MAX_METADATA_FIELDS:
 ```
 
 ### CR-C3: Spell Names Out
-Spell names out in new code. An abbreviation saves the writer three keystrokes and costs every reader a guess.
-
-This covers single letters too: `result`, not `r`. A plain index loop (`i`, `j`) is the only place one is acceptable.
-
-Exception: a name that mirrors an API, JSON, or CSV field keeps the field's own spelling, however abbreviated. `jobid` stays `jobid` so the same string greps across server and client.
+A violation is a variable or function whose name is a single letter or a shortened word, such as `r`, `q`, `cfg`, `msg`, `out`, or `tmp`. The rule is followed when names are full words, like `config_file` or `build_id`. A plain index loop variable (`i`, `j`) is allowed, and a name that mirrors an API, JSON, or CSV field keeps the field's own spelling, like `jobid`.
 
 Bad:
 ```python
@@ -372,7 +387,7 @@ jobid = response["jobid"]
 ```
 
 ### CR-C4: File And Dir Suffixes
-Name a filesystem path after what it points at: a `_file` or `_dir` suffix, or the extension when it matters (`readme_md`, `config_json`). A `path` suffix says nothing about whether the code can read it, list it, or write into it.
+A variable holding a filesystem path is a violation when its name ends in `_path`, or says nothing about whether it is a file or a directory. The rule is followed when path names end in `_file`, `_dir`, or the extension, like `readme_md` or `config_json`. Code with no path variables follows the rule.
 
 Bad:
 ```python
@@ -387,7 +402,7 @@ log_dir = args.log_dir
 ```
 
 ### CR-C5: Count Prefix
-Prefix integer counts with `num_`. A `_count` suffix or a phrase like `failures_seen` reads as a collection until the reader finds the assignment.
+A violation is an integer count named with a `_count` suffix or a phrase like `jobs_seen` instead of a `num_` prefix. The rule is followed when every count is named like `num_failures`. Code with no counters follows the rule. Why: a `_count` name reads as a collection until the reader finds the assignment.
 
 Bad:
 ```python
@@ -402,7 +417,7 @@ num_jobs = 0
 ```
 
 ### CR-C6: Name The Wrapper After The Tool
-Name a pass-through helper after the binary or concept it wraps. A `run_` or `_cmd` decoration on the name repeats what the body already shows and makes the call site read like plumbing.
+A violation is a pass-through wrapper around a tool named with decoration such as `run_`, `_cmd`, or `exec_`, like `run_tmux_cmd`. The rule is followed when the wrapper is named after the tool itself, like `tmux`. Code with no wrapper functions follows the rule.
 
 Bad:
 ```python
@@ -419,7 +434,7 @@ def tmux(args):
 ## CR-D: Function design
 
 ### CR-D1: Inline Helpers
-Inline single-use helpers into the caller. Do not create a function for logic that runs in exactly one place and is short enough to read inline.
+A violation is a helper function called from exactly one place whose body is short enough to read inline. The rule is followed when short single-use logic is written at its call site. Code with no helper functions follows the rule.
 
 Bad:
 ```python
@@ -439,7 +454,7 @@ for source_file in sources:
 ```
 
 ### CR-D2: Direct Passthrough
-Pass flags straight through to the underlying tool. Do not invent a custom boolean that maps onto a flag the tool already accepts.
+A violation is a custom boolean option or parameter that only maps onto a flag the underlying tool already accepts, such as `skip_hooks=True` turning into `--no-verify`. The rule is followed when tool flags are passed straight through as arguments. Code that wraps no tool follows the rule.
 
 Bad:
 ```python
@@ -455,7 +470,7 @@ def commit(message, git_args=()):
 ```
 
 ### CR-D3: Existing Helpers
-Look for an existing helper before writing a new one. If the repo already wraps this call, use the wrapper; a second copy drifts from the first and both have to be fixed later.
+A violation is new code that re-implements a call the repository or the same file already wraps in a helper. The rule is followed when existing wrappers are used. Why: a second copy drifts from the first and both have to be fixed later.
 
 Bad:
 ```python
@@ -473,7 +488,7 @@ def current_branch():
 ```
 
 ### CR-D4: Cohesive Functions
-Put the setup a function needs inside that function. If every caller has to remember a preparation step first, the step belongs in the function that owns the work. A one-off step with a single caller does not need its own name at all; fold it in and keep the module's public surface to the functions other files actually call.
+A violation is a function that needs every caller to run a preparation step first, or a single-use setup step given its own public name. The rule is followed when the setup lives inside the function that owns the work, and the module exposes only the functions other files call. Code with no functions follows the rule.
 
 Bad:
 ```python
@@ -494,7 +509,7 @@ errors = parse_build_errors(build_log)
 ```
 
 ### CR-D5: Return, Do Not Write
-Do not take a destination parameter the caller already controls. Return the result instead of writing it somewhere, so the caller decides the destination and the function is testable without a filesystem.
+A violation is a function that takes a destination the caller already controls, such as an output file or stream, and writes its result there instead of returning it. The rule is followed when the function returns the result and the caller writes it. Code with no functions follows the rule.
 
 Bad:
 ```python
@@ -513,7 +528,7 @@ log_file.write_text(summarize_failures(results))
 ```
 
 ### CR-D6: No Nested Functions
-Define functions at module level. A function nested inside another is invisible to tests and callers, and it usually only exists to reach a local it could have taken as a parameter. If it is genuinely reused, hoist it; if it is single-use, inline it per CR-D1.
+A violation is a named function defined inside another function. The rule is followed when every function is defined at the top level of the file. Why: a nested function is invisible to tests and callers; hoist it if it is reused, or inline it per CR-D1 if not.
 
 Bad:
 ```python
@@ -531,7 +546,7 @@ def build_report(rows):
 ```
 
 ### CR-D7: Parameterize Reuse
-When a second caller needs the same code or data with a different value, take that value as an input instead of copying the file. Do this the moment the second caller exists, not speculatively (CR-E5).
+A violation is a file or block copied so a second caller can run the same code with a different hardcoded value. The rule is followed when the differing value is taken as a parameter. Do this once a second caller exists, not speculatively (CR-E5).
 
 Bad:
 The URL is baked in, so the next consumer has to copy the whole file:
@@ -549,7 +564,7 @@ def upload(report_file, api_url):
 ```
 
 ### CR-D8: Plain Conditions
-Test the value directly. Comparing against `True` or `False` adds noise and breaks the moment the value is `None` or an empty string instead of the literal you compared to.
+A violation is comparing a value against a literal boolean, such as `== True`, `is not False`, `== "true"`, or `[[ "$flag" == true ]]`. The rule is followed when the value is tested directly, or as an integer flag with `(( ))` in bash. Why: the comparison breaks the moment the value is `None` or an empty string.
 
 Bad:
 ```python
@@ -564,7 +579,7 @@ if args.verbose:
 ```
 
 ### CR-D9: No Step Machinery
-Run the steps in order under section headers (CR-B8). Do not build a step table, dispatcher, or registry to drive a fixed sequence that only ever runs one way.
+A violation is a step table, list of step functions, dispatcher, or registry that drives a fixed sequence that always runs the same way. The rule is followed when the steps run in order under section headers (CR-B8). Code with no such table follows the rule.
 
 Bad:
 ```python
@@ -597,10 +612,10 @@ upload_results()
 ## CR-E: Change hygiene
 
 ### CR-E1: Delete Dead Code
-Delete unused imports, commented-out blocks, and leftover scaffolding instead of leaving them behind. Do not keep code that nothing calls.
+A violation is an unused import, variable, or function, a commented-out block of code, or leftover debug scaffolding. The rule is followed when everything in the code is used. Within a diff, this applies only to code the change touches (CR-E3).
 
 ### CR-E2: Reachable Features
-When you add a variant, update the place that enumerates the allowed values in the same change. Otherwise the code is unreachable and the argument parser rejects the value before your branch ever runs.
+A violation is a new branch for a value that the argument parser or enumeration does not allow, so the branch can never run. The rule is followed when the allowed values are updated in the same change as the new branch.
 
 Bad:
 `--format yaml` exits with "invalid choice", so the new branch is dead code:
@@ -620,10 +635,10 @@ if args.format == "yaml":
 ```
 
 ### CR-E3: Stay In Scope
-Keep unrelated changes out of the change set. A bug fix does not need surrounding cleanup, and moving or renaming code you are not fixing buries the real change in the diff. CR-E1 and CR-D3 apply to the code the change touches, not to the rest of the file.
+A violation is a change that includes unrelated edits, such as reformatting, renaming, or moving code it is not fixing. The rule is followed when every edit serves the change. This rule needs a diff; a whole file reviewed without history follows it.
 
 ### CR-E4: One Source
-Define a value once. A constant declared in two files, or a default set in both the parser and the function it feeds, will drift, and the copy you forgot to change becomes the bug. For a CLI, the parser holds the default and the function takes the value as a required parameter.
+A violation is the same value defined in two places, such as a default set in both the argument parser and the function it feeds, or a constant declared in two files. The rule is followed when each value is defined once. For a CLI, the parser holds the default and the function takes the value as a required parameter.
 
 Bad:
 The same default lives in two places:
@@ -646,7 +661,7 @@ fetch_report(args.timeout)
 ```
 
 ### CR-E5: No Speculation
-Build what the change needs, not what it might need later. An option nobody passes and a hook nobody calls are pure cost, and the guess is usually wrong by the time a caller shows up.
+A violation is an option, parameter, hook, or setting that no caller uses. The rule is followed when every option is used by a real caller. Why: the guess about future needs is usually wrong by the time a caller shows up.
 
 Bad:
 No caller passes `dry_run`, `retries`, or `mirror_url`:
@@ -664,7 +679,7 @@ def upload_report(report_file):
 ## CR-F: Errors and failure handling
 
 ### CR-F1: Guard Clauses
-Check failure conditions upfront and exit early with `continue` or `return`. Do not wrap the main path in nested `if` blocks.
+A violation is an `if` nested inside another `if` to protect the main work, where the failure case could be checked first with an early `continue`, `next`, `return`, or `exit`. The rule is followed when failure checks come first and exit early, leaving the main path unindented.
 
 Bad:
 ```python
@@ -691,7 +706,7 @@ for log_file in log_files:
 ```
 
 ### CR-F2: Handle Then Pass Through
-Test for the case you actually handle, then fall through to one pass-through path. A negated test inverts the logic and forces a second exit point that has to repeat the value the fall-through already had.
+A violation is a negated test on an exit or return value that exits early, followed by handling and a second exit repeating the same value, such as `if exit_code != TIMEOUT: exit(exit_code)` then handling then `exit(TIMEOUT)`. The rule is followed when the code tests the case it handles with `==` and falls through to one exit. Code that never passes through an exit code follows the rule.
 
 Bad:
 ```python
@@ -709,7 +724,7 @@ sys.exit(exit_code)
 ```
 
 ### CR-F3: Bounded Retries
-Retry a fixed number of attempts instead of looping forever, and back off exponentially rather than sleeping the same amount each time. Print the reason to stderr on every attempt so a stuck job is diagnosable from the log.
+A violation is a retry loop with no attempt limit, a retry that sleeps the same amount every time instead of backing off exponentially, or retries that do not print the failure reason to stderr. The rule is followed when retries are bounded, back off, and log each failed attempt. Code with no retries follows the rule.
 
 Bad:
 ```python
@@ -740,7 +755,7 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
 ```
 
 ### CR-F4: Loud Failures
-Validate conflicting flags and missing prerequisites upfront and exit with a one-line message. Never let a bad configuration limp along silently. End the message with the way out: what to create, which flag to pass, which value to change. A message that only names the failure leaves the reader to guess the remedy.
+A violation is a missing prerequisite or conflicting flag handled with a warning and then continuing, or an error message that names the failure without saying how to fix it. The rule is followed when such problems are checked upfront and exit with one line that ends with the remedy: what to create, which flag to pass, or which value to change.
 
 Bad:
 ```python
@@ -755,7 +770,7 @@ if not config_file.exists():
 ```
 
 ### CR-F5: Debug Context
-Say what kind of failure it was and print the identifiers needed to debug it: which run, on which host, touching which path. A bare "run failed" forces a second debugging round, and a run that started and never finished is an interrupted run, not a bad result.
+A violation is an error message that does not say what kind of failure happened or leaves out the identifiers needed to debug it, such as which run, host, path, or value, like a bare `run failed`. The rule is followed when every error names the failure and the identifiers. A run that started and never finished is reported as interrupted, not as a bad result.
 
 Bad:
 ```python
@@ -777,7 +792,7 @@ if not result_file.exists():
 ```
 
 ### CR-F6: Boundary Validation
-Validate external input once, where it enters the program. Re-checking the same thing in every function that receives it adds noise and still leaves the real entry point unguarded.
+A violation is the same check on external input repeated in several functions instead of once where the input enters the program. The rule is followed when each input is validated once at its entry point.
 
 Bad:
 Every caller re-checks what the loader should have guaranteed:
@@ -801,7 +816,7 @@ def run_step(config):
 ```
 
 ### CR-F7: Check Before Try
-Test for the condition upfront when you can. Reach for `try` only when a check is not practical, as with a parse.
+A violation is a `try`, `rescue`, or `except` used for a condition that could be tested upfront, such as catching file-not-found instead of checking that the file exists. The rule is followed when exceptions are caught only where a check is impractical, such as parsing or a network call. Code with no exception handling follows the rule.
 
 Bad:
 A missing file can be tested for, so an `except` is the wrong tool:
@@ -821,7 +836,7 @@ config = yaml.safe_load(config_file.read_text())
 ```
 
 ### CR-F8: Narrow Excepts
-Never swallow an error you depend on succeeding. Catch the specific exception you expect, then exit or re-raise; a bare `except` hides the real failure and the next symptom shows up somewhere unrelated.
+A violation is a bare or broad catch that swallows an error and continues, such as `except:`, `except Exception`, a `rescue` with no error class, or `|| true` on a command whose success matters. The rule is followed when only the specific expected error is caught and the code then exits or re-raises. Code with no error catching follows the rule.
 
 Bad:
 ```python
@@ -841,7 +856,7 @@ except yaml.YAMLError as error:
 ```
 
 ### CR-F9: Always Timeout
-Set an explicit timeout on every network call. Most clients default to waiting forever, so one unresponsive server hangs the job until somebody notices and kills it.
+A violation is a network call, such as `curl`, `wget`, `ssh`, `requests.get`, or `Net::HTTP`, with no timeout option like `--max-time`, `--connect-timeout`, `timeout=`, or `read_timeout:`. The rule is followed when every network call sets an explicit timeout. Code with no network calls follows the rule. Why: most clients wait forever, so one unresponsive server hangs the job.
 
 Bad:
 ```python
@@ -859,7 +874,7 @@ response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
 ## CR-G: Arguments and CLI design
 
 ### CR-G1: Arguments At The Top
-Define every flag in `parse_args()` at the top of the file, and derive related state from the parsed arguments in one place right after it. Do not scatter argument handling into helpers, set defaults at the call site, or spread mode flags through the script.
+A violation is a flag defined outside the single argument-parsing block at the top of the file, a default set at a call site, or state derived from the arguments in several scattered places. The rule is followed when every flag is defined in one block at the top and derived state is computed right after it. Code with no command-line arguments follows the rule.
 
 Bad:
 ```python
@@ -888,7 +903,7 @@ use_remote = args.host is not None
 ```
 
 ### CR-G2: Useful Defaults
-Default a flag to whatever the tool is normally used for, and give the opposite a `--no-` form. Do not make the common case opt-in.
+A violation is a flag that makes the common case opt-in, such as a `--cleanup` that is off unless passed when cleanup is what users normally want. The rule is followed when the default is the normal use and a `--no-` form turns it off. Code with no flags follows the rule.
 
 Bad:
 ```python
@@ -901,8 +916,7 @@ parser.add_argument("--cleanup", action=argparse.BooleanOptionalAction, default=
 ```
 
 ### CR-G3: Argument Types
-Declare `type=` on every value-taking argument that is not a string, since argparse otherwise hands back a string and numeric comparisons silently do the wrong thing.
-Boolean flags are exempt: their action already produces a bool, and `type=bool` is wrong because `bool("False")` is `True`.
+A violation is a value-taking argument that is not a string, such as a count or a path, declared without a type, so the parser hands back a string. Boolean flags are exempt, and `type=bool` is itself a violation because `bool("False")` is `True`. Code with no typed arguments follows the rule.
 
 Bad:
 ```python
@@ -919,7 +933,7 @@ parser.add_argument("--config", type=Path, help="Config file to read")
 ## CR-H: Tests
 
 ### CR-H1: Useful Tests
-Delete tests that only prove the language works or repeat coverage another test already has. A test earns its place by failing when the new behavior breaks.
+A violation is a test that only proves the language or a library works, or that repeats coverage another test already has. The rule is followed when every test would fail if the behavior it covers broke. Code with no tests follows the rule.
 
 Bad:
 This only proves Python dicts work, not that anything you wrote works:
@@ -939,7 +953,7 @@ def test_parse_rejects_unknown_field():
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
-Never pass a secret as a command-line argument, and never give your own tool an option that takes one as its value. Argv is visible to every user on the box in `ps -ef` and lands in shell history. Pass secrets through the environment, stdin, or a file path. The same applies to anything the program prints: when an error or log line includes a value that embeds a secret, such as a URL with a token in it, redact that portion rather than dropping the value the reader needs (CR-F5).
+A violation is a password, token, or other secret passed as a command-line argument, such as `curl -u user:$PASSWORD`, `--token $TOKEN`, or `mysql -p$PASSWORD`; an option of your own tool that takes a secret as its value; or an error or log line that prints a secret unredacted. The rule is followed when secrets travel through the environment, stdin, or a file, and printed values have the secret part redacted (CR-F5). Code that handles no secrets follows the rule. Why: arguments are visible to every user in `ps -ef` and land in shell history.
 
 Bad:
 ```python
@@ -957,7 +971,7 @@ shell.run(["report-tool", "--upload", str(report_file)], env=env)
 ```
 
 ### CR-I2: No Shell True
-Call subprocesses with a list and no `shell=True`. With a shell in the middle, any value you interpolate can inject its own commands.
+A violation is a subprocess started through a shell with an interpolated string, such as `shell=True`, `os.system`, Ruby's `system` or backticks with one interpolated string, `eval`, or `bash -c "$command"`. The rule is followed when subprocesses take a list of arguments. In a bash script, running a command directly with quoted variables follows the rule. Code that starts no subprocesses follows the rule.
 
 Bad:
 An `author` of `x; rm -rf ~` runs as a second command:
@@ -971,7 +985,7 @@ shell.run(["git", "log", f"--author={author}"])
 ```
 
 ### CR-I3: Secret Storage
-Never persist a secret to a file that outlives the run. Reading one from an existing credential file is fine; writing one leaves it on disk where it can be committed, logged, or left world-readable.
+A violation is writing a secret to a file that outlives the run, such as caching a token on disk. The rule is followed when secrets stay in memory or are read fresh from an existing credential file each run. A `mktemp` file removed in an exit trap is allowed, since it is owner-only and gone when the run ends (BASH.md, Safety). Code that handles no secrets follows the rule.
 
 Bad:
 Caching the token to skip the next login leaves it on disk:
@@ -985,15 +999,13 @@ Read it fresh each run and keep it in memory:
 api_token = os.environ["API_TOKEN"]
 ```
 
-Exception: a temp file from `mktemp` that is removed in an exit trap is the right way to keep a secret off the command line, since `mktemp` creates it owner-only and it is gone when the run ends. The trap and `exec` patterns are in BASH.md under Safety.
-
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
-Use `.md` for prose files. A custom extension like `.prompt` loses syntax highlighting in editors and rendering in the web UI, for no benefit.
+A violation is a prose file given a custom extension, such as `.prompt`, instead of `.md`. The rule is followed when prose files end in `.md`. Code that creates or names no prose files follows the rule.
 
 ### CR-J2: XDG Locations
-Put config, cache, and runtime files under the matching XDG variable and state the fallback next to it. A hardcoded `~/.config` ignores the one variable a caller has to redirect the tool, and it breaks on any host that sets XDG elsewhere.
+A violation is a config, cache, or runtime path hardcoded under the home directory, such as `~/.config/tool`, instead of using `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, or `XDG_RUNTIME_DIR` with the fallback stated next to it. The rule is followed when such paths come from the XDG variable. Code with no config, cache, or runtime files follows the rule.
 
 Bad:
 ```python
@@ -1007,7 +1019,7 @@ config_yaml = config_home / "tool" / "config.yaml"
 ```
 
 ### CR-J3: Private Temp Files
-Never write to a fixed path under `/tmp`. Create a private file or directory, and tie its cleanup to the process exiting rather than to the last line of the happy path. A predictable name on a shared machine collides with another user's run, and on most systems it lets them create the file first.
+A violation is writing to a fixed path under `/tmp`, such as `/tmp/output.txt`, instead of a path created by `mktemp` or `tempfile`, or removing a temp file on the last line instead of in an exit trap or context manager. The rule is followed when temp files are private and cleaned up when the process exits. Code with no temp files follows the rule. Why: a predictable name on a shared machine collides with another user's run.
 
 Bad:
 ```python
@@ -1024,7 +1036,7 @@ with tempfile.TemporaryDirectory() as temp_dir:
 ```
 
 ### CR-J4: Resolve Symlinks
-Resolve a path before you act on it or report it. On a shared machine the interesting directories are symlinks into someone's scratch or another repo, and the name the caller typed does not say where the write actually lands.
+A violation is writing to, or reporting the location of, a caller-supplied path without resolving symlinks first with `realpath`, `.resolve()`, or `File.realpath`. The rule is followed when such paths are resolved before use. Code that writes to and reports no caller-supplied paths follows the rule.
 
 Bad:
 ```python
@@ -1037,7 +1049,7 @@ print(f"writing report to {report_dir.resolve()}")
 ```
 
 ### CR-J5: Self Locating Scripts
-A script that only works from its own directory resolves its location and changes there before doing anything else. Depending on the caller's cwd makes the script work from one terminal and fail from another, and the failure names a missing file rather than the real cause. See BASH.md under New Scripts for the header to copy.
+A violation is a script that reads or runs files by a relative path, such as `./settings.ini`, `data/input.csv`, or `make -C .`, without first changing to its own directory with a `SCRIPT_DIR` line and `cd "$SCRIPT_DIR"`. The rule is followed when such scripts locate themselves first (see BASH.md, New Scripts). Scripts that use no relative paths follow the rule.
 
 Bad:
 ```bash
