@@ -633,6 +633,31 @@ run_build()
 upload_results()
 ```
 
+### CR-D10: One Lookup
+A violation is the same lookup or parsing step written out in two or more places, especially when the copies handle a missing input differently: one warns, one exits, one raises a traceback, one never checks. The rule is followed when the step lives in one helper that reports what is missing, and each caller decides whether that is fatal. Code that performs the step once follows the rule. Why: copies drift apart, so the same missing file gives a clear error in one command and a traceback in another.
+
+Bad:
+```python
+def build(root=None):
+    root = root or find_root()
+    tool = root / 'bin' / 'my-tool'
+    if not tool.exists():
+        sys.exit(f"ERROR: {tool} not found")
+
+def query(root=None):
+    tool = (root or find_root()) / 'bin' / 'my-tool'
+```
+
+Good:
+```python
+def find_tool(root=None):
+    root = Path(root) if root else find_root()
+    tool = root / 'bin' / 'my-tool'
+    if not tool.exists():
+        raise FileNotFoundError(f"{tool} not found")
+    return root, tool
+```
+
 ## CR-E: Change hygiene
 
 ### CR-E1: Delete Dead Code
