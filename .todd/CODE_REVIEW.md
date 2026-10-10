@@ -157,6 +157,30 @@ Good:
 MAX_ATTEMPTS = 3
 ```
 
+### CR-A10: Contents Match Headings
+A violation is a table of contents that does not match the document: a link to an anchor no heading produces, a section left out, or entries in a different order from the headings. The rule is followed when every heading at the listed level has one entry, in document order, and each link is the heading's own anchor. A document with no table of contents follows the rule. Why: a dead link or missing entry sends the reader to the wrong place, and nobody notices because the file still renders.
+
+Bad:
+```markdown
+- [Usage](#usage)
+- [Directory Structure](#directory-structure)
+
+## Usage
+## Output Directory Structure
+## Troubleshooting
+```
+
+Good:
+```markdown
+- [Usage](#usage)
+- [Output Directory Structure](#output-directory-structure)
+- [Troubleshooting](#troubleshooting)
+
+## Usage
+## Output Directory Structure
+## Troubleshooting
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
