@@ -181,6 +181,19 @@ Good:
 ## Troubleshooting
 ```
 
+### CR-A11: Placeholder Examples
+A violation is an example in a comment or doc that uses a real value the reader is meant to replace, such as a real commit SHA, job ID, or hostname. The rule is followed when such values are placeholders that name their role, like `<COMMIT>` or `<JOB_ID>`. Why: a real value looks authoritative, so the reader cannot tell whether to copy it or swap it.
+
+Bad:
+```python
+# Usage: fetch_logs.py 4f9c2a1e
+```
+
+Good:
+```python
+# Usage: fetch_logs.py <COMMIT>
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
