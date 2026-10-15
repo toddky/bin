@@ -1017,6 +1017,24 @@ for host in hosts:
     print(host.name)
 ```
 
+### CR-G5: No Prompt Without A Terminal
+A violation is a script that asks a question on stdin when stdin is not a terminal, such as under cron or in CI. The rule is followed when the script offers a flag like `--yes` and exits with an error naming that flag when it would otherwise prompt with no terminal. Why: with no terminal the prompt either hangs forever or reads an empty answer and takes a default nobody chose.
+
+Bad:
+```python
+if input("Delete 40 files? [y/N] ") != "y":
+    sys.exit(1)
+```
+
+Good:
+```python
+if not args.yes:
+    if not sys.stdin.isatty():
+        sys.exit("ERROR: refusing to delete without a terminal, pass --yes")
+    if input("Delete 40 files? [y/N] ") != "y":
+        sys.exit(1)
+```
+
 ## CR-H: Tests
 
 ### CR-H1: Useful Tests
