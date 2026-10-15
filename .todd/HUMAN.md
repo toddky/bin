@@ -26,6 +26,9 @@ No bold section headers like `**Root cause:**` or `**Summary:**`. Just write the
 ### HM-A4: One Idea Per Sentence
 One idea per sentence. Short sentences. Don't pack all the context into one overly complete ask.
 
+### HM-A5: Name The Subject
+Don't open a new message or thread with "it" or a bare "this"; the reader has nothing to point it back to. Not "This is failing again", but "The nightly build is failing again". "This" followed by a noun is fine: "This MR fixes the upload timeout". A reply can open with "it" only when the message it answers names exactly one thing. Anywhere else, use a pronoun only when the noun it stands for is the last one mentioned and nothing else could match.
+
 ## HM-B: Tone
 
 ### HM-B1: Engineer Voice
