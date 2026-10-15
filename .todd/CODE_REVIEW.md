@@ -194,6 +194,21 @@ Good:
 # Usage: fetch_logs.py <COMMIT>
 ```
 
+### CR-A12: Present Tense
+A violation is a comment that tells the story of how the code came to be: what it used to do, what broke, who asked for it, or which ticket or merge request changed it. The rule is followed when the comment states the constraint as it holds now, with the date it was last checked when it describes something outside the code. Why: the history belongs in the commit message, and in a comment it goes stale as soon as the code changes again. The date tells the reader how old the claim is without digging through the log.
+
+Bad:
+```python
+# Used to retry forever, but that hung the nightly job after the server move, so now we stop at 3.
+MAX_ATTEMPTS = 3
+```
+
+Good:
+```python
+# As of 2026-10-15 the server drops connections after 3 failed handshakes, so more attempts never succeed.
+MAX_HANDSHAKE_ATTEMPTS = 3
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
