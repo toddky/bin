@@ -22,7 +22,7 @@ Each rule is written for a reviewer reading one file or one diff. The first sent
 ## CR-A: Comments and documentation
 
 ### CR-A1: Short Comments
-A violation is a comment block longer than 2 lines, a comment line wider than 120 columns, or a comment line holding more than one sentence. The rule is followed when every comment is 1 or 2 lines with one sentence per line. Lines that quote an example input (CR-A3), a usage example (CR-A6), a permalink on its own line (CR-A7), section header banners (CR-B8), and a script's USAGE and DESCRIPTION header lines do not count toward the limit. Why: a paragraph of comment stops being read and goes stale first.
+A violation is a comment block longer than 2 lines, a comment line wider than 120 columns, or a comment line holding more than one sentence. The rule is followed when every comment is 1 or 2 lines with one sentence per line. Lines that quote an example input (CR-A3), a usage example (CR-A6), a permalink on its own line (CR-A7), section header banners (CR-B9), and a script's USAGE and DESCRIPTION header lines do not count toward the limit. Why: a paragraph of comment stops being read and goes stale first.
 
 ```python
 # NFS dentry cache can hide a lock made on another host.
@@ -239,7 +239,25 @@ Run `sync-reports` from a terminal. It detaches after starting, so output goes t
 
 ## CR-B: Formatting and readability
 
-### CR-B1: Break Expressions
+### CR-B1: No Golfing
+A violation is code written shorter at the cost of being harder to read, such as `and`/`or` chains used as an if-else, nested conditional expressions, or several assignments packed onto one line. The rule is followed when the plain version is used whenever it is easier to follow, even if it takes more lines. Why: code is read far more often than it is written, so every saved line costs each later reader.
+
+Bad:
+```python
+label = error and f"failed: {error}" or skipped and "skipped" or "passed"
+```
+
+Good:
+```python
+if error:
+    label = f"failed: {error}"
+elif skipped:
+    label = "skipped"
+else:
+    label = "passed"
+```
+
+### CR-B2: Break Expressions
 A violation is one line that does several things at once: a comprehension that filters, transforms, and calls functions together, a call or command substitution nested inside another, or a chain of three or more calls. The rule is followed when intermediate results are assigned to named variables, one step per line.
 
 Bad:
@@ -254,7 +272,7 @@ valid_items = [item for item in test_items if validate(item)]
 results = [process(item, get_config(item)) for item in valid_items]
 ```
 
-### CR-B2: Hoist Out Of Loops
+### CR-B3: Hoist Out Of Loops
 A violation is a command or assignment inside a loop body whose result does not use the loop variable and so is the same on every pass, such as reading the same file or computing the same value each iteration. The rule is followed when such values are computed once above the loop. Code with no loops follows the rule. Why: inside the loop it hides the cost and reads as though it depends on the iteration.
 
 Bad:
@@ -271,8 +289,8 @@ for branch in branches:
     print(merge_base, branch)
 ```
 
-### CR-B3: Clean Invocations
-A violation is a short command, call, or list split one item per line when it would fit on a single line. The rule is followed when short invocations sit on one line and long ones are built per CR-B4.
+### CR-B4: Clean Invocations
+A violation is a short command, call, or list split one item per line when it would fit on a single line. The rule is followed when short invocations sit on one line and long ones are built per CR-B5.
 
 Bad:
 ```python
@@ -288,7 +306,7 @@ Good:
 cmd = ["git", "status", "--short"]
 ```
 
-### CR-B4: List Building
+### CR-B5: List Building
 A violation is a command or argument list built by concatenating strings with `+`, `\` line continuations, or one long interpolated string. The rule is followed when the parts are collected in a list or array and appended one at a time. Code that builds no commands or argument lists follows the rule.
 
 Bad:
@@ -305,7 +323,7 @@ cmd.extend(f"--exclude={pattern}" for pattern in excludes)
 cmd.extend([source_dir, dest_dir])
 ```
 
-### CR-B5: Step Parsing
+### CR-B6: Step Parsing
 A violation is a single regex or nested expression that pulls several fields out of text, a URL, or a path at once. The rule is followed when parsing happens in small sequential steps, such as split, then pick fields, then validate. Code with no text or path parsing follows the rule.
 
 Bad:
@@ -325,8 +343,8 @@ group_id = segments["groups"]
 item_id = segments["items"]
 ```
 
-### CR-B6: Vertical Spacing
-A violation is two or more blank lines in a row anywhere other than directly before a section header banner (CR-B8). The rule is followed when one blank line separates functions and blocks. When a formatter such as black or ruff owns the file, its spacing wins.
+### CR-B7: Vertical Spacing
+A violation is two or more blank lines in a row anywhere other than directly before a section header banner (CR-B9). The rule is followed when one blank line separates functions and blocks. When a formatter such as black or ruff owns the file, its spacing wins.
 
 Bad:
 ```python
@@ -348,7 +366,7 @@ def save_config():
     ...
 ```
 
-### CR-B7: Top Imports
+### CR-B8: Top Imports
 A violation is an import, `require`, or `source` statement anywhere other than the top of the file, such as inside a function or halfway down. The rule is followed when every import is at the top. Code with no imports follows the rule. Why: a buried import hides a dependency.
 
 Bad:
@@ -366,7 +384,7 @@ def load_config(config_file):
     return yaml.safe_load(config_file.read_text())
 ```
 
-### CR-B8: Section Headers
+### CR-B9: Section Headers
 A violation is a section header banner whose title is not all caps, is longer than three words, or describes the code instead of naming the step; standard sections out of the order `IMPORTS`, `ARGUMENTS`, `ENVIRONMENT`, `HELPERS`; or step sections out of the order the code runs. The rule is followed when every banner is the language's comment marker plus 78 `=`, a short all-caps step name, and 78 `=` again. A small main section is called `MAIN`. Code with no section headers follows the rule, and Go uses doc comments instead of banners.
 
 Bad:
@@ -383,10 +401,10 @@ Good:
 # ==============================================================================
 ```
 
-### CR-B9: Match The File
+### CR-B10: Match The File
 A violation is new code written in a different style from the rest of the same file, such as returning a dataclass where every other function returns a dict, or a naming or quoting style the file does not use. The rule is followed when new code matches the file's existing conventions. When the file conflicts with a rule here, the file wins for this change; fix the file in a separate change (CR-E3).
 
-### CR-B10: Multi-line Text
+### CR-B11: Multi-line Text
 A violation is fixed multi-line text, such as a help epilog, usage text, or a long message, built by joining a list of string literals with `'\n'.join([...])` or by `+` concatenation. The rule is followed when the text is one triple-quoted string. Joining lines computed at runtime follows the rule. A triple-quoted string reads exactly as it prints, with no quotes, commas, or separators in the way.
 
 Bad:
@@ -407,7 +425,7 @@ examples:
 '''
 ```
 
-### CR-B11: Sets For Lookups
+### CR-B12: Sets For Lookups
 A violation is an `in` check against a list inside a loop, where the list is built once and only searched. The rule is followed when the list is turned into a set before the loop. Why: each check on a list scans every item, so the loop slows down with the square of the input size.
 
 Bad:
@@ -540,6 +558,23 @@ Good:
 ```python
 def cart_total(prices):
     return sum(prices)
+```
+
+### CR-C8: Derived Values
+A violation is a literal number, in code or a comment, that is computed from another named constant, such as `8192` where the value means two pages of `PAGE_SIZE`. The rule is followed when the value is written as the expression or refers to the constant by name. Why: the literal stays the same when the constant changes, and nothing flags the mismatch.
+
+Bad:
+```python
+# Default memory page size on Linux.
+PAGE_SIZE = 4096
+BUFFER_SIZE = 8192  # two pages
+```
+
+Good:
+```python
+# Default memory page size on Linux.
+PAGE_SIZE = 4096
+BUFFER_SIZE = PAGE_SIZE * 2
 ```
 
 ## CR-D: Function design
@@ -690,7 +725,7 @@ if args.verbose:
 ```
 
 ### CR-D9: No Step Machinery
-A violation is a step table, list of step functions, dispatcher, or registry that drives a fixed sequence that always runs the same way. The rule is followed when the steps run in order under section headers (CR-B8). Code with no such table follows the rule.
+A violation is a step table, list of step functions, dispatcher, or registry that drives a fixed sequence that always runs the same way. The rule is followed when the steps run in order under section headers (CR-B9). Code with no such table follows the rule.
 
 Bad:
 ```python
@@ -1265,6 +1300,24 @@ The test was written first and failed with `ZeroDivisionError` until the fix wen
 ```python
 def test_average_of_empty_list_is_zero():
     assert average([]) == 0
+```
+
+### CR-H9: No Leaked State
+A violation is a test whose result depends on the host or on what another test left behind: environment variables, the current directory, module globals, or which tools are installed. The rule is followed when the test sets what it needs itself, through fixtures that undo the change afterward. Why: the test passes on the author's machine and fails in CI, or fails only when it runs after one particular test.
+
+Bad:
+Fails on any machine that sets `XDG_CACHE_HOME`:
+```python
+def test_default_cache_dir():
+    assert default_cache_dir() == Path.home() / ".cache" / "my-tool"
+```
+
+Good:
+```python
+def test_default_cache_dir(monkeypatch, tmp_path):
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    assert default_cache_dir() == tmp_path / ".cache" / "my-tool"
 ```
 
 ## CR-I: Security
