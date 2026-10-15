@@ -209,6 +209,21 @@ Good:
 MAX_HANDSHAKE_ATTEMPTS = 3
 ```
 
+### CR-A13: TODOs Need A Reason
+A violation is a new TODO or FIXME with no ticket and no reason it cannot be done now. The rule is followed when every new TODO names a ticket or the blocker, or the work is done in the same change. Why: a bare TODO never gets picked up, and later nobody can tell whether it still matters.
+
+Bad:
+```python
+# TODO: support gzip
+data = report_file.read_text()
+```
+
+Good:
+```python
+# TODO PROJ-123: support gzip once the exporter can write compressed reports.
+data = report_file.read_text()
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
