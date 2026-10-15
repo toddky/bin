@@ -1039,16 +1039,16 @@ A violation is a test that asserts on how the code works instead of what it prod
 Bad:
 This passes even if the total is wrong, and fails if the loop is rewritten:
 ```python
-def test_order_total():
-    with patch("orders.add_line") as add_line:
-        order_total([10, 20])
-    assert add_line.call_count == 2
+def test_cart_total():
+    with patch("cart.add_price") as add_price:
+        cart_total([10, 20])
+    assert add_price.call_count == 2
 ```
 
 Good:
 ```python
-def test_order_total():
-    assert order_total([10, 20]) == 30
+def test_cart_total():
+    assert cart_total([10, 20]) == 30
 ```
 
 ## CR-I: Security
