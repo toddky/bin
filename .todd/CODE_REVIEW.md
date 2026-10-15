@@ -999,6 +999,23 @@ def test_parse_rejects_unknown_field():
         parse_config(config_with_typo)
 ```
 
+### CR-H2: Assert The Behavior
+A violation is a test that runs code but asserts nothing, or asserts something that cannot fail or does not match what the test claims to check, such as a test named for sorting that only checks the length. The rule is followed when every test asserts the result it is named for. Code with no tests follows the rule. Why: a test that cannot fail reports a pass whether the code works or not.
+
+Bad:
+The name promises sorted output, but any list of three items passes:
+```python
+def test_sort_records():
+    result = sort_records([3, 1, 2])
+    assert len(result) == 3
+```
+
+Good:
+```python
+def test_sort_records():
+    assert sort_records([3, 1, 2]) == [1, 2, 3]
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
