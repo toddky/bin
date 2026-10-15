@@ -407,6 +407,21 @@ examples:
 '''
 ```
 
+### CR-B11: Sets For Lookups
+A violation is an `in` check against a list inside a loop, where the list is built once and only searched. The rule is followed when the list is turned into a set before the loop. Why: each check on a list scans every item, so the loop slows down with the square of the input size.
+
+Bad:
+```python
+passed_names = [result.name for result in results if result.passed]
+missing = [test for test in tests if test.name not in passed_names]
+```
+
+Good:
+```python
+passed_names = {result.name for result in results if result.passed}
+missing = [test for test in tests if test.name not in passed_names]
+```
+
 ## CR-C: Naming
 
 ### CR-C1: Specific Plain Names
