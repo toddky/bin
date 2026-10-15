@@ -455,6 +455,22 @@ def tmux(args):
     return shell.run(["tmux", *args])
 ```
 
+### CR-C7: One Meaning
+A violation is a name, in code or in an example, built on a word with a second meaning the reader could pick instead, such as `order` (a purchase, or a sort order), `key` (a dict key, or a credential), or `run` (a verb, or a past execution). The rule is followed when every name has only one reasonable reading in its surrounding code or prose. Why: the reader takes the wrong meaning first and then has to work out that the code does not do it.
+
+Bad:
+`order` reads as sort order, but the function only adds prices:
+```python
+def order_total(prices):
+    return sum(prices)
+```
+
+Good:
+```python
+def cart_total(prices):
+    return sum(prices)
+```
+
 ## CR-D: Function design
 
 ### CR-D1: Inline Helpers
