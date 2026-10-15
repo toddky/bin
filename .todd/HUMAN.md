@@ -2,7 +2,7 @@
 
 Rules for writing Slack messages, comments, and short-form text that don't read as AI-generated.
 
-Rules are grouped by letter:
+Each letter is a group of rules:
 
 | Section | Covers |
 |---|---|
@@ -41,7 +41,7 @@ No exclamation points unless you'd actually say it out loud.
 Use active voice. Not "it was determined that" or "this can be seen in".
 
 ### HM-B5: No Filler Openers
-Don't open with "Great question", "Certainly", "Of course", or similar.
+Don't open with "Great question", "Certainly", "Of course", or similar. Don't open a sentence with a signpost like "Note that", "It's worth noting that", or "Importantly" either; state the point.
 
 ### HM-B6: No Closing Pleasantries
 Don't end with "Hope that helps", "Let me know if you have questions", "Let me know if you need anything else", or similar.
