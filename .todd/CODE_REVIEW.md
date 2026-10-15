@@ -995,6 +995,28 @@ parser.add_argument("--timeout", type=int, help="Seconds to wait before giving u
 parser.add_argument("--config", type=Path, help="Config file to read")
 ```
 
+### CR-G4: Errors To Stderr
+A violation is a script that prints warnings, errors, or progress to stdout. The rule is followed when stdout holds only the result and everything else goes to stderr. Why: anyone piping the output into another command gets the messages mixed into the data.
+
+Bad:
+Piping this into another command passes the skip message along as if it were a host name:
+```python
+for host in hosts:
+    if not host.reachable:
+        print(f"Skipping {host.name}: unreachable")
+        continue
+    print(host.name)
+```
+
+Good:
+```python
+for host in hosts:
+    if not host.reachable:
+        print(f"Skipping {host.name}: unreachable", file=sys.stderr)
+        continue
+    print(host.name)
+```
+
 ## CR-H: Tests
 
 ### CR-H1: Useful Tests
