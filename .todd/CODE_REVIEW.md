@@ -99,7 +99,7 @@ MAX_PARALLEL_UPLOADS = 8
 ```
 
 ### CR-A6: Usage Examples
-A violation is a function whose inputs or outputs are not obvious from its name and parameters, with no one-line example call and result as its first comment. The rule is followed when such functions start with a comment like `# parse_duration("1h30m") -> 5400`. Functions whose behavior is obvious from the signature, and code with no functions, follow the rule.
+A violation is a function that parses, formats, converts, or builds data, or whose result is not obvious from its name, with no example call and result at the top of its comment or docstring. The rule is followed when such functions start with a line like `parse_duration("1h30m") -> 5400`, plus one more line for an edge case worth showing. Functions whose result is plain from the name, like `is_empty(items)`, follow the rule. Why: one example shows what a function is for faster than a sentence describing it.
 
 Bad:
 ```python
@@ -111,6 +111,7 @@ Good:
 ```python
 def parse_duration(text):
     # parse_duration("1h30m") -> 5400
+    # parse_duration("45s") -> 45
     ...
 ```
 
