@@ -224,6 +224,19 @@ Good:
 data = report_file.read_text()
 ```
 
+### CR-A14: Document Only Surprises
+A violation is a README or doc sentence describing behavior every tool of its kind already has, such as a command-line tool printing to the terminal or stopping on Ctrl-C. The rule is followed when docs describe only what differs from that default, like a tool that detaches or writes to a file instead of the terminal. Why: readers skim past the obvious lines, and the one that matters gets skimmed with them.
+
+Bad:
+```markdown
+Run `sync-reports` from a terminal. Output is printed to the terminal, and you can stop it with Ctrl-C.
+```
+
+Good:
+```markdown
+Run `sync-reports` from a terminal. It detaches after starting, so output goes to `~/.cache/sync-reports/sync.log`.
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: Break Expressions
