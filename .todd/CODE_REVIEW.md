@@ -730,6 +730,26 @@ def find_tool(root=None):
     return root, tool
 ```
 
+### CR-D11: Explicit Dependencies
+A violation is a function that only works if another function ran first, with nothing in the code enforcing it, such as reading a global that a setup function fills in. The rule is followed when the function takes what it needs as a parameter, or checks for it and fails with a message naming the setup step. Why: the hidden dependency breaks silently the first time someone calls the function from a new place.
+
+Bad:
+`get_output_dir()` fails with a `NameError` unless `load_settings()` ran first:
+```python
+def load_settings(config_file):
+    global SETTINGS
+    SETTINGS = read_settings(config_file)
+
+def get_output_dir():
+    return SETTINGS["output_dir"]
+```
+
+Good:
+```python
+def get_output_dir(settings):
+    return settings["output_dir"]
+```
+
 ## CR-E: Change hygiene
 
 ### CR-E1: Delete Dead Code
