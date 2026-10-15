@@ -1248,6 +1248,25 @@ def test_is_expired():
     assert not is_expired(expires=datetime(2030, 1, 1), now=datetime(2029, 12, 31))
 ```
 
+### CR-H8: Red-Green Fixes
+A violation is a bug fix with no test that fails without it. The rule is followed when the fix is done red-green-refactor: a test that reproduces the bug fails first (red), the fix makes it pass (green), and any cleanup keeps it passing (refactor). Why: a test written after the fix may never have failed, so nobody knows it catches the bug.
+
+Bad:
+The empty-input fix ships with no test:
+```python
+def average(values):
+    if not values:
+        return 0
+    return sum(values) / len(values)
+```
+
+Good:
+The test was written first and failed with `ZeroDivisionError` until the fix went in:
+```python
+def test_average_of_empty_list_is_zero():
+    assert average([]) == 0
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
