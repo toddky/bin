@@ -18,7 +18,7 @@ Each letter is a group of rules:
 Lead with the most important thing: the finding and the ask. When asking for something, put the ask first, not your backstory. One sentence of context is enough if it's connected to something the reader already cares about or knows.
 
 ### HM-A2: Prose Over Lists
-No bullet lists for things that read naturally as prose. Use a numbered list only for genuinely enumerable steps.
+No bullet lists for things that read naturally as prose. Use a numbered list only for genuinely enumerable steps. Don't list every part of something to sound thorough either: not "the logs, the config, the core dump, and the rerun script", but "everything needed to reproduce it".
 
 ### HM-A3: No Bold Headers
 No bold section headers like `**Root cause:**` or `**Summary:**`. Just write the sentence.
@@ -53,7 +53,7 @@ Don't end with "Hope that helps", "Let me know if you have questions", "Let me k
 Don't hedge with "it appears that", "it seems like", or "it would seem". If you're unsure, ask (HM-D1); if you have evidence, say it plainly.
 
 ### HM-B8: No Parallel Nouns
-Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". It's a classic LLM tell.
+Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". It's a classic LLM tell. The same goes for a trailing "and" clause that adds emphasis but no information: not "Rerun the test and see whether the failure comes back", but "Rerun the test".
 
 ## HM-C: What to leave out
 
