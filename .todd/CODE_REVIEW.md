@@ -1067,6 +1067,56 @@ def test_cart_total():
     assert cart_total([10, 20]) == 30
 ```
 
+### CR-H5: Private Test Files
+A violation is a test that writes to a fixed path or reads files another test left behind. The rule is followed when every file the test touches is under its own temp directory. Why: two copies running at once overwrite each other, and a stale file can make a broken test pass.
+
+Bad:
+```python
+def test_save_results():
+    save_results("/tmp/results.json", [1, 2])
+    assert json.loads(Path("/tmp/results.json").read_text()) == [1, 2]
+```
+
+Good:
+```python
+def test_save_results(tmp_path):
+    results_json = tmp_path / "results.json"
+    save_results(results_json, [1, 2])
+    assert json.loads(results_json.read_text()) == [1, 2]
+```
+
+### CR-H6: No Real Network
+A violation is a unit test that makes a real network call. The rule is followed when the call is replaced with a stub that returns a fixed response. Tests marked as integration tests are exempt. Why: the test fails whenever the server is slow or down, which the change did not cause.
+
+Bad:
+```python
+def test_latest_version():
+    assert latest_version("https://example.com/releases") == "2.1.0"
+```
+
+Good:
+```python
+def test_latest_version(monkeypatch):
+    monkeypatch.setattr(releases, "fetch_json", lambda url: [{"version": "2.1.0"}])
+    assert latest_version("https://example.com/releases") == "2.1.0"
+```
+
+### CR-H7: Fixed Clock
+A violation is a test whose result depends on today's date, the current time, or how long a step takes. The rule is followed when the test passes the time in or freezes the clock. Why: a time-dependent test passes today and fails at midnight, at month end, or on a slow machine.
+
+Bad:
+This passes until 2030:
+```python
+def test_is_expired():
+    assert not is_expired(expires=datetime(2030, 1, 1))
+```
+
+Good:
+```python
+def test_is_expired():
+    assert not is_expired(expires=datetime(2030, 1, 1), now=datetime(2029, 12, 31))
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
