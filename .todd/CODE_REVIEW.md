@@ -1016,6 +1016,41 @@ def test_sort_records():
     assert sort_records([3, 1, 2]) == [1, 2, 3]
 ```
 
+### CR-H3: Names Match Bodies
+A violation is a test whose name describes a different case or outcome than the body checks, such as a name that says "rejects" over a body that asserts success. The rule is followed when reading only the test name tells you what input the body uses and what it asserts. Code with no tests follows the rule. Why: the test name is what shows up in a failure report, so a wrong name sends the reader to debug the wrong behavior.
+
+Bad:
+The name says empty input is rejected, but the body checks a normal value:
+```python
+def test_parse_port_rejects_empty():
+    assert parse_port("8080") == 8080
+```
+
+Good:
+```python
+def test_parse_port_rejects_empty():
+    with pytest.raises(ValueError):
+        parse_port("")
+```
+
+### CR-H4: Observable Behavior
+A violation is a test that asserts on how the code works instead of what it produces: call counts on mocks, private attributes, or the order of internal calls. A test that mocks every interesting part and then checks the mocks were called is the same violation. The rule is followed when the test asserts on return values, raised errors, files written, or other output a caller can see. Mocks are fine at the edges, such as a network call. Code with no tests follows the rule. Why: a test tied to internals breaks on every correct refactor and still passes when the output is wrong.
+
+Bad:
+This passes even if the total is wrong, and fails if the loop is rewritten:
+```python
+def test_order_total():
+    with patch("orders.add_line") as add_line:
+        order_total([10, 20])
+    assert add_line.call_count == 2
+```
+
+Good:
+```python
+def test_order_total():
+    assert order_total([10, 20]) == 30
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
