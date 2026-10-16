@@ -238,6 +238,31 @@ Good:
 Run `sync-reports` from a terminal. It detaches after starting, so output goes to `~/.cache/sync-reports/sync.log`.
 ```
 
+### CR-A15: Document Shape
+A violation is a README or doc whose opening line does not say what kind of thing it describes, a section that relies on something explained later, or a heading in place of the usual word readers scan for. The rule is followed when the first line names the kind of thing, each section builds on the ones before it, and headings use the plain words like *Usage*, *Installation*, and *Configuration*. Why: readers decide from the first line whether a page is relevant, and then jump to the heading they expected.
+
+Bad:
+```markdown
+# sync-reports
+
+Uses the token from the setup step below.
+
+## Running it
+
+## Getting started
+```
+
+Good:
+```markdown
+# sync-reports
+
+A command-line tool that copies finished reports to a shared directory.
+
+## Installation
+
+## Usage
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: No Golfing
