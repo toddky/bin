@@ -21,6 +21,7 @@ Go-specific rules. The cross-language rules (naming basics, control flow, string
 - Always wrap with `%w` so callers can `errors.Is`/`errors.As`; use `errors.As` for typed errors (e.g. `*exec.ExitError`).
 - Include what was attempted and the relevant values: `fmt.Errorf("read tools dir %s: %w", dir, err)`.
 - Only swallow an error when you specifically expect it; test the narrow condition (`errors.Is(err, fs.ErrNotExist)`), never a blanket `err != nil` discard.
+- After a `for rows.Next()` loop over database results, check `rows.Err()`. A read error ends the loop early, and without the check it looks like the end of the data.
 
 ## Structs and Wire Formats
 
