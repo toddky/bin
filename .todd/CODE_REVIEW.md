@@ -1053,7 +1053,7 @@ config = yaml.safe_load(config_file.read_text())
 ```
 
 ### CR-F8: Narrow Excepts
-A violation is a bare or broad catch that swallows an error and continues, such as `except:`, `except Exception`, a `rescue` with no error class, or `|| true` on a command whose success matters. The rule is followed when only the specific expected error is caught and the code then exits or re-raises. Code with no error catching follows the rule.
+A violation is a bare or broad catch that swallows an error and continues, such as `except:`, `except Exception`, a `rescue` with no error class, `|| true` on a command whose success matters, or a lookup that reports every error as "not found". The rule is followed when only the specific expected error is caught and the code then exits or re-raises. Code with no error catching follows the rule.
 
 Bad:
 ```python
@@ -1086,6 +1086,26 @@ Good:
 REQUEST_TIMEOUT_SECONDS = 30
 
 response = requests.get(url, timeout=REQUEST_TIMEOUT_SECONDS)
+```
+
+### CR-F10: Check In The Write
+A violation is a write that depends on a check made earlier in a separate step, such as reading a row and then updating it by id alone, or checking a rate limit and recording the attempt only after slow work. The rule is followed when the write repeats the check in its own condition, or the check and the write run inside one transaction or lock, and the code reports when the condition no longer holds; code with no such check-then-write follows the rule. Why: anything that changes in between is silently undone, and the bug only shows up under concurrent use, which normal tests never create.
+
+Bad:
+```python
+ticket = db.get_ticket(ticket_id)
+if ticket.status != "open":
+    raise Conflict("ticket is closed")
+query = "UPDATE tickets SET status = 'assigned', assignee = ? WHERE id = ?"
+db.execute(query, user_id, ticket_id)
+```
+
+Good:
+```python
+query = "UPDATE tickets SET status = 'assigned', assignee = ? WHERE id = ? AND status = 'open'"
+updated = db.execute(query, user_id, ticket_id)
+if updated.rowcount == 0:
+    raise Conflict("ticket changed while this request ran; reload and try again")
 ```
 
 ## CR-G: Arguments and CLI design
@@ -1373,6 +1393,35 @@ def test_render_output_is_safe_for_any_comment():
         assert is_safe_html(html), f"unsafe output for {comment!r}"
 ```
 
+### CR-H11: One Test Per Condition
+A violation is a check with several conditions, such as an access rule that allows admins, public items, or listed readers, whose tests cover only some of them. The rule is followed when each condition has a test that passes only because of that condition, so removing the condition makes that test fail; code with no multi-condition check follows the rule. Why: a dropped condition still leaves a passing suite, so a refactor can quietly remove access, or grant it, with nobody noticing.
+
+Bad:
+Deleting `user.is_admin` or `document.is_public` from the rule leaves this test passing:
+```python
+def can_view(user, document):
+    return user.is_admin or document.is_public or user.id in document.reader_ids
+
+def test_can_view():
+    assert can_view(reader, private_document)
+    assert not can_view(stranger, private_document)
+```
+
+Good:
+```python
+def test_admin_can_view_private_document():
+    assert can_view(admin, private_document)
+
+def test_anyone_can_view_public_document():
+    assert can_view(stranger, public_document)
+
+def test_listed_reader_can_view_private_document():
+    assert can_view(reader, private_document)
+
+def test_stranger_cannot_view_private_document():
+    assert not can_view(stranger, private_document)
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
@@ -1492,6 +1541,41 @@ Good:
 log.info("connecting to %s as %s", api_url, account_name)
 ```
 
+### CR-I8: Same Answer For Unknown Accounts
+A violation is a login, password reset, or lookup by name that answers an unknown account differently from a real account with a wrong password, whether in the message, the status, the response time, or a lockout only real accounts can reach. The rule is followed when an unknown name gets the same answer, takes as long, and counts toward the same rate limit; code with no lookup by account name follows the rule. Why: any difference tells an attacker which accounts exist, which is the first step to guessing their passwords.
+
+Bad:
+Each failure tells the caller something different, and an unknown name returns before the slow password check:
+```python
+def log_in(username, password):
+    user = db.find_user(username)
+    if user is None:
+        raise Unauthorized("no such user")
+    if is_locked_out(user.id):
+        raise TooManyRequests("try again later")
+    if not bcrypt.checkpw(password, user.password_hash):
+        raise Unauthorized("wrong password")
+    return user
+```
+
+Good:
+```python
+# Hashed at the same cost as real passwords, so an unknown name takes as long to reject.
+UNKNOWN_USER_HASH = bcrypt.hashpw(b"no account has this password", bcrypt.gensalt())
+
+def log_in(username, password):
+    account_key = username.lower()
+    if is_locked_out(account_key):
+        raise TooManyRequests("try again later")
+    record_attempt(account_key)
+    user = db.find_user(username)
+    password_hash = user.password_hash if user else UNKNOWN_USER_HASH
+    password_matches = bcrypt.checkpw(password, password_hash)
+    if user is None or not password_matches:
+        raise Unauthorized("wrong username or password")
+    return user
+```
+
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
@@ -1554,4 +1638,20 @@ Good:
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 make release
+```
+
+### CR-J6: Ids That Name Files Are Never Reused
+A violation is a file or cache entry named after a row id from a table that can hand a deleted row's id to a new row, such as an SQLite `INTEGER PRIMARY KEY` without `AUTOINCREMENT`. The rule is followed when those ids are never reused, or the name also includes something unique such as a content hash; code that names no files after row ids follows the rule. Why: after a delete, the next insert can get the same id, and cleaning up the old row's file deletes the new row's file.
+
+Bad:
+Delete the newest upload and the next one gets its id, so cleaning up the old file can remove the new one:
+```sql
+CREATE TABLE uploads (id INTEGER PRIMARY KEY, filename TEXT NOT NULL);
+-- each file is stored at uploads/<id>
+```
+
+Good:
+```sql
+CREATE TABLE uploads (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL);
+-- each file is stored at uploads/<id>
 ```
