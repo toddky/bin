@@ -1346,6 +1346,33 @@ def test_default_cache_dir(monkeypatch, tmp_path):
     assert default_cache_dir() == tmp_path / ".cache" / "my-tool"
 ```
 
+### CR-H10: Property Tests For Untrusted Input
+A violation is code that parses, renders, or sanitizes input from outside the program, such as a Markdown renderer or a query parser, whose tests are only hand-picked example inputs. The rule is followed when a seeded random test also feeds it many generated inputs and asserts a property on every output, such as "never throws" or "every attribute value is quoted and free of markup"; code that handles no outside input follows the rule. Why: each fix for one bad input can open a hole for the next, and hand-picked examples only find the holes someone thought of.
+
+Bad:
+Two attacks someone thought of; a third that nests a link inside a URL still gets through:
+```python
+def test_render_escapes_script():
+    assert "<script>" not in render_comment("<script>x</script>")
+
+def test_render_blocks_javascript_links():
+    assert 'href="javascript:' not in render_comment("[x](javascript:alert(1))")
+```
+
+Good:
+```python
+COMMENT_PIECES = ["<script>", "[link](", "https://x.com", ")", "`", "**", "\n", "plain text"]
+
+def test_render_output_is_safe_for_any_comment():
+    fixed_rng_seed = 42
+    generator = random.Random(fixed_rng_seed)
+    # 2000 comments render in under a second and cover combinations nobody writes by hand.
+    for _ in range(2000):
+        comment = "".join(generator.choices(COMMENT_PIECES, k=generator.randint(1, 50)))
+        html = render_comment(comment)
+        assert is_safe_html(html), f"unsafe output for {comment!r}"
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
@@ -1393,6 +1420,76 @@ Good:
 Read it fresh each run and keep it in memory:
 ```python
 api_token = os.environ["API_TOKEN"]
+```
+
+### CR-I4: No Nested Repetition In Regexes
+A violation is a regex run on input from outside the program that repeats a group which itself repeats, such as `(a+)+` or `([a-z0-9]+\.?)+`, or that repeats alternatives that can match the same text, such as `(a|ab)*`. The rule is followed when every part of the pattern can match a given piece of text in only one way; code with no regex on outside input follows the rule. Why: when such a pattern fails to match, the regex engine tries every way to split the text before giving up, so a short crafted string can take seconds or hang.
+
+Bad:
+A 27-character address ending in "!" takes 2 seconds to reject, and each extra character doubles it:
+```python
+COMPANY_EMAIL_PATTERN = re.compile(r"^([a-z0-9]+\.?)+@example\.com$")
+```
+
+Good:
+Every repeated part starts with a dot, so a run of letters can only be matched one way:
+```python
+COMPANY_EMAIL_PATTERN = re.compile(r"^[a-z0-9]+(\.[a-z0-9]+)*@example\.com$")
+```
+
+### CR-I5: Linear Work On Untrusted Input
+A violation is a loop over input from outside the program that recounts, rescans, or copies the whole input on every pass. The rule is followed when the loop counts any total once before it starts and updates it as it goes; code with no loop over outside input follows the rule. Why: the work grows with the square of the input, so one oversized message takes seconds to process and stalls everyone who loads it, while tests with normal-sized input never notice.
+
+Bad:
+Every pass re-encodes the whole comment to measure it, so trimming a 136 KB comment to a 200-byte preview takes 2 seconds:
+```python
+def preview(comment, max_bytes):
+    while len(comment.encode()) > max_bytes:
+        comment = comment[:-1]
+    return comment
+```
+
+Good:
+```python
+def preview(comment, max_bytes):
+    num_bytes = len(comment.encode())
+    end = len(comment)
+    while num_bytes > max_bytes:
+        end -= 1
+        num_bytes -= len(comment[end].encode())
+    return comment[:end]
+```
+
+### CR-I6: Least-Privilege Credentials
+A violation is code that holds a credential with more power than its job needs and limits itself in its own code, such as a report that only reads but logs in to the database as an admin and checks each query itself. The rule is followed when the credential itself is limited, through a token scoped to the job or an account the server restricts; code that holds no credentials follows the rule. Why: a limit in the caller's code disappears with one bug or one tricked agent, while a limit on the credential holds no matter what the code does.
+
+Bad:
+The admin login can drop tables; only the prefix check stands in the way, and `SELECT 1; DROP TABLE orders` passes it:
+```python
+def run_report(query):
+    if not query.lstrip().upper().startswith("SELECT"):
+        raise PermissionError("reports may only read")
+    return connect(user="admin", password=os.environ["ADMIN_PASSWORD"]).execute(query)
+```
+
+Good:
+The `report_reader` account can only read, and the database refuses anything else:
+```python
+def run_report(query):
+    return connect(user="report_reader", password=os.environ["REPORT_READER_PASSWORD"]).execute(query)
+```
+
+### CR-I7: Secrets Out Of Output
+A violation is printing a password, token, or other secret to the terminal or a log, including in error messages and debug output. The rule is followed when the output names the account or where the secret is kept but never contains the secret itself; code that prints no secrets follows the rule. Why: terminal scrollback, screen shares, recordings, and CI logs keep whatever was printed, long after the run ends.
+
+Bad:
+```python
+log.info("connecting to %s with token %s", api_url, api_token)
+```
+
+Good:
+```python
+log.info("connecting to %s as %s", api_url, account_name)
 ```
 
 ## CR-J: Files
