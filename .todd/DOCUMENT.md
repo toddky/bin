@@ -10,6 +10,7 @@ Rules for long-form writing: notes, published pages, design docs, and anything a
 | DOC-B | Structure |
 | DOC-C | Evidence |
 | DOC-D | Revising |
+| DOC-E | Diagrams |
 
 ## DOC-A: Titles and Headings
 
@@ -78,3 +79,40 @@ When evidence is rebuilt from a result rather than taken from a record, say so o
 
 ### DOC-D1: Counts Track The Body
 Any sentence that counts, orders, or sums up the entries is part of the body. Changing an entry means fixing every "five of the six", "the first of these", and "all but one" that described the old set. These lines are the easiest part of a document to leave stale, and a wrong one makes the reader doubt the rest.
+
+## DOC-E: Diagrams
+
+A diagram here means a block diagram: a map of the parts of a system and what crosses between them.
+
+### DOC-E1: One Diagram Over Many Links
+When a set of links exists to show how the parts of a system fit together, draw a diagram instead. The reader gets the shape of the system without opening anything. The links can still go on the diagram's own page.
+
+### DOC-E2: A Map, Not A Flowchart
+Lay components out by where they sit, not by the order they run. If the diagram reads top to bottom as step 1, step 2, step 3, it is a flowchart, so redo it. The one exception is a component that runs inside another's loop, which is drawn inside that box rather than as the next one down.
+
+### DOC-E3: Lanes By Kind
+Group components into labeled lanes by what they are, such as the processes, the wrappers around them, and the external systems they call. Put the owner of the data where its ownership shows, usually the middle, rather than as one box among peers. Pair related boxes on the same row, so a wrapper sits beside the thing it runs.
+
+### DOC-E4: Start Where The Reader Starts
+Put whatever a person touches, such as a browser or the command that starts everything, in the leftmost lane so the diagram reads left to right. Not a launcher in the right lane with an arrow reaching back across the whole diagram, but a launcher on the left beside the browser. A long arrow running against the flow means a box is in the wrong lane.
+
+### DOC-E5: Shared State Gets A Band
+Files, caches, databases, and config go in their own band along the bottom, not in a lane with the processes. They are resources every component touches, never steps in a sequence.
+
+### DOC-E6: Label Every Edge
+Label each edge with what crosses it, not with a step number. Not "1", "2", "then", but "events", "one session per message", "page and API calls". An unlabeled arrow says two boxes are related and nothing about how.
+
+### DOC-E7: Put The Contract On The Box
+When a component has a real contract, such as its inputs, exit codes, or timeouts, write it on the box. That is the part of a diagram worth more than the prose around it.
+
+### DOC-E8: Show How Many
+When one box stands for several running processes, say so on the box and name each one. A single box reads as a single process, which hides the most important fact about a launcher that starts three. Not one box labeled "bot", but one box with "lead", "worker", and "reviewer" marked inside it.
+
+### DOC-E9: Two Edge Styles And A Caption
+Use solid edges for calls between processes and dashed edges for reads and writes on disk. Say which is which in a caption under the diagram, or the reader has to guess.
+
+### DOC-E10: Crossings Are Fine
+Leave an edge crossing in place. Bending the layout to avoid one costs more clarity than the crossing does.
+
+### DOC-E11: Outline, Do Not Fill
+Draw boxes as outlines with a colored border, one color per kind of component, and leave the inside the background color. Bright solid fills fight the text for attention. Draw a group as a dashed border with no fill.
