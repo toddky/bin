@@ -108,8 +108,8 @@ When a component has a real contract, such as its inputs, exit codes, or timeout
 ### DOC-E8: Show How Many
 When one box stands for several running processes, say so on the box and name each one. A single box reads as a single process, which hides the most important fact about a launcher that starts three. Not one box labeled "bot", but one box with "lead", "worker", and "reviewer" marked inside it.
 
-### DOC-E9: Two Edge Styles And A Caption
-Use solid edges for calls between processes and dashed edges for reads and writes on disk. Say which is which in a caption under the diagram, or the reader has to guess.
+### DOC-E9: Edge Style, Direction, And A Caption
+Use solid edges for calls between processes and dashed edges for reads and writes on disk. Point each arrow from the side that starts the call rather than putting a head on both ends, since most calls get a reply and two heads hide who started it. Say both in a caption under the diagram, or the reader has to guess.
 
 ### DOC-E10: Crossings Are Fine
 Leave an edge crossing in place. Bending the layout to avoid one costs more clarity than the crossing does.
