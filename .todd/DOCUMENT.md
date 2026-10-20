@@ -8,6 +8,7 @@ Rules for long-form writing: notes, published pages, design docs, and anything a
 |---|---|
 | DOC-A | Titles and headings |
 | DOC-B | Structure |
+| DOC-C | Evidence |
 
 ## DOC-A: Titles and Headings
 
@@ -41,7 +42,7 @@ The second paragraph tells the reader what they get from the rest of the page. M
 Put the thing that delivers the value directly after the opening, so the reader gets something useful on the first screen. What that is depends on the document: for a command-line tool it is the commands a user runs and their output, which shows how little it takes; for a system it is the diagram; for a collection it is the strongest entry. Not a README that opens with installation and design notes, but one whose first code block is the command people will actually type.
 
 ### DOC-B4: Same Shape Every Entry (Body)
-Every entry in a repeated series carries the same parts in the same order. Once a reader learns the shape from the first entry they can skip to the part they want in all the rest. An entry missing a part is a signal that it does not belong.
+Every entry in a repeated series carries the same parts in the same order. Once a reader learns the shape from the first entry they can skip to the part they want in all the rest. An example that can't fill every part should be replaced, not kept with a caveat explaining the gap.
 
 ### DOC-B5: Mark The Roles (Body)
 When a document quotes a conversation or a sequence of actors, give each role a consistent visual marker and use it everywhere. The marker is what lets a reader skim to the answer, or to the question, without reading the surrounding prose.
@@ -57,3 +58,17 @@ Finish with the section that makes the point, not a summary of what was already 
 
 ### DOC-B9: Links Last (Ending)
 Put reference links in one final section, each labeled by kind, such as `Notes:` or `Repository:`. Links in the body point at the evidence for a specific claim. Links for further reading go at the bottom, where a reader who finished the page looks for them.
+
+## DOC-C: Evidence
+
+### DOC-C1: Quote, Do Not Paraphrase
+Use the exact words of whoever said it, in a block quote. A paraphrase hides what was actually said and reads as your claim rather than theirs. Trim with an ellipsis rather than rewording.
+
+### DOC-C2: Link The Exact Thing
+Link to the specific message, line, or commit, not to the thread, file, or branch that contains it. A reader who has to search inside your link for the thing you meant will stop following links. Not "the discussion is in the review thread", but a link on "the reviewer's objection" that lands on that one comment.
+
+### DOC-C3: Name What Was Looked Up
+When a conclusion came from a query, say which query and what it returned. The reader can then run the same check instead of taking your word for it. Not "worked out the cause", but "checked the job record and found it was killed for exceeding its memory limit".
+
+### DOC-C4: Say Where It Came From
+When evidence is rebuilt from a result rather than taken from a record, say so once, near the top. A list pieced together from what a reply cites is weaker than one copied from a log, and a reader who assumes the stronger one will be misled. One sentence is enough.
