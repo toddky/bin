@@ -9,6 +9,7 @@ Rules for long-form writing: notes, published pages, design docs, and anything a
 | DOC-A | Titles and headings |
 | DOC-B | Structure |
 | DOC-C | Evidence |
+| DOC-D | Revising |
 
 ## DOC-A: Titles and Headings
 
@@ -72,3 +73,8 @@ When a conclusion came from a query, say which query and what it returned. The r
 
 ### DOC-C4: Say Where It Came From
 When evidence is rebuilt from a result rather than taken from a record, say so once, near the top. A list pieced together from what a reply cites is weaker than one copied from a log, and a reader who assumes the stronger one will be misled. One sentence is enough.
+
+## DOC-D: Revising
+
+### DOC-D1: Counts Track The Body
+Any sentence that counts, orders, or sums up the entries is part of the body. Changing an entry means fixing every "five of the six", "the first of these", and "all but one" that described the old set. These lines are the easiest part of a document to leave stale, and a wrong one makes the reader doubt the rest.
