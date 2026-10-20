@@ -1,6 +1,6 @@
 # Writing Like a Human
 
-Rules for writing Slack messages, comments, and short-form text that don't read as AI-generated.
+Rules for writing text that doesn't read as AI-generated.
 
 Each letter is a group of rules:
 
