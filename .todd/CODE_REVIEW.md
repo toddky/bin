@@ -893,6 +893,21 @@ def upload_report(report_file):
     ...
 ```
 
+### CR-E6: Renames Update Every Reference
+A violation is a change that renames or moves a file, function, flag, or setting and leaves a reference to the old name behind, such as a default argument, a README, a help string, or a test fixture. The rule is followed when a search for the old name finds nothing the change should have updated, or only references that must keep the old name, each listed with its reason in the commit message. Changes that rename nothing follow the rule. Why: a stale reference fails far from the rename, in a default nobody passes or a doc that sends the reader to a file that no longer exists.
+
+Bad:
+The script was renamed, but the default still points at the old name:
+```python
+# scripts/check-upload.py was renamed to scripts/verify-upload.py
+parser.add_argument("--checker", default="scripts/check-upload.py")
+```
+
+Good:
+```python
+parser.add_argument("--checker", default="scripts/verify-upload.py")
+```
+
 ## CR-F: Errors and failure handling
 
 ### CR-F1: Guard Clauses
@@ -1654,4 +1669,19 @@ Good:
 ```sql
 CREATE TABLE uploads (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NULL);
 -- each file is stored at uploads/<id>
+```
+
+### CR-J7: Name A File For Its Purpose
+A violation is a file named after how it works instead of what it is for, such as `curl-loop.sh` for a script that waits until a deploy finishes. The rule is followed when someone who has never opened the file can tell from its name why they would run or read it. Changes that add or rename no files follow the rule. Why: the mechanism is the part most likely to change, and a listing of mechanism names makes the reader open every file to find the one they need.
+
+Bad:
+```text
+scripts/curl-loop.sh
+scripts/parse.py
+```
+
+Good:
+```text
+scripts/wait-for-deploy.sh
+scripts/extract-build-errors.py
 ```
