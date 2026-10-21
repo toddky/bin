@@ -2,10 +2,15 @@
 volume_cmd=volume-amixer
 if (type pactl &>/dev/null); then
 	volume_cmd=volume-pactl
-	$volume_cmd "$1"
+fi
+$volume_cmd "$1" || exit
+if [[ "$1" == up || "$1" == down ]]; then
+	play-sound-volume-change
+fi
+# pactl setups have always exited here, before the notify-send popup below.
+if [[ "$volume_cmd" == volume-pactl ]]; then
 	exit
 fi
-$volume_cmd "$1"
 
 # For pulsemixer:
 # https://www.reddit.com/r/i3wm/comments/zfaaks/comment/izasqil/
