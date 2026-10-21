@@ -10,20 +10,36 @@ while [[ $# -ge 1 ]]; do
 	arg="$1" && shift
 	case "$arg" in
 		--list) list_only=1;;
-		*) echo "USAGE: sway-monitors [--list]" 1>&2; exit 2;;
+		*) print-error "unknown argument: $arg"; echo "USAGE: sway-monitors [--list]" 1>&2; exit 2;;
 	esac
 done
 
 # ==============================================================================
 # ENVIRONMENT
 # ==============================================================================
+# Models as reported by `swaymsg -t get_outputs`; unlike the mode list, they are right while a screen is still waking up.
+WORK_MODEL="LG Ultra HD"
+HOME_MODEL="LG ULTRAGEAR"
+
+declare -A tool_packages=([swaymsg]=sway [jq]=jq [column]=bsdextrautils)
+for tool in "${!tool_packages[@]}"; do
+	if ! command -v "$tool" >/dev/null; then
+		print-error "$tool not found, install it with: sudo apt install ${tool_packages[$tool]}"
+		exit 1
+	fi
+done
+
 # Shells that outlived an i3 login (e.g. tmux) have no SWAYSOCK; find the live one.
 if [[ -z "$SWAYSOCK" || ! -S "$SWAYSOCK" ]]; then
 	SWAYSOCK="$(ls -t "/run/user/$UID"/sway-ipc.*.sock 2>/dev/null | head -1)"
 	export SWAYSOCK
 fi
 if [[ -z "$SWAYSOCK" ]]; then
-	echo "ERROR: sway is not running." 1>&2
+	print-error "sway is not running; run sway-monitors from inside a sway session"
+	exit 1
+fi
+if ! outputs_json="$(swaymsg -t get_outputs -r)"; then
+	print-error "swaymsg -t get_outputs failed on $SWAYSOCK; log into sway again if that socket is stale"
 	exit 1
 fi
 
@@ -31,14 +47,32 @@ fi
 # HELPERS
 # ==============================================================================
 function print_outputs() {
-	swaymsg -t get_outputs -r | jq -r '.[] | select(.active) | "\(.name)\t\(.current_mode.width)x\(.current_mode.height)\tscale \(.scale * 100 | round / 100)\tat \(.rect.x),\(.rect.y)\t\(.make) \(.model)"' | column -t -s $'\t'
+	# DP-1  3840x2160  scale 1.33  at 0,0  LG Electronics LG HDR 4K
+	swaymsg -t get_outputs -r | jq -r '
+		.[] | select(.active) | [
+			.name,
+			"\(.current_mode.width)x\(.current_mode.height)",
+			"scale \(.scale * 100 | round / 100)",
+			"at \(.rect.x),\(.rect.y)",
+			"\(.make) \(.model)"
+		] | join("\t")' | column -t -s $'\t'
+}
+
+function find_output() {
+	# find_output '^HDMI' -> HDMI-A-1 (output names look like eDP-1, HDMI-A-1, DP-1)
+	jq -r --arg pattern "$1" 'first(.[] | select(.name | test($pattern)) | .name) // empty' <<< "$outputs_json"
+}
+
+function has_model() {
+	# has_model "LG Ultra HD" succeeds when a connected output, even a disabled one, reports that model.
+	jq -e --arg model "$1" 'any(.[]; .model == $model)' <<< "$outputs_json" >/dev/null
 }
 
 function output() {
 	# output DP-1 enable mode 2560x1440 scale 1 position 1920 0
 	local message
 	if ! message="$(swaymsg output "$@")"; then
-		echo "ERROR: swaymsg output $*: $message" 1>&2
+		print-error "swaymsg output $*: $message"
 		return 1
 	fi
 }
@@ -60,26 +94,29 @@ function disable_others() {
 # Modes omit the refresh rate so sway picks the highest one, e.g. ~100Hz on the home DP panel.
 # Positions are in scaled coordinates: a 4K output at scale 1.333333 spans 2880x1620.
 function setup_work() {
-	local dp_ext="$1" hdmi_ext="$2"
-	echo "work: [$dp_ext 4K] [$hdmi_ext 4K] [$internal_display]"
-	disable_others "$dp_ext" "$hdmi_ext" "$internal_display" || return 1
-	output "$dp_ext" enable mode 3840x2160 scale 1.333333 position 0 0 || return 1
-	output "$hdmi_ext" enable mode 3840x2160 scale 1.333333 position 2880 0 || return 1
+	local dp_output="$1" hdmi_output="$2"
+	echo "work: [$dp_output 4K] [$hdmi_output 4K] [$internal_display]"
+	disable_others "$dp_output" "$hdmi_output" "$internal_display" || return 1
+	output "$dp_output" enable mode 3840x2160 scale 1.333333 position 0 0 || return 1
+	output "$hdmi_output" enable mode 3840x2160 scale 1.333333 position 2880 0 || return 1
 	output "$internal_display" enable mode 1920x1200 scale 1 position 5760 0
 }
 
 function setup_home() {
-	local dp_ext="$1" hdmi_ext="$2"
-	echo "home: [$internal_display] [$dp_ext 2560x1440] [$hdmi_ext 1080p]"
-	disable_others "$internal_display" "$dp_ext" "$hdmi_ext" || return 1
+	local dp_output="$1" hdmi_output="$2"
+	echo "home: [$internal_display] [$dp_output 2560x1440] [$hdmi_output 1080p]"
+	disable_others "$internal_display" "$dp_output" "$hdmi_output" || return 1
 	output "$internal_display" enable mode 1920x1200 scale 1 position 0 0 || return 1
-	output "$dp_ext" enable mode 2560x1440 scale 1 position 1920 0 || return 1
-	output "$hdmi_ext" enable mode 1920x1080 scale 1 position 4480 0
+	output "$dp_output" enable mode 2560x1440 scale 1 position 1920 0 || return 1
+	output "$hdmi_output" enable mode 1920x1080 scale 1 position 4480 0
 }
 
 function setup_laptop() {
 	local native_mode
-	native_mode="$(jq -r --arg name "$internal_display" '.[] | select(.name == $name) | .modes | max_by(.width * .height) | "\(.width)x\(.height)"' <<< "$outputs_json")"
+	native_mode="$(jq -r --arg name "$internal_display" '
+		.[] | select(.name == $name)
+		| .modes | max_by(.width * .height)
+		| "\(.width)x\(.height)"' <<< "$outputs_json")"
 	echo "laptop: [$internal_display $native_mode]"
 	disable_others "$internal_display" || return 1
 	output "$internal_display" enable mode "$native_mode" scale 1 position 0 0
@@ -93,25 +130,27 @@ if (( list_only )); then
 	exit 0
 fi
 
-outputs_json="$(swaymsg -t get_outputs -r)"
-internal_display="$(jq -r 'first(.[] | select(.name | test("^(eDP|LVDS)")) | .name) // empty' <<< "$outputs_json")"
+internal_display="$(find_output '^(eDP|LVDS)')"
 if [[ -z "$internal_display" ]]; then
-	echo "ERROR: no internal display found" 1>&2
+	print-error "no internal display (eDP or LVDS) among outputs: $(jq -r '[.[].name] | join(", ")' <<< "$outputs_json")"
 	exit 1
 fi
-hdmi_ext="$(jq -r 'first(.[] | select(.name | startswith("HDMI")) | .name) // empty' <<< "$outputs_json")"
-dp_ext="$(jq -r 'first(.[] | select(.name | startswith("DP")) | .name) // empty' <<< "$outputs_json")"
-hdmi_max_width="$(jq -r --arg name "$hdmi_ext" '.[] | select(.name == $name) | [.modes[].width] | max' <<< "$outputs_json")"
+hdmi_output="$(find_output '^HDMI')"
+dp_output="$(find_output '^DP')"
 
 # ==============================================================================
 # APPLY LAYOUT
 # ==============================================================================
-# Both desks have DP + HDMI connected; only the work HDMI monitor is 4K.
-if [[ -n "$hdmi_ext" && -n "$dp_ext" ]] && (( hdmi_max_width >= 3840 )); then
-	setup_work "$dp_ext" "$hdmi_ext" || exit 1
-elif [[ -n "$hdmi_ext" && -n "$dp_ext" ]]; then
-	setup_home "$dp_ext" "$hdmi_ext" || exit 1
-else
+# Both desk layouts need DP and HDMI, so a single external screen gets the laptop layout.
+if [[ -z "$hdmi_output" || -z "$dp_output" ]]; then
 	setup_laptop || exit 1
+elif has_model "$WORK_MODEL"; then
+	setup_work "$dp_output" "$hdmi_output" || exit 1
+elif has_model "$HOME_MODEL"; then
+	setup_home "$dp_output" "$hdmi_output" || exit 1
+else
+	models="$(jq -r '[.[].model] | join(", ")' <<< "$outputs_json")"
+	print-error "unrecognized monitors ($models); press Super+Alt+A once every screen is on, or set WORK_MODEL/HOME_MODEL"
+	exit 1
 fi
 print_outputs
