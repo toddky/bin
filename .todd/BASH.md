@@ -300,6 +300,69 @@ cd "$build_dir"
 - Do not use `set -euo pipefail`. Handle each error explicitly at the call site so failures get a meaningful message instead of a silent abort.
 - Check return codes with `if !`, `||`, or explicit `$?` checks. Print a clear error to `>&2` and exit with a non-zero code when something fails.
 
+## Signals and Traps
+
+Bash does not run a trap until the current foreground child finishes, so a long `go build` in the foreground delays shutdown by the whole build. Run long children in the background and `wait` for them. A trapped signal cuts `wait` short, so loop until the child has really exited.
+
+```bash
+trap 'shutting_down=1' TERM
+go build -o mybin . &
+build_pid=$!
+wait "$build_pid"
+exit_code=$?
+# Exit codes above 128 mean wait returned early because a trap fired, not that the build finished.
+while ((exit_code > 128)) && kill -0 "$build_pid" 2>/dev/null; do
+    wait "$build_pid"
+    exit_code=$?
+done
+```
+
+## Locks
+
+Use `flock -n -E <code>` so a held lock has its own exit code, and test for that code, not just non-zero. Without `-E` a held lock exits 1, which `flock -n "$lock_file" my-command` cannot tell apart from the command itself exiting 1. Check the `exec` that opens the lock file too: when the open fails, bash prints an error and keeps running with the fd unset.
+
+```bash
+if ! exec {lock_fd}>"$lock_file"; then
+    echo "ERROR: cannot open $lock_file; check the directory exists and is writable" 1>&2
+    exit 1
+fi
+# 75 is EX_TEMPFAIL from sysexits.h; pick a code that neither flock nor the command returns.
+flock -n -E 75 "$lock_fd"
+exit_code=$?
+if ((exit_code == 75)); then
+    echo "ERROR: another run holds $lock_file; wait for it to finish or pass --force" 1>&2
+    exit 1
+fi
+if ((exit_code != 0)); then
+    echo "ERROR: cannot lock $lock_file (flock exit $exit_code)" 1>&2
+    exit 1
+fi
+```
+
+A lock fd is inherited by every background child, so the lock outlives the script for as long as any child runs. Close it in children, or check the pid as well when the lock is used as proof that the script is still alive.
+
+```bash
+# Good
+long_job {lock_fd}>&- &
+
+# Bad
+long_job &
+```
+
+## Replacing a Running Script
+
+Bash reads a script from disk as it runs, so editing a running script in place can make the running copy execute the wrong lines when it reaches them. Write the new content to a separate file and `mv` it over the old name. The rename swaps the inode and the running copy keeps reading the old one.
+
+```bash
+# Good
+printf '%s\n' "${new_lines[@]}" > "$script_file.new"
+chmod --reference="$script_file" "$script_file.new"
+mv "$script_file.new" "$script_file"
+
+# Bad
+sed -i 's/old-flag/new-flag/' "$script_file"
+```
+
 ## New Scripts
 
 Scripts that need to run from a specific directory should start with:
