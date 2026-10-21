@@ -1,31 +1,22 @@
 #!/usr/bin/env bash
-volume_cmd=volume-amixer
-if (type pactl &>/dev/null); then
-	volume_cmd=volume-pactl
+# USAGE: ,volume <up|down|mute|mic>
+# DESCRIPTION: Change the volume through pactl (amixer as a fallback) and play a tick on up/down
+
+volume_command=volume-amixer
+if command -v pactl >/dev/null; then
+	volume_command=volume-pactl
 fi
-$volume_cmd "$1" || exit
+"$volume_command" "$1" || exit
 if [[ "$1" == up || "$1" == down ]]; then
 	play-sound-volume-change
 fi
-# pactl setups have always exited here, before the notify-send popup below.
-if [[ "$volume_cmd" == volume-pactl ]]; then
+# volume-pactl shows its own popup; the one below is only for the amixer fallback.
+if [[ "$volume_command" == volume-pactl ]]; then
 	exit
 fi
 
-# For pulsemixer:
-# https://www.reddit.com/r/i3wm/comments/zfaaks/comment/izasqil/
-# pulsemixer --change-volume +5 --max-volume 100
-# pulsemixer --change-volume -5 --max-volume 100
-# pulsemixer --change-volume +5 --max-volume 300
-# pulsemixer --change-volume -5 --max-volume 300
-# pactl set-sink-mute @DEFAULT_SINK@ toggle
-#dunstify -i audio-volume-muted-blocking -t 1000 -r 2593 -u normal "$volume_icon $volume%" -h int:value:$volume -h string:hlcolor:$bar_color
-
-
-# Popup notification for volume
-notify-send \
-	-t 400 \
-	-u normal \
-	-h string:x-canonical-private-synchronous:volume \
-	"$(,volume-info)"
-
+notify_args=()
+notify_args+=(-t 400)
+notify_args+=(-u normal)
+notify_args+=(-h string:x-canonical-private-synchronous:volume)
+notify-send "${notify_args[@]}" "$(,volume-info)"
