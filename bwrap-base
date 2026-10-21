@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# USAGE: bwrap-base [bwrap-options...] [--] <command> [args...]
+# DESCRIPTION: Run a command in a bwrap sandbox with / read-only and a private /tmp
+
+# Only blocks file writes outside the dirs a caller binds; network, processes, and reads are untouched.
+# Callers add their own writable binds and flags such as --unshare-net after the base args.
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+if (( $# == 0 )); then
+	echo "Usage: bwrap-base [bwrap-options...] [--] <command> [args...]" 1>&2
+	exit 1
+fi
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+if ! command -v bwrap &>/dev/null; then
+	print-error "bwrap not found on PATH; install bubblewrap (dnf install bubblewrap or apt install bubblewrap)"
+	exit 127
+fi
+
+# ==============================================================================
+# BUILD SANDBOX
+# ==============================================================================
+bwrap_args=()
+# Nothing is writable here, so a caller only gets the write access it binds on top.
+bwrap_args+=(--ro-bind / /)
+bwrap_args+=(--dev /dev)
+bwrap_args+=(--proc /proc)
+bwrap_args+=(--tmpfs /tmp)
+
+# Root-owned files show up as nobody inside bwrap's user namespace, so ssh rejects this dir with "Bad owner".
+ssh_config_dir=/etc/ssh/ssh_config.d
+[[ -d "$ssh_config_dir" ]] && bwrap_args+=(--tmpfs "$ssh_config_dir")
+
+# ==============================================================================
+# RUN
+# ==============================================================================
+# Caller args come last so their binds and flags apply on top of the base ones.
+exec bwrap "${bwrap_args[@]}" "$@"

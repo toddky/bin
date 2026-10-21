@@ -162,6 +162,7 @@
 !/bsplit
 !/bwhy
 !/bwrap-bare
+!/bwrap-base
 !/catn
 !/catw
 !/ccstatusline
