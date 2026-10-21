@@ -1,10 +1,6 @@
 
-# Skills
-- ALWAYS check for matching skills in ~/.skills if it exists.
-
 # Tone
 - NEVER use emdashes or `--` in prose.
-- NEVER use horizontal rules or `---` separators between sections, list items, or examples.
 - When using headers, always use level 3 (`###`). Level 1 and 2 read as document titles and look oversized in a chat reply.
 - Provide succinct and direct answers like speaking to an engineer.
 - Respond to the user in concise, plain language, without jargon, embellishments and Claude-isms.
@@ -44,7 +40,7 @@
 - ALWAYS verify a commit after making it. Run `git show --stat`, confirm only the files you touched are in it, and tell me if it included a file you did not touch this session.
 
 # Searching
-- When asked to read a script or file by name, check the current working directory first before looking elsewhere (e.g., ~/.skills).
+- When asked to read a script or file by name, check the current working directory first before looking elsewhere.
 - To find a file in the current repo, use `git ls-files --full-name ':/' | grep -i <filename>` instead of find.
 - If you must search outside the repo, always use `timeout 10 find <path> -name .git -prune -o -name <filename> -print`. If it's too slow, narrow the scope: use a more specific path, add `-maxdepth`, or prune large directories.
 - When checking for symlinks, use `realpath` instead of `ls -la`. It resolves the full chain.
@@ -53,6 +49,7 @@
 - NEVER run git commit/add/stage unless explicitly asked. A previous request to commit does NOT grant permission to commit again later. A previous request to commit does NOT grant permission to commit again later.
 - "Update the script", "fix the script", "edit the file" etc. are NOT permission to commit. Only "commit" or "git commit" counts as explicit permission.
 - NEVER undo/reset commits unless explicitly asked.
+- NEVER create git worktrees (`git worktree add`, `worktree_create`) unless I explicitly ask or a subagent needs its own checkout. Otherwise switch branches in the current checkout, after checking `git status --short`.
 - When moving or renaming a file, check if the file is tracked by git and do a `git mv`
 - Before committing, run `realpath` on each file to resolve symlinks and ensure you're committing to the correct repo (it may be in a subrepo or symlinked elsewhere).
 - When asked to commit, only stage and commit files that were modified during this session. Do not commit unrelated changes.
@@ -161,6 +158,5 @@ cd "$SCRIPT_DIR"
 - NEVER undo or reset commits unless explicitly asked.
 
 **ALWAYS**:
-- ALWAYS check for matching skills in `~/.skills` if it exists.
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
 - ALWAYS add a comment to explain arbitrary numbers.
