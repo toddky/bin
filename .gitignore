@@ -258,6 +258,7 @@
 !/path-tui
 !/perl-calc
 !/pgrep-rg
+!/play-sound-volume-change
 !/pnginfo
 !/port-scanner
 !/prun

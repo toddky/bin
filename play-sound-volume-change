@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# USAGE: play-sound-volume-change
+# DESCRIPTION: Play the soft volume-change tick on the default audio output (handy for testing earbuds)
+
+SOUND_FILE="/usr/share/sounds/freedesktop/stereo/audio-volume-change.oga"
+
+if ! command -v paplay >/dev/null; then
+	print-error "paplay not found, install it with: sudo apt install pulseaudio-utils"
+	exit 1
+fi
+if [[ ! -f "$SOUND_FILE" ]]; then
+	print-error "$SOUND_FILE not found, install it with: sudo apt install sound-theme-freedesktop"
+	exit 1
+fi
+
+exec paplay "$SOUND_FILE"
