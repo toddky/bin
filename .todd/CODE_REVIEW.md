@@ -1421,7 +1421,7 @@ def test_latest_version(monkeypatch):
 ```
 
 ### CR-H7: Fixed Clock
-A violation is a test whose result depends on today's date, the current time, or how long a step takes. The rule is followed when the test passes the time in or freezes the clock. Why: a time-dependent test passes today and fails at midnight, at month end, or on a slow machine.
+A violation is a test whose result depends on today's date, the current time, or how long a step takes. The rule is followed when the test passes the time in or freezes the clock. A test that must check how run time grows compares sizes far apart with a wide ratio, such as allowing 16 times the time for 8 times the input, where quadratic work takes 64 times. Why: a time-dependent test passes today and fails at midnight, at month end, or on a slow machine.
 
 Bad:
 This passes until 2030:
@@ -1501,7 +1501,7 @@ def test_render_output_is_safe_for_any_comment():
 ```
 
 ### CR-H11: One Test Per Condition
-A violation is a check with several conditions, such as an access rule that allows admins, public items, or listed readers, whose tests cover only some of them. The rule is followed when each condition has a test that passes only because of that condition, so removing the condition makes that test fail; code with no multi-condition check follows the rule. Why: a dropped condition still leaves a passing suite, so a refactor can quietly remove access, or grant it, with nobody noticing.
+A violation is a check with several conditions, such as an access rule that allows admins, public items, or listed readers, or several filters spread across functions that together keep one user's data from another, whose tests cover only some of them. The rule is followed when each condition has a test that passes only because of that condition, so removing the condition makes that test fail; code with no multi-condition check follows the rule. Why: a dropped condition still leaves a passing suite, so a refactor can quietly remove access, or grant it, with nobody noticing.
 
 Bad:
 Deleting `user.is_admin` or `document.is_public` from the rule leaves this test passing:
@@ -1527,6 +1527,33 @@ def test_listed_reader_can_view_private_document():
 
 def test_stranger_cannot_view_private_document():
     assert not can_view(stranger, private_document)
+```
+
+### CR-H12: Tests Fail, They Do Not Hang
+A violation is a test that waits forever when the code under test breaks, such as one that runs a command, reads from a pipe or FIFO, or waits on a child process with no deadline. The rule is followed when every step that can block runs under a deadline, and missing the deadline kills what the test started (CR-F12) and fails the test. Tests with no step that can block follow the rule. Why: a hung suite looks like a slow suite, and nobody learns which test broke.
+
+Bad:
+If `sync-reports` stops exiting, this test and the whole suite hang:
+```python
+def test_sync_reports_exits_cleanly(tmp_path):
+    result = subprocess.run(["./sync-reports", str(tmp_path)])
+    assert result.returncode == 0
+```
+
+Good:
+```python
+# As of 2026-10-21 sync-reports finishes in under 1s; 10s leaves room for a loaded CI host.
+SYNC_TIMEOUT_SECONDS = 10
+
+def test_sync_reports_exits_cleanly(tmp_path):
+    process = subprocess.Popen(["./sync-reports", str(tmp_path)], start_new_session=True)
+    try:
+        returncode = process.wait(timeout=SYNC_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGKILL)
+        process.wait()
+        pytest.fail(f"sync-reports did not exit in {SYNC_TIMEOUT_SECONDS}s")
+    assert returncode == 0
 ```
 
 ## CR-I: Security
@@ -1594,7 +1621,7 @@ COMPANY_EMAIL_PATTERN = re.compile(r"^[a-z0-9]+(\.[a-z0-9]+)*@example\.com$")
 ```
 
 ### CR-I5: Linear Work On Untrusted Input
-A violation is a loop over input from outside the program that recounts, rescans, or copies the whole input on every pass. The rule is followed when the loop counts any total once before it starts and updates it as it goes; code with no loop over outside input follows the rule. Why: the work grows with the square of the input, so one oversized message takes seconds to process and stalls everyone who loads it, while tests with normal-sized input never notice.
+A violation is a loop over input from outside the program that recounts, rescans, or copies the whole input on every pass, or code whose output can grow far faster than its input, such as a table renderer that repeats a wide header for every row, with no cap on the output size. The rule is followed when the loop counts any total once before it starts and updates it as it goes, and output that can grow faster than the input stops at a stated size; code that handles no outside input follows the rule. Why: the work grows with the square of the input, so one oversized message takes seconds to process and stalls everyone who loads it, while tests with normal-sized input never notice.
 
 Bad:
 Every pass re-encodes the whole comment to measure it, so trimming a 136 KB comment to a 200-byte preview takes 2 seconds:
