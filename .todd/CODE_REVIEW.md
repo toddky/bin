@@ -15,7 +15,7 @@ Rules are grouped by letter:
 | CR-I | Security |
 | CR-J | Files |
 
-Per-language mechanics live in BASH.md, PYTHON.md, GO.md, and RUBY.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
+Per-language mechanics live in BASH.md, PYTHON.md, GO.md, RUBY.md, and JAVASCRIPT.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
 
 Each rule is written for a reviewer reading one file or one diff. The first sentence says exactly what counts as a violation. The second says when the rule is followed, including when the code has nothing the rule applies to. Then comes why, and the Bad and Good examples.
 
@@ -908,6 +908,26 @@ Good:
 parser.add_argument("--checker", default="scripts/verify-upload.py")
 ```
 
+### CR-E7: Opt In To Changed Defaults
+A violation is a change to the default behavior of a function, endpoint, or flag that other callers use, with no opt-in parameter and not every caller checked. The rule is followed when the default stays the same and the new behavior sits behind a parameter, or when the commit message lists every caller and why the new default is right for each. Changes that leave every shared default alone follow the rule. Why: callers that never asked for the new behavior get it without anyone noticing.
+
+Bad:
+`get_orders` used to sort by id, and every other caller now gets the new order:
+```python
+def get_orders(customer_id):
+    orders = load_orders(customer_id)
+    return sorted(orders, key=lambda order: order.last_activity, reverse=True)
+```
+
+Good:
+```python
+def get_orders(customer_id, by_activity=False):
+    orders = load_orders(customer_id)
+    if by_activity:
+        return sorted(orders, key=lambda order: order.last_activity, reverse=True)
+    return sorted(orders, key=lambda order: order.id)
+```
+
 ## CR-F: Errors and failure handling
 
 ### CR-F1: Guard Clauses
@@ -1121,6 +1141,78 @@ query = "UPDATE tickets SET status = 'assigned', assignee = ? WHERE id = ? AND s
 updated = db.execute(query, user_id, ticket_id)
 if updated.rowcount == 0:
     raise Conflict("ticket changed while this request ran; reload and try again")
+```
+
+### CR-F11: Say The Side Effect Happened
+A violation is a step after an irreversible action, such as posting, sending, or deploying, whose failure makes the program report that the whole operation failed. The rule is followed when any failure after the action says the action already happened and how to finish by hand, or when nothing that can fail runs after it. Code with no irreversible action follows the rule. Why: a caller told "failed" retries, and the retry repeats the action.
+
+Bad:
+A full disk raises after the post, so the caller sees an error and posts again:
+```python
+message_id = post_message(room_id, body)
+save_sent_record(sent_file, message_id)
+```
+
+Good:
+A full disk can only be detected by writing, so here the `except` is the check:
+```python
+message_id = post_message(room_id, body)
+try:
+    save_sent_record(sent_file, message_id)
+except OSError as error:
+    sys.exit(f"ERROR: posted message {message_id} but could not record it in {sent_file} ({error}); do not post again, add the id by hand")
+```
+
+### CR-F12: Kill The Process Group On Timeout
+A violation is a timeout on a child process that can start children of its own, such as a shell script or a build tool, where the timeout kills only the direct child. The rule is followed when the child runs in its own process group and the timeout kills the whole group. Code with no subprocess timeouts, or whose children start no processes, follows the rule. Why: the grandchildren keep running after the timeout and pile up with every run.
+
+Bad:
+`subprocess.run` kills only `check-tool`, and the processes it started keep running:
+```python
+subprocess.run(["./check-tool"], timeout=CHECK_TIMEOUT_SECONDS)
+```
+
+Good:
+```python
+process = subprocess.Popen(["./check-tool"], start_new_session=True)
+try:
+    process.wait(timeout=CHECK_TIMEOUT_SECONDS)
+except subprocess.TimeoutExpired:
+    os.killpg(process.pid, signal.SIGKILL)
+    process.wait()
+    sys.exit(f"ERROR: ./check-tool did not finish in {CHECK_TIMEOUT_SECONDS}s; run it by hand to see where it hangs")
+```
+
+### CR-F13: Check A Pid Before Signalling It
+A violation is code that signals a pid read from a file without first confirming that the pid is still the same process that wrote it. The rule is followed when the pid file also records the process start time and the signaller compares it before signalling, or when the code only signals children it started and still holds a handle to. Code that sends no signals follows the rule. Why: pids are reused, so a stale pid file can signal an unrelated process, and a check on the command line alone still matches a second copy of the same program.
+
+Bad:
+```python
+launcher_pid = int(pid_file.read_text())
+os.kill(launcher_pid, signal.SIGUSR2)
+```
+
+Good:
+A pid and its start time together name exactly one process:
+```python
+def get_start_time(pid):
+    # The process can exit between any separate check and the read, so the read is the check.
+    try:
+        stat_text = Path(f"/proc/{pid}/stat").read_text()
+    except FileNotFoundError:
+        return None
+    # The command name can hold spaces and parens; start time is field 22 of proc(5), the 20th after the name.
+    return stat_text.rsplit(")", 1)[1].split()[19]
+
+# In the launcher:
+pid_file.write_text(f"{os.getpid()} {get_start_time(os.getpid())}\n")
+
+# In the signaller:
+launcher_pid, start_time = pid_file.read_text().split()
+if get_start_time(launcher_pid) != start_time:
+    sys.exit(f"ERROR: pid {launcher_pid} in {pid_file} is no longer the launcher; start the workflow again")
+# A pid reused in the microseconds between this check and the kill still gets the signal; pidfd closes that gap.
+os.kill(int(launcher_pid), signal.SIGUSR2)
 ```
 
 ## CR-G: Arguments and CLI design
@@ -1591,6 +1683,27 @@ def log_in(username, password):
     return user
 ```
 
+### CR-I9: Cap Captured Output
+A violation is capturing a child process's output into memory with no size limit, such as `capture_output=True` on a tool the code does not control. The rule is followed when the output goes to a temp file and only up to a stated limit is read back, and anything past the limit is refused with a message saying so. Code that captures no child output follows the rule. Why: one runaway child prints gigabytes and pushes a long-running server out of memory.
+
+Bad:
+```python
+output = subprocess.run(["./check-tool"], capture_output=True).stdout
+```
+
+Good:
+```python
+# As of 2026-10-21 the largest report check-tool prints is ~40 KB, so 1 MB is far past it.
+MAX_OUTPUT_BYTES = 1_000_000
+
+with tempfile.TemporaryFile() as output_file:
+    subprocess.run(["./check-tool"], stdout=output_file)
+    output_file.seek(0)
+    output = output_file.read(MAX_OUTPUT_BYTES + 1)
+if len(output) > MAX_OUTPUT_BYTES:
+    sys.exit(f"ERROR: ./check-tool printed more than {MAX_OUTPUT_BYTES} bytes; run it by hand to see why")
+```
+
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
@@ -1684,4 +1797,26 @@ Good:
 ```text
 scripts/wait-for-deploy.sh
 scripts/extract-build-errors.py
+```
+
+### CR-J8: Replace Files By Rename
+A violation is code that overwrites a file other code reads, such as a config, a state file, or a published report, by writing to the final name directly. The rule is followed when the content goes to a new temp file in the same directory, is renamed over the final name, and the temp file is removed if anything fails first. Code that writes no files others read follows the rule. Why: a crash or a full disk halfway leaves half a file under the real name, and a reader that opens it mid-write sees a partial file.
+
+Bad:
+```python
+state_file.write_text(json.dumps(state))
+```
+
+Good:
+```python
+temp_fd, temp_name = tempfile.mkstemp(dir=state_file.parent)
+try:
+    # mkstemp creates the file 0600; as of 2026-10-21 other users read this file, so 0644 keeps it readable to them.
+    os.fchmod(temp_fd, 0o644)
+    with os.fdopen(temp_fd, "w") as temp_file:
+        json.dump(state, temp_file)
+    os.replace(temp_name, state_file)
+finally:
+    # After a successful replace the temp name is gone, so this only cleans up a failed write.
+    Path(temp_name).unlink(missing_ok=True)
 ```
