@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# USAGE: tmux [tmux-args ...]
+# DESCRIPTION: tmux wrapper that blocks kill-server so an agent cannot tear down all sessions.
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+for argument in "$@"; do
+    if [[ "$argument" == "kill-server" ]]; then
+        echo "ERROR: tmux kill-server is blocked; use 'tmux kill-session -t <name>' on a socket you created with -L or -S." 1>&2
+        exit 1
+    fi
+done
+
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+self_file="$(realpath "${BASH_SOURCE[0]}")"
+real_tmux_file=""
+
+# Skip this wrapper in $PATH so exec does not recurse into aibin/tmux.
+IFS=':' read -r -a path_dirs <<< "$PATH"
+for path_dir in "${path_dirs[@]}"; do
+    candidate_file="${path_dir}/tmux"
+    if [[ ! -x "$candidate_file" || -d "$candidate_file" ]]; then
+        continue
+    fi
+    candidate_real_file="$(realpath "$candidate_file")"
+    if [[ "$candidate_real_file" == "$self_file" ]]; then
+        continue
+    fi
+    real_tmux_file="$candidate_file"
+    break
+done
+
+if [[ -z "$real_tmux_file" ]]; then
+    echo "ERROR: no real tmux binary found on PATH ($PATH); install tmux or add its directory to PATH." 1>&2
+    exit 1
+fi
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+exec "$real_tmux_file" "$@"
+
