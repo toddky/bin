@@ -626,7 +626,7 @@ for source_file in sources:
 ```
 
 ### CR-D2: Direct Passthrough
-A violation is a custom boolean option or parameter that only maps onto a flag the underlying tool already accepts, such as `skip_hooks=True` turning into `--no-verify`. The rule is followed when tool flags are passed straight through as arguments. Code that wraps no tool follows the rule.
+A violation is a custom boolean option or parameter that only maps onto a flag the underlying tool already accepts, such as `skip_hooks=True` turning into `--no-verify`. The rule is followed when tool flags are passed straight through as arguments. The wrapper keeps the user's flags in their original order and puts any flags of its own before a `--` separator, since the tool reads everything after `--` as a file or argument, not a flag. Code that wraps no tool follows the rule.
 
 Bad:
 ```python
@@ -642,7 +642,7 @@ def commit(message, git_args=()):
 ```
 
 ### CR-D3: Existing Helpers
-A violation is new code that re-implements a call the repository or the same file already wraps in a helper. The rule is followed when existing wrappers are used. Why: a second copy drifts from the first and both have to be fixed later.
+A violation is new code that re-implements a call the repository or the same file already wraps in a helper. The rule is followed when existing wrappers are used. The same applies to the standard library and well-known packages: use `shlex.quote`, `re.escape`, or `urllib.parse` rather than a hand-written version, which misses edge cases the library already handles. Why: a second copy drifts from the first and both have to be fixed later.
 
 Bad:
 ```python
@@ -855,7 +855,7 @@ if args.format == "yaml":
 A violation is a change that includes unrelated edits, such as reformatting, renaming, or moving code it is not fixing. The rule is followed when every edit serves the change. This rule needs a diff; a whole file reviewed without history follows it.
 
 ### CR-E4: One Source
-A violation is the same value defined in two places, such as a default set in both the argument parser and the function it feeds, or a constant declared in two files. The rule is followed when each value is defined once. For a CLI, the parser holds the default and the function takes the value as a required parameter.
+A violation is the same value defined in two places, such as a default set in both the argument parser and the function it feeds, or a constant declared in two files. The rule is followed when each value is defined once. When one rule has to exist in two places that can't share code, such as a filter written in both Python and SQL, each copy names the other in a comment and a test checks that both give the same answer. For a CLI, the parser holds the default and the function takes the value as a required parameter.
 
 Bad:
 The same default lives in two places:
@@ -976,7 +976,7 @@ sys.exit(exit_code)
 ```
 
 ### CR-F3: Bounded Retries
-A violation is a retry loop with no attempt limit, a retry that sleeps the same amount every time instead of backing off exponentially, or retries that do not print the failure reason to stderr. The rule is followed when retries are bounded, back off, and log each failed attempt. Code with no retries follows the rule.
+A violation is a retry loop with no attempt limit, a retry that sleeps the same amount every time instead of backing off exponentially, or retries that do not print the failure reason to stderr. The rule is followed when retries are bounded, back off, and log each failed attempt. An automatic retry runs only when the failed attempt changed nothing. A request that timed out may still have reached the server, so a post or send is not retried unless the server can tell a repeat from a new request. Code with no retries follows the rule.
 
 Bad:
 ```python
@@ -1044,7 +1044,7 @@ if not result_file.exists():
 ```
 
 ### CR-F6: Boundary Validation
-A violation is the same check on external input repeated in several functions instead of once where the input enters the program. The rule is followed when each input is validated once at its entry point.
+A violation is the same check on external input repeated in several functions instead of once where the input enters the program. The rule is followed when each input is validated once at its entry point. A value handed to another program enters that program too, so the receiver checks it again at its own entry point instead of trusting the sender. A request or config with an unknown field is refused, not ignored, so a misspelled field name fails instead of quietly falling back to the default.
 
 Bad:
 Every caller re-checks what the loader should have guaranteed:
@@ -1164,7 +1164,7 @@ except OSError as error:
 ```
 
 ### CR-F12: Kill The Process Group On Timeout
-A violation is a timeout on a child process that can start children of its own, such as a shell script or a build tool, where the timeout kills only the direct child. The rule is followed when the child runs in its own process group and the timeout kills the whole group. Code with no subprocess timeouts, or whose children start no processes, follows the rule. Why: the grandchildren keep running after the timeout and pile up with every run.
+A violation is a timeout on a child process that can start children of its own, such as a shell script or a build tool, where the timeout kills only the direct child. The rule is followed when the child runs in its own process group and the timeout kills the whole group. The code keeps the child's pid until it has been waited for, so a cleanup that runs during a slow stop, such as on Ctrl-C, still finds and kills it. Code with no subprocess timeouts, or whose children start no processes, follows the rule. Why: the grandchildren keep running after the timeout and pile up with every run.
 
 Bad:
 `subprocess.run` kills only `check-tool`, and the processes it started keep running:
@@ -1391,7 +1391,7 @@ def test_parse_rejects_unknown_field():
 ```
 
 ### CR-H2: Assert The Behavior
-A violation is a test that runs code but asserts nothing, or asserts something that cannot fail or does not match what the test claims to check, such as a test named for sorting that only checks the length. The rule is followed when every test asserts the result it is named for. Code with no tests follows the rule. Why: a test that cannot fail reports a pass whether the code works or not.
+A violation is a test that runs code but asserts nothing, or asserts something that cannot fail or does not match what the test claims to check, such as a test named for sorting that only checks the length. The rule is followed when every test asserts the result it is named for. A test that expects an error or a non-zero exit also checks the message or field that says which error, so a failure for some other reason, such as broken setup, does not pass it. Code with no tests follows the rule. Why: a test that cannot fail reports a pass whether the code works or not.
 
 Bad:
 The name promises sorted output, but any list of three items passes:
@@ -2007,7 +2007,7 @@ scripts/extract-build-errors.py
 ```
 
 ### CR-J8: Replace Files By Rename
-A violation is code that overwrites a file other code reads, such as a config, a state file, or a published report, by writing to the final name directly. The rule is followed when the content goes to a new temp file in the same directory, is renamed over the final name, and the temp file is removed if anything fails first. Code that writes no files others read follows the rule. Why: a crash or a full disk halfway leaves half a file under the real name, and a reader that opens it mid-write sees a partial file.
+A violation is code that overwrites a file other code reads, such as a config, a state file, or a published report, by writing to the final name directly. The rule is followed when the content goes to a new temp file in the same directory, is renamed over the final name, and the temp file is removed if anything fails first. When the file is a program or config that a running service loads, the previous copy is kept until the new one has started and stayed up, so a version that crashes at start can be put back. Code that writes no files others read follows the rule. Why: a crash or a full disk halfway leaves half a file under the real name, and a reader that opens it mid-write sees a partial file.
 
 Bad:
 ```python
