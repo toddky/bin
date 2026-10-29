@@ -1632,7 +1632,7 @@ def test_copy_reports_missing_file(tmp_path):
 ```
 
 ### CR-H14: Old-Version Fixtures Come From Old Code
-A violation is a test that fakes an older version of saved data, such as a database or config file, by changing the version number on data the current code created. The rule is followed when the fixture is built the way the older version built it, such as running only the migrations up to that version or loading a file the old release wrote. Tests with no old-version fixtures follow the rule. Why: the faked fixture already has everything added since that version, so the upgrade under test runs on data that already has the change and passes whether or not it works.
+A violation is a test that fakes an older version of saved data, such as a database or config file, by changing the version number on data the current code created. The rule is followed when the fixture is built the way the older version built it, such as running only the migrations up to that version. Tests with no old-version fixtures follow the rule. Why: the faked fixture already has everything added since that version, so the upgrade under test runs on data that already has the change and passes whether or not it works.
 
 Bad:
 The database already has every column added since version 1, so the upgrade has nothing to do and the test passes either way:
