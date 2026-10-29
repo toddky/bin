@@ -11,7 +11,7 @@ Go-specific rules. The cross-language rules (naming basics, control flow, string
 - For a process-scoped singleton, prefer short lifecycle names paired as `Setup`/`Cleanup` over descriptive compounds like `SetupRuntimeTools`.
 - Never use the word `emit` (or any inflection) in identifiers, comments, or commit messages. Use `notify`, `publish`, `write`, or `print` instead.
 
-## API Surface
+## Exported API
 
 - Keep each package's exported API as small as possible. Fold helper steps into the function that needs them instead of exporting them.
 - Package state is acceptable for something that exists exactly once per process; expose it through a getter instead of threading it through every call site.
