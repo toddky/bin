@@ -29,6 +29,9 @@ One idea per sentence. Short sentences. Don't pack all the context into one over
 ### HM-A5: Name The Subject
 Don't open a new message or thread with "it" or a bare "this"; the reader has nothing to point it back to. Not "This is failing again", but "The nightly build is failing again". "This" followed by a noun is fine: "This MR fixes the upload timeout". A reply can open with "it" only when the message it answers names exactly one thing. Anywhere else, use a pronoun only when the noun it stands for is the last one mentioned and nothing else could match.
 
+### HM-A6: Whole Sentences
+Write whole sentences with their articles and verbs. No arrows, symbol-speak, or verbless fragments the reader has to decode: not "bad date → exit 2, no write", but "The parser rejects a bad date, exits with code 2, and writes nothing".
+
 ## HM-B: Tone
 
 ### HM-B1: Engineer Voice
@@ -54,6 +57,27 @@ Don't hedge with "it appears that", "it seems like", or "it would seem". If you'
 
 ### HM-B8: No Parallel Nouns
 Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". It's a classic LLM tell. The same goes for a trailing "and" clause that adds emphasis but no information: not "Rerun the test and see whether the failure comes back", but "Rerun the test".
+
+### HM-B9: No AI Vocabulary
+Don't use the words that mark text as AI-written: delve, crucial, pivotal, underscore, showcase, foster, garner, intricate, interplay, enduring, vibrant, testament, tapestry, and "landscape" for anything that isn't land. Use the plain word: not "this underscores a crucial gap", but "this shows a gap".
+
+### HM-B10: Say Is
+Say "is" or "has". Not "the script serves as the entry point" or "the dashboard boasts three views", but "the script is the entry point" and "the dashboard has three views".
+
+### HM-B11: No Contrast Framing
+State the point instead of framing it against something nobody claimed. Not "it's not just a cache, it's the source of truth", but "it's the source of truth".
+
+### HM-B12: Natural Counts
+Don't force ideas into groups of three. Give as many as there are: not "fast, reliable, and scalable" when only the speed was measured, but "fast".
+
+### HM-B13: One Name Per Thing
+Pick one name for a thing and repeat it. Not "the runner", then "the executor", then "the job engine" for the same program; the reader takes each new name for a new thing.
+
+### HM-B14: Concrete Words
+Don't use an abstract metaphor noun where a concrete word exists: substrate, harness, primitive, vector, locus, nexus, scaffolding, paradigm, north star, flywheel, or "surface" as in "API surface". Not "the harness exposes a small surface", but "the test runner has three public functions".
+
+### HM-B15: Say What It Does
+Name the mechanism or a number, not a feeling. Not "the new cache makes builds feel snappy", but "the new cache cuts a build with no changes from 40 s to 3 s". If the sentence could appear unchanged in another project's docs, it says nothing about this one; cut it.
 
 ## HM-C: What to leave out
 
