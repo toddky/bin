@@ -54,6 +54,110 @@ async function loadThread(threadId) {
 }
 ```
 
+## Pending Actions
+
+A poll that redraws the view also redraws a button that was disabled while its request was in flight, enabled again, so a second click repeats the action. Keep the pending state in the module, outside the view, and clear it only when the server's data shows the change.
+
+```javascript
+// Job id to the run number shown when Restart was clicked.
+const pendingRestarts = new Map();
+
+function renderJob(job) {
+    if (job.runNumber > pendingRestarts.get(job.id)) {
+        pendingRestarts.delete(job.id);
+    }
+    const button = document.createElement('button');
+    button.textContent = 'Restart';
+    button.disabled = pendingRestarts.has(job.id);
+    button.addEventListener('click', () => {
+        pendingRestarts.set(job.id, job.runNumber);
+        button.disabled = true;
+        restartJob(job.id).catch((error) => {
+            pendingRestarts.delete(job.id);
+            showError(error);
+        });
+    });
+    return button;
+}
+```
+
+Not:
+
+The next poll builds a new, enabled button while the restart is still waiting:
+
+```javascript
+function renderJob(job) {
+    const button = document.createElement('button');
+    button.textContent = 'Restart';
+    button.addEventListener('click', () => {
+        button.disabled = true;
+        restartJob(job.id).catch(showError);
+    });
+    return button;
+}
+```
+
+## Failed Refreshes
+
+Decide once, in the function that makes every request, whether a failure means the server is away. Only no answer at all and a 5xx status mean that; a 4xx or a response that won't parse is a bug to show. When the server is away, keep the last good view on screen, dimmed, instead of replacing it with an error.
+
+```javascript
+class ServerAwayError extends Error {}
+
+async function request(url) {
+    let response;
+    try {
+        response = await fetch(url);
+    } catch (error) {
+        throw new ServerAwayError(`no answer from ${url}: ${error.message}`);
+    }
+    if (response.status >= 500) {
+        throw new ServerAwayError(`${url} returned ${response.status}`);
+    }
+    if (!response.ok) {
+        throw new Error(`${url} returned ${response.status}`);
+    }
+    return response.json();
+}
+
+async function refreshJobs(view) {
+    try {
+        renderJobs(view, await request('/api/jobs'));
+        view.classList.remove('stale');
+    } catch (error) {
+        if (error instanceof ServerAwayError) {
+            view.classList.add('stale');
+            return;
+        }
+        showError(error);
+    }
+}
+```
+
+## Timers
+
+Every `setInterval`, `setTimeout`, and poll loop has an owner that stops it when its view is torn down and when the user signs out. A timer nobody stops keeps running after sign-out, requesting with no session and drawing into a view that is gone.
+
+```javascript
+// A guess; jobs change on the order of minutes, so 5s feels live without loading the server.
+const POLL_MILLISECONDS = 5000;
+
+function mountJobs(view) {
+    const pollTimer = setInterval(() => refreshJobs(view), POLL_MILLISECONDS);
+    return function unmountJobs() {
+        clearInterval(pollTimer);
+    };
+}
+```
+
+Not:
+
+```javascript
+function mountJobs(view) {
+    setInterval(() => refreshJobs(view), POLL_MILLISECONDS);
+}
+```
+
 ## Promise Rejections
 
 Every promise started from an event handler ends in a catch, so a failure shows a message instead of an unhandled rejection the user never sees.
