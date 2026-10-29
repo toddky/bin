@@ -29,6 +29,7 @@ Go-specific rules. The cross-language rules (naming basics, control flow, string
 - Separate exported domain types from wire types. Keep wire structs (`apiMessage`, `apiToolCall`) unexported next to the client that marshals them.
 - Use `json.RawMessage` for schema/payload fields that pass through unparsed.
 - Watch `omitempty` on fields a server requires: an empty-but-required field needs a sentinel value, not omission.
+- Decode request bodies with a `json.Decoder` and `DisallowUnknownFields()`, so a misspelled field is refused (CR-F6) instead of quietly left at its zero value.
 
 ## Concurrency
 
@@ -51,6 +52,15 @@ cmd := exec.Command("git", args...)
 - A file write that replaces an existing file goes to a temp file in the same directory followed by `os.Rename`, so a mid-write crash leaves the original intact.
 - Create with `os.MkdirTemp` and clean up with a deferred remove; never assemble a /tmp path by hand.
 - Create private dirs 0700 and re-chmod after `MkdirAll`, since `MkdirAll` keeps an existing dir's mode.
+- Read a file another process writes through `io.LimitReader` with a stated cap, so a runaway writer cannot fill memory (the file form of CR-I9).
+
+## Serving Files
+
+`http.ServeFile` follows symlinks and guesses the content type from the file's bytes, so a log that starts with `<html>` is served as a web page. To serve a file a user picked:
+
+- Build the path from an allowlist or a stored name (CR-I10), and open it with the checks in CR-I11.
+- Serve at most a stated size, or only the tail of the file.
+- Set `Content-Type: text/plain; charset=utf-8`, `X-Content-Type-Options: nosniff`, and `Content-Security-Policy: sandbox`, so the browser never runs what the file contains.
 
 ## CLI
 
@@ -70,6 +80,8 @@ cmd := exec.Command("git", args...)
 - Pure functions get tests first; exec- and network-dependent code uses fakes (tempdir scripts via `t.TempDir()`, `httptest`, scripted interface fakes).
 - Test through the narrow interface a component consumes (e.g. a `ResponseStreamer` fake), not by mocking the whole client.
 - No fixtures checked in; tests build their inputs in `t.TempDir()`.
+- To test a failure partway through a series of OS calls, route the call through a package-level var (`var rename = os.Rename`) that the test swaps and restores with `t.Cleanup`. A test that swaps one cannot use `t.Parallel`.
+- For a SQLite query on a table that can grow, a test runs `EXPLAIN QUERY PLAN` and checks the intended index is named (`USING INDEX jobs_by_state`). Without `ANALYZE` statistics SQLite picks plans by fixed guesses; a unary `+` on a column (`+state = ?`) keeps it off an index that would be slower.
 
 ## Comments
 
