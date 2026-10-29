@@ -1215,6 +1215,62 @@ if get_start_time(launcher_pid) != start_time:
 os.kill(int(launcher_pid), signal.SIGUSR2)
 ```
 
+### CR-F14: Record, Then Publish
+A violation is notifying a worker or another process to run a job before saving the record that defines it. The rule is followed when the database or log entry commits first and the notification or enqueue happens second. Code that hands no work to another process follows the rule. Why: if notifying happens first and the save fails or crashes, a background worker picks up a job that has no record, no parameters, and no audit trail.
+
+Bad:
+The worker can wake and look up the job before its record exists:
+```python
+notify_worker(job_id)
+db.save_job(job_id, payload)
+```
+
+Good:
+```python
+db.save_job(job_id, payload)
+notify_worker(job_id)
+```
+
+### CR-F15: One Bad Item Does Not Fail The List
+A violation is a loop over many independent items, such as files, hosts, or records, that stops the whole run when one item fails to read or parse. The rule is followed when a bad item is skipped or shown as broken with its name and reason, and the run fails as a whole only when the source itself fails, such as the directory being unreadable. Code that processes no list of independent items follows the rule. Why: one corrupt file hides every good result, and the person reading the output can't tell which item broke.
+
+Bad:
+One truncated JSON file makes the whole report exit with a traceback:
+```python
+for result_json in sorted(results_dir.glob("*.json")):
+    results.append(json.loads(result_json.read_text()))
+```
+
+Good:
+```python
+for result_json in sorted(results_dir.glob("*.json")):
+    try:
+        results.append(json.loads(result_json.read_text()))
+    except json.JSONDecodeError as error:
+        print(f"WARNING: skipping {result_json}, not valid JSON: {error}", file=sys.stderr)
+```
+
+### CR-F16: Bound State Carried Between Runs
+A violation is a file or table that a program reads at the start of each run and adds to at the end, such as a list of processed ids or a cache of past answers, with no limit on how old or how large it can get. The rule is followed when old entries are dropped by age or count, the limit has a comment saying where it came from, and the docs say how to reset the state by hand. Programs that keep nothing between runs follow the rule. Why: the file grows until every run slows down or runs out of space, and a bad entry stays forever because nothing ever removes it.
+
+Bad:
+Every id ever processed stays in the file, so after a year each run loads and saves millions of lines:
+```python
+seen_ids = set(seen_file.read_text().split())
+...
+seen_file.write_text("\n".join(seen_ids | new_ids))
+```
+
+Good:
+```python
+# Reports older than 30 days are archived upstream and never come back, so older ids can go.
+SEEN_MAX_AGE_SECONDS = 30 * 24 * 3600
+
+seen = json.loads(seen_file.read_text())
+cutoff = time.time() - SEEN_MAX_AGE_SECONDS
+seen = {report_id: seen_at for report_id, seen_at in seen.items() if seen_at > cutoff}
+```
+
 ## CR-G: Arguments and CLI design
 
 ### CR-G1: Arguments At The Top
@@ -1556,6 +1612,77 @@ def test_sync_reports_exits_cleanly(tmp_path):
     assert returncode == 0
 ```
 
+### CR-H13: Match The Stable Part Of Tool Output
+A violation is a test that matches another tool's full output word for word, such as a compiler error or a query plan, or a check that output must not contain something, loosened until bad output passes it. The rule is followed when the test matches only the words that carry the meaning, each must-not-contain check still fails on the output it exists to catch, and output from your own program is still matched exactly (CR-H2). Tests that check no other tool's output follow the rule. Why: an exact match on text you don't control breaks on another machine or the next upgrade, and a check loosened too far passes on the bug it was written for.
+
+Bad:
+GNU `cp` uses curly quotes in a UTF-8 locale and macOS `cp` uses none, so this passes on one machine only:
+```python
+def test_copy_reports_missing_file(tmp_path):
+    result = run_backup(tmp_path / "missing.txt")
+    assert result.stderr == "cp: cannot stat 'missing.txt': No such file or directory\n"
+```
+
+Good:
+```python
+def test_copy_reports_missing_file(tmp_path):
+    result = run_backup(tmp_path / "missing.txt")
+    assert "missing.txt" in result.stderr
+    assert "No such file or directory" in result.stderr
+```
+
+### CR-H14: Old-Version Fixtures Come From Old Code
+A violation is a test that fakes an older version of saved data, such as a database or config file, by changing the version number on data the current code created. The rule is followed when the fixture is built the way the older version built it, such as running only the migrations up to that version or loading a file the old release wrote. Tests with no old-version fixtures follow the rule. Why: the faked fixture already has everything added since that version, so the upgrade under test runs on data that already has the change and passes whether or not it works.
+
+Bad:
+The database already has every column added since version 1, so the upgrade has nothing to do and the test passes either way:
+```python
+def test_upgrade_from_v1(tmp_path):
+    db = create_database(tmp_path / "app.db")
+    db.execute("PRAGMA user_version = 1")
+    upgrade(db)
+    assert "email" in get_column_names(db, "users")
+```
+
+Good:
+```python
+def test_upgrade_from_v1(tmp_path):
+    db = create_database(tmp_path / "app.db", up_to_version=1)
+    upgrade(db)
+    assert "email" in get_column_names(db, "users")
+```
+
+### CR-H15: Test Runners Find Tests By Pattern
+A violation is a test target, such as a Makefile rule or a CI step, that names each test file it runs. The rule is followed when the target runs every file matching the naming pattern, such as `tests/test_*.py`, so a new test file runs without anyone editing the target. Repos with no test target follow the rule. Why: a list of names silently skips every test file added after it, and the suite keeps passing while new tests never run.
+
+Bad:
+`test_upload.py` was added later and never runs:
+```make
+test:
+	python -m pytest tests/test_config.py tests/test_report.py
+```
+
+Good:
+```make
+test:
+	python -m pytest tests/
+```
+
+### CR-H16: Add Tests To The Existing Suite
+A violation is a change that adds a new test file for a small fix or feature when a test file for the same code already exists. The rule is followed when the new cases go into the existing file, and a new file starts only for new code or when the existing file would need setup the new tests don't share. Changes that add no tests follow the rule. Why: a test file per change scatters the tests for one piece of code across the repo, so the next person has to find them all before they can change it.
+
+Bad:
+```text
+tests/test_report.py
+tests/test_report_empty_input.py
+tests/test_report_utf8.py
+```
+
+Good:
+```text
+tests/test_report.py
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
@@ -1729,6 +1856,59 @@ with tempfile.TemporaryFile() as output_file:
     output = output_file.read(MAX_OUTPUT_BYTES + 1)
 if len(output) > MAX_OUTPUT_BYTES:
     sys.exit(f"ERROR: ./check-tool printed more than {MAX_OUTPUT_BYTES} bytes; run it by hand to see why")
+```
+
+### CR-I10: Build Paths From Stored Names
+A violation is a file path built from a name the caller sent, such as `REPORTS_DIR / name`, when the code looked up the record some other way, or a stored name used in a path without checking it is one plain path part. The rule is followed when the path uses the name saved in the record and the code refuses a name that is empty, `.`, `..`, or contains `/`. Code that builds no paths from names follows the rule. Why: a case-insensitive lookup finds `alice` from `Alice` and then reads the wrong folder, and a name like `..` climbs out of the directory.
+
+Bad:
+The lookup ignores case, so `Alice` finds user `alice` and then lists an empty `Alice/` folder:
+```python
+user = db.find_user(name)
+report_dir = REPORTS_DIR / name
+```
+
+Good:
+```python
+user = db.find_user(name)
+if user.name in ("", ".", "..") or "/" in user.name:
+    sys.exit(f"ERROR: user name {user.name!r} is not a plain directory name; rename the account")
+report_dir = REPORTS_DIR / user.name
+```
+
+### CR-I11: Refuse Links And Special Files In Shared Directories
+A violation is opening a file in a directory that other users or processes can write to without refusing symlinks, hard links, and anything that is not a regular file. The rule is followed when the open uses no-follow and non-blocking flags, and a check on the open file confirms it is a regular file with one link and the expected owner. Code that opens no files in shared directories follows the rule. Why: a planted link makes the code read or overwrite any file its account can reach, a hard link gets past no-follow, and a named pipe hangs the reader forever.
+
+Bad:
+Anyone who can write to `shared_dir` can make `run.log` a link to a private file, or a pipe that never answers:
+```python
+log_text = (shared_dir / "run.log").read_text()
+```
+
+Good:
+A symlink makes the open itself fail; the `fstat` check catches hard links, pipes, and files owned by someone else:
+```python
+log_fd = os.open(shared_dir / "run.log", os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+log_stat = os.fstat(log_fd)
+if not stat.S_ISREG(log_stat.st_mode) or log_stat.st_nlink != 1 or log_stat.st_uid != os.getuid():
+    os.close(log_fd)
+    sys.exit(f"ERROR: {shared_dir}/run.log is a link or special file, or not yours; delete it and rerun")
+with os.fdopen(log_fd) as log_file:
+    log_text = log_file.read()
+```
+
+### CR-I12: No Wildcards In User Searches
+A violation is a value from a user placed inside a pattern language, such as a search term in SQL `LIKE`, a filename in a glob, or text in a regex, where its wildcards still act as wildcards. The rule is followed when the code uses a plain substring or equality match instead, such as SQLite's `instr`, or escapes the value with the library's own function, such as `re.escape` or `glob.escape`. Code that puts no user values into patterns follows the rule. Why: a search for `run_1` also matches `run11`, and a search for `%` matches every row.
+
+Bad:
+Searching for `run_1` also matches `run11` and `run21`:
+```python
+db.execute("SELECT name FROM reports WHERE name LIKE ?", (f"%{search}%",))
+```
+
+Good:
+```python
+db.execute("SELECT name FROM reports WHERE instr(name, ?) > 0", (search,))
 ```
 
 ## CR-J: Files
