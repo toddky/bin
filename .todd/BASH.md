@@ -28,6 +28,34 @@ my_func() {
 }
 ```
 
+## Local Variables
+
+Bash scoping is dynamic, so a `local` is visible to every function it calls and hides any global of the same name from them. Never give a local the name of a global that a called function reads.
+
+```bash
+function handle_request() {
+    local request_name="$1"
+    write_status
+}
+```
+
+Not:
+
+`write_status` reads the global `name`, so it writes the request name instead of the workflow name:
+
+```bash
+name="nightly-build"
+
+function write_status() {
+    echo "$name: running" > "$status_file"
+}
+
+function handle_request() {
+    local name="$1"
+    write_status
+}
+```
+
 ## Conditionals
 
 - Use `[[ ]]` instead of `[ ]`.
@@ -78,6 +106,26 @@ if [[ "$needs_rebuild" == true ]]; then
 fi
 ```
 
+## Associative Array Lookups
+
+Looking up an empty key, such as `${owners[""]}`, prints `bad array subscript` and still returns 0, so the script runs on with a stray error in its output. Check that the key is not empty before the lookup.
+
+```bash
+if [[ -z "$user" ]]; then
+    echo "ERROR: request has no user; expected a user name" 1>&2
+    exit 1
+fi
+owner="${owners[$user]:-}"
+```
+
+Not:
+
+A request with no user prints `bad array subscript` and carries on as if the user has no owner:
+
+```bash
+owner="${owners[$user]:-}"
+```
+
 ## Arrays Over Concatenation
 
 When building a command from multiple parts (flags, arguments, etc.), collect the parts in an array and expand it. Do not concatenate with string interpolation or `\` line continuations.
@@ -120,6 +168,31 @@ done
 - Use `basename` and `dirname` for basename/dirname operations. Prefer these over `${var##*/}` and `${var%/*}` shell parameter expansion.
 - Always write stderr redirects as `1>&2`, not `>&2`. Being explicit about the source fd makes the intent obvious.
 
+## Validating Captured Values
+
+`$(...)` strips every trailing newline, so a check on the captured value passes `restart\n\n` as `restart`. When the original value goes on to another program, check it in the tool that reads the original instead.
+
+```bash
+if ! jq -e '.action == "restart"' "$request_file" > /dev/null; then
+    echo "ERROR: $request_file has an unknown action; expected restart" 1>&2
+    exit 1
+fi
+mv "$request_file" "$queue_dir/"
+```
+
+Not:
+
+For `{"action": "restart\n\n"}` the check passes, and the queue gets the action with its newlines:
+
+```bash
+action="$(jq -r .action "$request_file")"
+if [[ "$action" != "restart" ]]; then
+    echo "ERROR: $request_file has an unknown action; expected restart" 1>&2
+    exit 1
+fi
+mv "$request_file" "$queue_dir/"
+```
+
 ## Multiline Strings
 
 Use a heredoc to capture multi-line output into a variable:
@@ -138,6 +211,25 @@ Not:
 ```bash
 result="$first_line
 $second_line"
+```
+
+## Reading Fields
+
+A tab in `IFS` counts as whitespace, so `read` treats two tabs in a row as one separator. An empty field disappears and every later field moves one place left. Split tab-separated lines with `mapfile -d $'\t'`, which splits on every tab. `printf '%s'` replaces `<<<`, which adds a newline that would end up in the last field.
+
+```bash
+mapfile -t -d $'\t' fields < <(printf '%s' "$line")
+action="${fields[0]}"
+target="${fields[1]}"
+scope="${fields[2]}"
+```
+
+Not:
+
+For the line `<TAB>restart<TAB>all`, `action` gets `restart` and `target` gets `all`:
+
+```bash
+IFS=$'\t' read -r action target scope <<< "$line"
 ```
 
 ## Control Flow
@@ -299,6 +391,34 @@ cd "$build_dir"
 
 - Do not use `set -euo pipefail`. Handle each error explicitly at the call site so failures get a meaningful message instead of a silent abort.
 - Check return codes with `if !`, `||`, or explicit `$?` checks. Print a clear error to `>&2` and exit with a non-zero code when something fails.
+
+## Testing Scripts
+
+Many bash errors, such as a bad array subscript or a missing command in the middle of a script, print to stderr and let the script run on and exit 0. Tests that run a script also fail when its stderr contains a `<script>: line N:` line.
+
+```bash
+"$script" > "$output_file" 2> "$error_file"
+exit_code=$?
+if grep -E '^[^:]+: line [0-9]+: ' "$error_file"; then
+    echo "FAIL: $script printed a bash error" 1>&2
+    exit 1
+fi
+if ((exit_code != 0)); then
+    echo "FAIL: $script exited $exit_code" 1>&2
+    exit 1
+fi
+```
+
+Not:
+
+A script that prints `line 4: owners: bad array subscript` and then finishes still passes:
+
+```bash
+if ! "$script" > /dev/null; then
+    echo "FAIL: $script exited non-zero" 1>&2
+    exit 1
+fi
+```
 
 ## Signals and Traps
 
