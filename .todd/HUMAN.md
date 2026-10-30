@@ -24,13 +24,16 @@ No bullet lists for things that read naturally as prose. Use a numbered list onl
 No bold section headers like `**Root cause:**` or `**Summary:**`. Just write the sentence.
 
 ### HM-A4: One Idea Per Sentence
-One idea per sentence. Short sentences. Don't pack all the context into one overly complete ask.
+One idea per sentence. Short sentences: aim for 25 words or fewer, the limit Simplified Technical English (ASD-STE100) sets for descriptive text. Don't pack all the context into one overly complete ask.
 
 ### HM-A5: Name The Subject
 Don't open a new message or thread with "it" or a bare "this"; the reader has nothing to point it back to. Not "This is failing again", but "The nightly build is failing again". "This" followed by a noun is fine: "This MR fixes the upload timeout". A reply can open with "it" only when the message it answers names exactly one thing. Anywhere else, use a pronoun only when the noun it stands for is the last one mentioned and nothing else could match.
 
 ### HM-A6: Whole Sentences
 Write whole sentences with their articles and verbs. No arrows, symbol-speak, or verbless fragments the reader has to decode: not "bad date → exit 2, no write", but "The parser rejects a bad date, exits with code 2, and writes nothing".
+
+### HM-A7: Condition First
+When an instruction applies only in some cases, put the case first so the reader can skip what doesn't apply. Not "Rerun with `--verbose` if the build fails", but "If the build fails, rerun with `--verbose`".
 
 ## HM-B: Tone
 
@@ -78,6 +81,9 @@ Don't use an abstract metaphor noun where a concrete word exists: substrate, har
 
 ### HM-B15: Say What It Does
 Name the mechanism or a number, not a feeling. Not "the new cache makes builds feel snappy", but "the new cache cuts a build with no changes from 40 s to 3 s". If the sentence could appear unchanged in another project's docs, it says nothing about this one; cut it.
+
+### HM-B16: Short Noun Stacks
+Don't stack more than three nouns in a row; the reader can't tell which word describes which. Not "the nightly build failure report upload step", but "the step that uploads the nightly failure report".
 
 ## HM-C: What to leave out
 
