@@ -196,7 +196,7 @@ Good:
 ```
 
 ### CR-A12: Present Tense
-A violation is a comment that tells the story of how the code came to be: what it used to do, what broke, who asked for it, or which ticket or merge request changed it. The rule is followed when the comment states the constraint as it holds now, with the date it was last checked when it describes something outside the code. Why: the history belongs in the commit message, and in a comment it goes stale as soon as the code changes again. The date tells the reader how old the claim is without digging through the log.
+A violation is a comment that tells the story of how the code came to be: what it used to do, what broke, who asked for it, or which ticket or merge request changed it. The rule is followed when the comment states the constraint as it holds now, with the date it was last checked when it describes something outside the code. Naming an option the code doesn't take, as in "reads the cached copy instead of calling the API, which allows 10 requests a minute", is fine when that option still exists, since the reader can check both. Why: the history belongs in the commit message, and in a comment it goes stale as soon as the code changes again. The date tells the reader how old the claim is without digging through the log.
 
 Bad:
 ```python
@@ -211,7 +211,7 @@ MAX_HANDSHAKE_ATTEMPTS = 3
 ```
 
 ### CR-A13: TODOs Need A Reason
-A violation is a new TODO or FIXME with no ticket and no reason it cannot be done now. The rule is followed when every new TODO names a ticket or the blocker, or the work is done in the same change. Why: a bare TODO never gets picked up, and later nobody can tell whether it still matters.
+A violation is a new TODO or FIXME with no ticket and no reason it cannot be done now. The rule is followed when every new TODO names a ticket or the blocker, or the work is done in the same change. A limit the code accepts on purpose gets a comment naming the limit and when to fix it, such as `# shortcut: loads the whole file into memory; stream it if reports pass 1 GB.` Why: a bare TODO never gets picked up, and later nobody can tell whether it still matters.
 
 Bad:
 ```python
@@ -1007,7 +1007,7 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
 ```
 
 ### CR-F4: Loud Failures
-A violation is a missing prerequisite or conflicting flag handled with a warning and then continuing, or an error message that names the failure without saying how to fix it. The rule is followed when such problems are checked upfront and exit with one line that ends with the remedy: what to create, which flag to pass, or which value to change.
+A violation is a missing prerequisite, such as a config file or an environment variable the code needs, or a conflicting flag handled with a warning and then continuing, or an error message that names the failure without saying how to fix it. The rule is followed when such problems are checked upfront and exit with one line that ends with the remedy: what to create, which flag to pass, or which value to change.
 
 Bad:
 ```python
