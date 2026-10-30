@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
+status=0
 for src in "$@"; do
-	if ! [[ -e "$src" ]]; then
-		echo "WARNING: '$src' not found."
+	if ! [[ -e "$src" || -L "$src" ]]; then
+		echo "WARNING: '$src' not found." >&2
 		continue
 	fi
 	src="${src%/}"
-	echo "rm -rf $src"
+	parent="$(dirname -- "$src")"
+	base="$(basename -- "$src")"
+	if ! [[ -d "$src" && ! -L "$src" ]]; then
+		echo "rm -f $src"
+		rm -f -- "$src" || status=1
+		continue
+	fi
+	deleting="$parent/.$base.deleting.$$"
+	empty="$parent/.$base.empty.$$"
+	if ! mv -T -- "$src" "$deleting"; then
+		echo "ERROR: could not rename '$src'; nothing deleted." >&2
+		status=1
+		continue
+	fi
+	echo "rm -rf $src (renamed to $deleting, contents unlinked in background)"
 	(
-		if [[ -d "$src" ]]; then
-			empty="$(dirname "$src")/$(basename "$src").deleted.$$"
-			mkdir "$empty"
-			rsync -a --delete "$empty/" "$src/"
-			rmdir "$empty" "$src"
-		else
-			rm -f "$src"
-		fi
+		trap '' HUP
+		mkdir -- "$empty" && rsync -a --delete -- "$empty/" "$deleting/" && rmdir -- "$empty" "$deleting"
 	) &>/dev/null &
 done
+exit "$status"
