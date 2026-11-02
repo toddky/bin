@@ -7,7 +7,7 @@ cd "$SCRIPT_DIR"
 # ==============================================================================
 # ENVIRONMENT
 # ==============================================================================
-real_curl=/usr/bin/curl
+real_curl="$("$SCRIPT_DIR/realbin" curl)" || exit 1
 testdir="$(mktemp -d)"
 server_pid=""
 # The wait after kill keeps bash from printing a "Terminated" line for the server.

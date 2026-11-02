@@ -31,9 +31,12 @@ unset _AIBIN_CURL_ARGV _AIBIN_CURL_REEXEC
 # ==============================================================================
 # ENVIRONMENT
 # ==============================================================================
-# Absolute path avoids a recursive call when aibin/ is in $PATH.
+# Resolve the real binary through realbin next to this script so exec does not recurse into aibin/curl.
 # AIBIN_CURL_REAL overrides the real binary for testing only.
-real_curl="${AIBIN_CURL_REAL:-/usr/bin/curl}"
+real_curl="${AIBIN_CURL_REAL:-}"
+if [[ -z "$real_curl" ]]; then
+    real_curl="$("$(dirname "$(realpath "${BASH_SOURCE[0]}")")/realbin" curl)" || exit 1
+fi
 
 
 # ==============================================================================
