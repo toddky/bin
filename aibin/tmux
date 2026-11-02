@@ -16,28 +16,8 @@ done
 # ==============================================================================
 # ENVIRONMENT
 # ==============================================================================
-self_file="$(realpath "${BASH_SOURCE[0]}")"
-real_tmux_file=""
-
-# Skip this wrapper in $PATH so exec does not recurse into aibin/tmux.
-IFS=':' read -r -a path_dirs <<< "$PATH"
-for path_dir in "${path_dirs[@]}"; do
-    candidate_file="${path_dir}/tmux"
-    if [[ ! -x "$candidate_file" || -d "$candidate_file" ]]; then
-        continue
-    fi
-    candidate_real_file="$(realpath "$candidate_file")"
-    if [[ "$candidate_real_file" == "$self_file" ]]; then
-        continue
-    fi
-    real_tmux_file="$candidate_file"
-    break
-done
-
-if [[ -z "$real_tmux_file" ]]; then
-    echo "ERROR: no real tmux binary found on PATH ($PATH); install tmux or add its directory to PATH." 1>&2
-    exit 1
-fi
+# Resolve the real binary through realbin next to this script so exec does not recurse into aibin/tmux.
+real_tmux_file="$("$(dirname "$(realpath "${BASH_SOURCE[0]}")")/realbin" tmux)" || exit 1
 
 
 # ==============================================================================
