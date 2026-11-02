@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
+# USAGE: find [find-args ...]
+# DESCRIPTION: find wrapper that kills a search after 15 seconds and prints narrower alternatives.
 
-# Use absolute path to avoid recursive call when aibin/ is in $PATH.
-real_find="/usr/bin/find"
+# Resolve the real binary through realbin next to this script so this does not recurse into aibin/find.
+real_find="$("$(dirname "$(realpath "${BASH_SOURCE[0]}")")/realbin" find)" || exit 1
 
 timeout 15 "$real_find" "$@"
 exit_code=$?
