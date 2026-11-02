@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# USAGE: grep [grep-args ...]
+# DESCRIPTION: grep wrapper that kills a file search after 15 seconds and prints narrower alternatives.
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+# Resolve the real binary through realbin next to this script so this does not recurse into aibin/grep.
+real_grep="$("$(dirname "$(realpath "${BASH_SOURCE[0]}")")/realbin" grep)" || exit 1
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+# A piped grep is filtering another command's output; a timeout there would cut off a slow upstream.
+if [[ -p /dev/stdin ]]; then
+    exec "$real_grep" "$@"
+fi
+
+# 15s matches aibin/find; the slowest recursive grep re-run from past sessions took 2.4s on /proj_risc.
+timeout 15 "$real_grep" "$@"
+exit_code=$?
+
+if ((exit_code == 124)); then
+    cat 1>&2 <<EOF
+ERROR: grep timed out after 15 seconds. Try one of these instead:
+
+  Narrower path:   grep -rn <pattern> /more/specific/path
+  Filter files:    grep -rn --include='*.py' <pattern> <path>
+  Skip dirs:       grep -rn --exclude-dir=.git --exclude-dir=node_modules <pattern> <path>
+  Inside a repo:   git grep -n <pattern>
+EOF
+fi
+
+exit "$exit_code"
+
