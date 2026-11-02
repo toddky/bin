@@ -11,11 +11,11 @@ if (($# != 1)); then
 fi
 command_name="$1"
 
-# realbin runs realpath and dirname; an aibin wrapper for either would call realbin again forever.
+# realbin starts through env and bash; an aibin wrapper for either would call realbin again forever.
 # The marker dies with this process because realbin only prints a path and exits.
 if [[ -n "${_AIBIN_REALBIN_ACTIVE:-}" ]]; then
     echo "ERROR: realbin called itself while resolving '$command_name'; an aibin wrapper for a command realbin" \
-        "uses (realpath, dirname, bash) must find its real binary without realbin." 1>&2
+        "uses (env, bash) must find its real binary without realbin." 1>&2
     exit 1
 fi
 export _AIBIN_REALBIN_ACTIVE=1
@@ -24,9 +24,9 @@ export _AIBIN_REALBIN_ACTIVE=1
 # ==============================================================================
 # ENVIRONMENT
 # ==============================================================================
-# Compare resolved paths so a symlinked copy of aibin on PATH is skipped too.
-self_file="$(realpath "${BASH_SOURCE[0]}")" || exit 1
-aibin_dir="$(dirname "$self_file")"
+# Parameter expansion instead of dirname and realpath because every wrapped grep pays for each fork (~5ms here).
+aibin_dir="${BASH_SOURCE[0]%/*}"
+[[ "$aibin_dir" == "${BASH_SOURCE[0]}" ]] && aibin_dir=.
 
 
 # ==============================================================================
@@ -38,8 +38,8 @@ for path_dir in "${path_dirs[@]}"; do
     [[ -z "$path_dir" ]] && path_dir=.
     candidate_file="${path_dir}/${command_name}"
     [[ -f "$candidate_file" && -x "$candidate_file" ]] || continue
-    candidate_real_file="$(realpath "$candidate_file")" || exit 1
-    [[ "$candidate_real_file" == "$aibin_dir"/* ]] && continue
+    # -ef compares device and inode, so a symlinked copy of aibin on PATH is skipped too.
+    [[ "$candidate_file" -ef "$aibin_dir/$command_name" ]] && continue
     printf '%s\n' "$candidate_file"
     exit 0
 done
