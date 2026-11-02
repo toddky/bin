@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# USAGE: realbin <command>
+# DESCRIPTION: Print the first <command> on PATH that is not an aibin wrapper, so a wrapper can exec the real one.
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+if (($# != 1)); then
+    echo "USAGE: realbin <command>" 1>&2
+    exit 1
+fi
+command_name="$1"
+
+# realbin runs realpath and dirname; an aibin wrapper for either would call realbin again forever.
+# The marker dies with this process because realbin only prints a path and exits.
+if [[ -n "${_AIBIN_REALBIN_ACTIVE:-}" ]]; then
+    echo "ERROR: realbin called itself while resolving '$command_name'; an aibin wrapper for a command realbin" \
+        "uses (realpath, dirname, bash) must find its real binary without realbin." 1>&2
+    exit 1
+fi
+export _AIBIN_REALBIN_ACTIVE=1
+
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+# Compare resolved paths so a symlinked copy of aibin on PATH is skipped too.
+self_file="$(realpath "${BASH_SOURCE[0]}")" || exit 1
+aibin_dir="$(dirname "$self_file")"
+
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+IFS=':' read -r -a path_dirs <<< "$PATH"
+for path_dir in "${path_dirs[@]}"; do
+    # An empty PATH entry means the current directory.
+    [[ -z "$path_dir" ]] && path_dir=.
+    candidate_file="${path_dir}/${command_name}"
+    [[ -f "$candidate_file" && -x "$candidate_file" ]] || continue
+    candidate_real_file="$(realpath "$candidate_file")" || exit 1
+    [[ "$candidate_real_file" == "$aibin_dir"/* ]] && continue
+    printf '%s\n' "$candidate_file"
+    exit 0
+done
+
+echo "ERROR: no $command_name found on PATH outside $aibin_dir; install it or add its directory to PATH." 1>&2
+exit 1
+
