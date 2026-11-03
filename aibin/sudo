@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# USAGE: sudo [sudo-args ...]
+# DESCRIPTION: sudo wrapper that refuses every call so an agent cannot run anything as root.
+
+# %q keeps args with spaces or quotes copy-pasteable in the suggested command.
+quoted_args=""
+(($# > 0)) && printf -v quoted_args ' %q' "$@"
+
+cat 1>&2 <<EOF
+ERROR: sudo is blocked for agents. Ask the user to run the command themselves:
+
+  !sudo${quoted_args}
+EOF
+exit 1
