@@ -38,8 +38,8 @@ for path_dir in "${path_dirs[@]}"; do
     [[ -z "$path_dir" ]] && path_dir=.
     candidate_file="${path_dir}/${command_name}"
     [[ -f "$candidate_file" && -x "$candidate_file" ]] || continue
-    # -ef compares device and inode, so a symlinked copy of aibin on PATH is skipped too.
-    [[ "$candidate_file" -ef "$aibin_dir/$command_name" ]] && continue
+    # Any PATH dir holding a realbin is a copy of aibin, so wrappers from a second copy on PATH are skipped too.
+    [[ -e "${path_dir}/realbin" ]] && continue
     printf '%s\n' "$candidate_file"
     exit 0
 done
