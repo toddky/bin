@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# USAGE: killall [killall-args ...]
+# DESCRIPTION: killall wrapper that refuses every call because it matches by name and can hit processes the agent did not start.
+
+cat 1>&2 <<'EOF'
+ERROR: killall is blocked; it kills every process with that name, including ones you did not start.
+Find the specific processes, then kill only those PIDs:
+
+  List matches:    pgrep -u "$USER" -af <pattern>
+  Kill one:        kill <pid>
+  Kill a job:      kill %1   or   kill "$!"   for a process you started in the background
+EOF
+exit 1
