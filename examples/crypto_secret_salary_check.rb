@@ -42,7 +42,7 @@ GATE_TRUTH = {
 # ==============================================================================
 options = { alice: 150_000, bob: 155_000, threshold: 10_000 }
 parser = OptionParser.new
-parser.banner = 'usage: garbled_circuits.rb [options]'
+parser.banner = 'usage: crypto_secret_salary_check.rb [options]'
 parser.on('--alice SALARY', Integer, "Alice's salary (default: #{options[:alice]})")
 parser.on('--bob SALARY', Integer, "Bob's salary (default: #{options[:bob]})")
 parser.on('--threshold AMOUNT', Integer, "public threshold (default: #{options[:threshold]})")
