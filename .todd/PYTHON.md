@@ -41,6 +41,22 @@ Style rules for all Python code.
   return replacement + line[len(command):]
   ```
 
+## Regexes
+
+`$` also matches just before a trailing newline, so `^name$` accepts `"nightly\n"`. To check that a whole string matches, use `re.fullmatch`.
+
+```python
+if not re.fullmatch(r"[a-z0-9_-]+", run_name):
+    sys.exit(f"ERROR: run name {run_name!r} must be lowercase letters, digits, _ or -")
+```
+
+Not:
+
+```python
+if not re.match(r"^[a-z0-9_-]+$", run_name):
+    sys.exit(f"ERROR: run name {run_name!r} must be lowercase letters, digits, _ or -")
+```
+
 ## Control Flow
 
 - Use guard clauses (early `return` or `continue`) to reduce nesting instead of wrapping the happy path in an `if` block.
