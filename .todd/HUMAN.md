@@ -133,4 +133,4 @@ Use the shortest meaningful display text. Wrap these as clickable links wherever
 - Issue numbers
 
 ### HM-E6: Unambiguous Dates
-Use `Mon D` (three-letter month and day, like `May 4`) instead of full ISO. Avoid `5/4`: it reads as April 5 in many locales.
+In prose for people, use `Mon D` (three-letter month and day, like `May 4`) instead of full ISO. Avoid `5/4`: it reads as April 5 in many locales. Timelines are the exception: lead each entry with `YYYY-MM-DD`, like `2026-05-04`, so entries sort and line up.
