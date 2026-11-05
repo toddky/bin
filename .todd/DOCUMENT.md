@@ -4,6 +4,8 @@ Rules for long-form writing: notes, published pages, design docs, and anything a
 
 `HUMAN.md` applies here too, and its tone rules hold in a document just as in a message. Two of its structure rules flip. A message leads with the finding (HM-A1) because its reader already knows the subject; a document's reader arrives cold, so it names the subject first (DOC-B1) and reaches the point within the first screen (DOC-B3). A message avoids bullet lists (HM-A2), while a document ends with a list of links (DOC-B9).
 
+For a requirements document, also follow `REQUIREMENTS.md`.
+
 | Section | Covers |
 |---|---|
 | DOC-A | Titles and headings |
