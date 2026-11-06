@@ -31,6 +31,7 @@
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
+  - NEVER run `tmux kill-server`. To clean up a scratch session, use `tmux kill-session -t <name>` on a socket you created with `-L` or `-S`.
 
 # Parallel Work
 - I do parallel work on a single repo. Untracked files, new commits, and modified files you did not touch are EXPECTED. Do not list them, do not ask about them, and do not describe them as unexpected, new, or having "appeared".
@@ -156,7 +157,6 @@ cd "$SCRIPT_DIR"
 - NEVER expose secrets (API tokens, passwords, etc.) in command arguments, they are visible in `ps -ef`.
 - NEVER run `git commit`, `git add`, or `git stage` unless explicitly asked. "update the script" or "fix the file" is NOT permission.
 - NEVER undo or reset commits unless explicitly asked.
-- NEVER run `tmux kill-server`. To clean up a scratch session, use `tmux kill-session -t <name>` on a socket you created with `-L` or `-S`.
 
 **ALWAYS**:
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
