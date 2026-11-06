@@ -1911,6 +1911,32 @@ Good:
 db.execute("SELECT name FROM reports WHERE instr(name, ?) > 0", (search,))
 ```
 
+### CR-I13: Make Control Characters Visible Before Printing
+A violation is printing text the code did not write, such as tool output, log lines, file names, commit messages, or chat text, to a terminal or TUI with its control characters intact. The rule is followed when the code decodes the text and replaces every control character except newline and tab with a visible form before printing. Code that prints only its own fixed strings follows the rule. Why: one unterminated sequence in that text can freeze the screen, change the window title, write the clipboard, or overwrite earlier output to fake a result.
+
+Test the fix with each of these sequences:
+- `\x1b]` (OSC) with no `\x07` or `\x1b\\` terminator: swallows all text after it. `\x1b]0;` and `\x1b]2;` set the window title, `\x1b]52;` writes the clipboard, and `\x1b]8;` makes a link whose target differs from its text.
+- `\x1b(0` (DEC line-drawing charset) with no `\x1b(B`: every later lowercase letter prints as a box-drawing glyph.
+- `\x1b[200~` and `\x1b[201~` (bracketed-paste markers): a TUI that reads this output as input treats everything after `200~` as pasted text, and a `201~` inside a paste ends it early so the rest runs as typed keys.
+- `\x1b[2J`, `\x1b[H`, `\x1b[<n>A`, and a bare `\r`: clear the screen or move the cursor, so later text overwrites earlier output.
+- `\x1bc` (full reset) and `\x1b[?1049h` (alternate screen): wipe or hide the user's scrollback.
+- `\x9b` and `\x9d` (8-bit CSI and OSC, code points U+009B and U+009D): some terminals act on them with no `\x1b` at all.
+
+Bad:
+A job log containing `\x1b]0;` with no terminator swallows every line printed after it:
+```python
+print(result.stdout.decode())
+```
+
+Good:
+```python
+# C0 controls except tab and newline, DEL, and C1, which some terminals read as CSI and OSC.
+UNSAFE_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+text = result.stdout.decode(errors="replace")
+print(UNSAFE_CONTROL.sub(lambda match: f"\\x{ord(match.group()):02x}", text))
+```
+
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
