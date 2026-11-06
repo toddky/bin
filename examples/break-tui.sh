@@ -1,31 +1,47 @@
 #!/usr/bin/env bash
-# Emits raw unterminated ANSI/OSC/charset escape sequences to wedge the TUI.
-# Run one at a time; use `reset` or the recovery command below to recover.
-#
-# Recovery (blind-type if screen goes dark):
-#   printf '\x1b\\\x1bc\x1b[!p\x1b(B\x1b[m\x1b[H\x1b[2J' && reset
+# USAGE: break-tui.sh <osc-title|line-drawing|bracketed-paste|all|recover>
+# DESCRIPTION: Print unterminated escape sequences to test how a TUI recovers from them.
 
-set -euo pipefail
+declare -A sequences=(
+    [osc-title]='unterminated OSC title: \033]0;some-title-no-terminator end\n'
+    [line-drawing]='DEC line-drawing charset enter WITHOUT exit: \033(0lqqqk end-no-exit\n'
+    [bracketed-paste]='bracketed-paste start no end: \033[200~ end\n'
+)
 
-run_b6() { printf 'B6 unterminated OSC: \033]0;some-title-no-terminator end\n'; }
-run_b4() { printf 'B4 DEC alt charset enter WITHOUT exit: \033(0lqqqk end-no-exit\n'; }
-run_b8() { printf 'B8 bracketed-paste start no end: \033[200~ end\n'; }
+function print_usage() {
+    cat 1>&2 <<EOF
+Usage: $0 <osc-title|line-drawing|bracketed-paste|all|recover>
+  osc-title        OSC window title with no terminator
+  line-drawing     DEC line-drawing charset with no switch back to ASCII
+  bracketed-paste  bracketed-paste start marker with no end marker
+  all              all three, with osc-title last
+  recover          reset the terminal (blind-type it if the screen goes dark)
+EOF
+}
 
-if [[ $# -eq 0 ]]; then
-	run_b6
-	run_b4
-	run_b8
-	exit 0
+if [[ $# -ne 1 ]]; then
+    print_usage
+    exit 1
 fi
 
 case "$1" in
-	b6)      run_b6 ;;
-	b4)      run_b4 ;;
-	b8)      run_b8 ;;
-	recover) printf '\x1b\\\x1bc\x1b[!p\x1b(B\x1b[m\x1b[H\x1b[2J' && reset ;;
-	*)
-		echo "Usage: $0 [b4|b6|b8|recover]"
-		echo "  (no args runs b6, b4, b8 in sequence)"
-		exit 1
-		;;
+    osc-title|line-drawing|bracketed-paste)
+        printf "${sequences[$1]}"
+        ;;
+    all)
+        # An unterminated OSC swallows any text after it, so it goes last.
+        # line-drawing stays active for the rest, so the osc-title label prints as box-drawing glyphs.
+        for name in bracketed-paste line-drawing osc-title; do
+            printf "${sequences[$name]}"
+        done
+        ;;
+    # ST closes any open OSC first so the full reset (ESC c) is parsed as a command.
+    recover)
+        printf '\033\\\033c' && reset
+        ;;
+    *)
+        echo "ERROR: unknown case: $1" 1>&2
+        print_usage
+        exit 1
+        ;;
 esac
