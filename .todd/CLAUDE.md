@@ -26,12 +26,17 @@
 - I often commit changes outside of this tool.
 - Check for existing implementations first.
 - Prefer editing existing files.
-- When writing a new script, also run chmod +x on it
+- When writing a new script, also run chmod +x on it.
 - When fixing bugs, fix the root cause, not the symptom.
+- For a change across several files, check every target before writing any, so a failure never leaves the tree half-edited.
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
   - NEVER run `tmux kill-server`. To clean up a scratch session, use `tmux kill-session -t <name>` on a socket you created with `-L` or `-S`.
+
+# Context
+- When a command could print a lot (logs, test runs, large files), filter, aggregate, or write it to a `mktemp` file and print only the summary.
+- Hand noisy exploration or debugging to a subagent and keep only its summary in the main conversation.
 
 # Parallel Work
 - I do parallel work on a single repo. Untracked files, new commits, and modified files you did not touch are EXPECTED. Do not list them, do not ask about them, and do not describe them as unexpected, new, or having "appeared".
