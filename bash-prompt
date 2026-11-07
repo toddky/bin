@@ -34,7 +34,8 @@ export LD_LIBRARY_PATH=/lib64:/usr/lib64
 
 current_ms="$(date +'%s%3N')"
 
-parent="$(cat /proc/$PPID/comm 2>/dev/null)"
+# This runs on every prompt, so it uses bash builtins instead of forking wherever it can.
+read -r parent 2>/dev/null < "/proc/$PPID/comm"
 
 if [[ "$parent" == bash ]]; then
 	reset="\[\e[0m\]"
