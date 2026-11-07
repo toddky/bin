@@ -33,6 +33,16 @@
 # PERFORMANCE
 # ==============================================================================
 # - /bin/bash, not `env bash`: env would search PATH
+# - `read` for the parent process name, not `cat`: no fork
+# - $USER, not `whoami`: no fork
+# - `date` for the timer only when a command was timed: no fork otherwise
+# - `printf -v` and `printf '%(%T)T'`, not `$(printf ...)` and `$(date +%T)`: no subshell or fork
+# - One `stat -c '%a %U %g'`, not three `stat` calls
+# - ${PWD##*/}, not `basename`: no fork
+# - [[ . -ef "$PWD" ]], not `readlink -f .` and [[ -d "$PWD" ]]: no fork
+# - [[ "$PWD" == *"$username"* ]], not `grep`: no fork
+# - Walk up for .git in bash, not `git rev-parse` and `git safe-top`: no git at all outside a repo
+# - One `git status --porcelain=v2 --branch`, not six git calls: it reports branch, upstream, ahead/behind and dirty
 
 
 # Reset LD_LIBRARY_PATH
@@ -40,7 +50,6 @@ export LD_LIBRARY_PATH=/lib64:/usr/lib64
 
 current_ms="$(date +'%s%3N')"
 
-# This runs on every prompt, so it uses bash builtins instead of forking wherever it can.
 read -r parent 2>/dev/null < "/proc/$PPID/comm"
 username="${USER:-$(id -un)}"
 
