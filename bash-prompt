@@ -147,24 +147,19 @@ fi
 
 # Directory permissions
 [[ "$OSTYPE" =~ .*darwin.* ]] && ismac=1 || ismac=0
+stat_args=()
 if ((ismac)); then
-	permission="$(stat -f %Lp . 2>/dev/null)"
+	stat_args+=(-f '%Lp %Su %g')
 else
-	permission="$(stat -c %a . 2>/dev/null)"
+	stat_args+=(-c '%a %U %g')
 fi
+stat_output="$(stat "${stat_args[@]}" . 2>/dev/null)"
+read -r permission owner dir_gid <<<"$stat_output"
 
 if [[ -n "$permission" ]]; then
 	p1="${permission:(-3):1}"
 	p2="${permission:(-2):1}"
 	p3="${permission:(-1):1}"
-
-	if ((ismac)); then
-		owner="$(stat -f %Su .)"
-		dir_gid="$(stat -f %g .)"
-	else
-		owner="$(stat -c %U .)"
-		dir_gid="$(stat -c %g .)"
-	fi
 
 	prompt+=" "
 	[[ "$username" == "$owner" ]] && prompt+="$green$p1" || prompt+="$red$p1"
