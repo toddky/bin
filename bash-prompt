@@ -99,12 +99,13 @@ if ((start_ms)); then
 	total_ms=$((current_ms - start_ms))
 	ms=$((total_ms % 1000))
 	total_s=$((total_ms / 1000))
-	time_str="$(printf "%d.%03ds" "$total_s" "$ms")"
+	printf -v time_str "%d.%03ds" "$total_s" "$ms"
 
 	# Get hours
 	if (( total_s >= 3600 )); then
-		h="$(($total_s/3600))"
-		time_str+="$(printf " (%d.%02d hours)" "$h" "$(((total_s%3600)*100/3600))")"
+		num_hours=$((total_s / 3600))
+		printf -v hours_str " (%d.%02d hours)" "$num_hours" "$(((total_s % 3600) * 100 / 3600))"
+		time_str+="$hours_str"
 	fi
 	printf "\x1b[38;5;8m[$(date +%T)] Finished in %s \e[0m\n" "$time_str"
 
