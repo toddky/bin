@@ -107,7 +107,7 @@ if ((start_ms)); then
 		printf -v hours_str " (%d.%02d hours)" "$num_hours" "$(((total_s % 3600) * 100 / 3600))"
 		time_str+="$hours_str"
 	fi
-	printf "\x1b[38;5;8m[$(date +%T)] Finished in %s \e[0m\n" "$time_str"
+	printf "\x1b[38;5;8m[%(%T)T] Finished in %s \e[0m\n" -1 "$time_str"
 
 	# Notify if command took over 60s and pane is not focused
 	if [[ -n "$TMUX_PANE" ]] && (( total_s >= 60 )); then
