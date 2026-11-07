@@ -169,7 +169,8 @@ if [[ -n "$permission" ]]; then
 	prompt+="$green$p3"
 fi
 
-base="$(basename "$PWD")"
+base="${PWD##*/}"
+[[ -z "$base" ]] && base=/
 if ! readlink -f . &>/dev/null; then
 	base_color="$red"
 elif ! [[ -d "$PWD" ]]; then
