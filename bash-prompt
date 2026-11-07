@@ -171,9 +171,8 @@ fi
 
 base="${PWD##*/}"
 [[ -z "$base" ]] && base=/
-if ! readlink -f . &>/dev/null; then
-	base_color="$red"
-elif ! [[ -d "$PWD" ]]; then
+# -ef catches a deleted or replaced cwd (e.g. after rm -rf build && mkdir build).
+if ! [[ . -ef "$PWD" ]]; then
 	base_color="$red"
 elif grep -q "$username" <<<"$PWD"; then
 	base_color="$green"
