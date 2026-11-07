@@ -48,8 +48,6 @@
 # Reset LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/lib64:/usr/lib64
 
-current_ms="$(date +'%s%3N')"
-
 read -r parent 2>/dev/null < "/proc/$PPID/comm"
 username="${USER:-$(id -un)}"
 
@@ -95,6 +93,7 @@ fi
 # Get execution time
 #start_ms="$1"
 if ((start_ms)); then
+	current_ms="$(date +'%s%3N')"
 
 	# Get seconds
 	total_ms=$((current_ms - start_ms))
