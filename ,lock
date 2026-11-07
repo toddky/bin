@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+log_file="$HOME/lock_debug.log"
+function log() {
+	echo "$(date '+%F %T') $*" >> "$log_file"
+}
+log "started by $(ps -o comm= -p "$PPID") (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)"
+
 # Pause media
 ,media pause
 
@@ -43,6 +49,7 @@ fi
 # Wait for the locker only — on a password unlock the fingerprint loop blocks forever holding the device claim.
 # The kill below releases it, else later fprintd calls fail with "already claimed" (Jul 31 2026, ~/FREEZE.md).
 wait "$lock_pid"
+log "$locker exited with $?"
 
 if [[ -n "${fploop_pid:-}" ]]; then
 	kill "$fploop_pid" 2>/dev/null
