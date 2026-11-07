@@ -36,6 +36,7 @@ current_ms="$(date +'%s%3N')"
 
 # This runs on every prompt, so it uses bash builtins instead of forking wherever it can.
 read -r parent 2>/dev/null < "/proc/$PPID/comm"
+username="${USER:-$(id -un)}"
 
 if [[ "$parent" == bash ]]; then
 	reset="\[\e[0m\]"
@@ -151,7 +152,7 @@ if [[ -n "$permission" ]]; then
 	fi
 
 	prompt+=" "
-	[[ "$(whoami)" == "$owner" ]] && prompt+="$green$p1" || prompt+="$red$p1"
+	[[ "$username" == "$owner" ]] && prompt+="$green$p1" || prompt+="$red$p1"
 	# $GROUPS is the bash builtin GID list. Avoids forking groups(1), which
 	# blocks on SSSD group lookups here (~5s per prompt).
 	[[ " ${GROUPS[*]} " == *" $dir_gid "* ]] && prompt+="$green$p2" || prompt+="$red$p2"
@@ -163,7 +164,7 @@ if ! readlink -f . &>/dev/null; then
 	base_color="$red"
 elif ! [[ -d "$PWD" ]]; then
 	base_color="$red"
-elif grep -q "$(whoami)" <<<"$PWD"; then
+elif grep -q "$username" <<<"$PWD"; then
 	base_color="$green"
 else
 	base_color="$yellow"
