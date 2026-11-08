@@ -185,55 +185,64 @@ prompt+=" $base_color$base"
 # ==============================================================================
 # GIT
 # ==============================================================================
-in_git="$(git rev-parse --is-inside-work-tree 2>/dev/null)"
-RETVAL=$?
-#git_slow=1
+# Appends the git part of the prompt to $prompt.
+# Example: clean branch main, 2 ahead of upstream -> appends "<green> main <yellow>+2"
+function append_git_prompt() {
+	local search_dir="$PWD" git_top='' git_output git_exit line
+	local branch='' ahead_behind='' has_upstream=0 is_dirty=0 num_ahead=0 num_behind=0 branch_color
 
-if ((RETVAL)); then
-	if git safe-top &>/dev/null; then
-		prompt+=" ${red}<unsafe>"
-	fi
-else
-
-	#git_url="$(git config --get remote.origin.url 2>/dev/null)"
-	git_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
-
-	# TODO: Add timeout here
-	# https://unix.stackexchange.com/questions/43340/how-to-introduce-timeout-for-shell-scripting
-	#stat="$(git status -sb -uno 2>/dev/null | head -1)"
-	#git_slow=$?
-	
-	[[ -f "$(git rev-parse --show-toplevel 2>/dev/null)/.git/index.lock" ]] && prompt+=" ${red}<locked>"
-	#[[ -f "$(git rev-parse --show-toplevel 2>/dev/null)/.git/index.lock" ]] && prompt+=" 🔒"
-
-	if ((git_slow)); then
-		prompt+=" $white$git_branch"
-
-	else
-
-		# Check if in .git directory
-		if [[ "$in_git" == 'false' ]]; then
-			git_branch=".git"
-			prompt+="$red"
-		elif ! (git rev-parse @{u} &>/dev/null); then
-			prompt+="$cyan"
-		#elif ! (git diff-index --quiet HEAD 2>/dev/null); then
-		elif ! (git diff-index --quiet --exit-code --ignore-submodules HEAD); then
-			prompt+="$red"
-		else
-			prompt+="$green"
+	# Same walk as git-safe-top, but -e so worktrees and submodules (.git is a file) count too.
+	while [[ -n "$search_dir" ]]; do
+		if [[ -e "$search_dir/.git" ]]; then
+			git_top="$search_dir"
+			break
 		fi
-		#prompt+="$white$git_branch$reset"
-		prompt+=" $git_branch"
+		search_dir="${search_dir%/*}"
+	done
+	[[ -z "$git_top" && -z "${GIT_DIR:-}" ]] && return
 
-		# Get ahead/behind
-		behind_ahead="$(git rev-list --count --left-right @{upstream}...HEAD 2>/dev/null)"
-		ahead="$( echo "$behind_ahead" | cut -f2)"
-		behind="$(echo "$behind_ahead" | cut -f1)"
-		((ahead)) && prompt+=" $yellow+$ahead"
-		((behind)) && prompt+=" $red-$behind"
+	# GIT_OPTIONAL_LOCKS=0 stops status from taking index.lock, which can race a git command in another pane.
+	git_output="$(GIT_OPTIONAL_LOCKS=0 git status --porcelain=v2 --branch --untracked-files=no --ignore-submodules=all 2>&1)"
+	git_exit=$?
+	if ((git_exit)); then
+		if [[ "$git_output" == *"must be run in a work tree"* ]]; then
+			prompt+="$red .git"
+		else
+			prompt+=" ${red}<unsafe>"
+		fi
+		return
 	fi
-fi
+
+	[[ -f "$git_top/.git/index.lock" ]] && prompt+=" ${red}<locked>"
+
+	while IFS= read -r line; do
+		case "$line" in
+			'# branch.head '*) branch="${line#'# branch.head '}";;
+			# Only present when the upstream exists, which matches the old `git rev-parse @{u}` check.
+			'# branch.ab '*) has_upstream=1; ahead_behind="${line#'# branch.ab '}";;
+			'1 '*|'2 '*|'u '*) is_dirty=1;;
+		esac
+	done <<<"$git_output"
+
+	[[ "$branch" == '(detached)' ]] && branch=HEAD
+	if [[ -n "$ahead_behind" ]]; then
+		num_ahead="${ahead_behind%% *}"
+		num_ahead="${num_ahead#+}"
+		num_behind="${ahead_behind##* -}"
+	fi
+
+	if ((!has_upstream)); then
+		branch_color="$cyan"
+	elif ((is_dirty)); then
+		branch_color="$red"
+	else
+		branch_color="$green"
+	fi
+	prompt+="$branch_color $branch"
+	((num_ahead)) && prompt+=" $yellow+$num_ahead"
+	((num_behind)) && prompt+=" $red-$num_behind"
+}
+append_git_prompt
 
 
 # ==============================================================================
