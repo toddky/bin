@@ -189,7 +189,8 @@ prompt+=" $base_color$base"
 # Example: clean branch main, 2 ahead of upstream -> appends "<green> main <yellow>+2"
 function append_git_prompt() {
 	local search_dir="$PWD" git_top='' git_output git_exit line
-	local branch='' ahead_behind='' has_upstream=0 is_dirty=0 num_ahead=0 num_behind=0 branch_color
+	local branch='' ahead_behind='' has_upstream=0 is_dirty=0 num_ahead num_behind ahead_text='' behind_text=''
+	local branch_color
 
 	# Same walk as git-safe-top, but -e so worktrees and submodules (.git is a file) count too.
 	while [[ -n "$search_dir" ]]; do
@@ -219,17 +220,20 @@ function append_git_prompt() {
 		case "$line" in
 			'# branch.head '*) branch="${line#'# branch.head '}";;
 			# Only present when the upstream exists, which matches the old `git rev-parse @{u}` check.
-			'# branch.ab '*) has_upstream=1; ahead_behind="${line#'# branch.ab '}";;
+			# Example: "# branch.ab +2 -1" -> ahead_text=" <yellow>+2", behind_text=" <red>-1"
+			'# branch.ab '*)
+				has_upstream=1
+				ahead_behind="${line#'# branch.ab +'}"
+				num_ahead="${ahead_behind%% *}"
+				num_behind="${ahead_behind##*-}"
+				((num_ahead)) && ahead_text=" $yellow+$num_ahead"
+				((num_behind)) && behind_text=" $red-$num_behind"
+				;;
 			'1 '*|'2 '*|'u '*) is_dirty=1;;
 		esac
 	done <<<"$git_output"
 
 	[[ "$branch" == '(detached)' ]] && branch=HEAD
-	if [[ -n "$ahead_behind" ]]; then
-		num_ahead="${ahead_behind%% *}"
-		num_ahead="${num_ahead#+}"
-		num_behind="${ahead_behind##* -}"
-	fi
 
 	if ((!has_upstream)); then
 		branch_color="$cyan"
@@ -238,9 +242,7 @@ function append_git_prompt() {
 	else
 		branch_color="$green"
 	fi
-	prompt+="$branch_color $branch"
-	((num_ahead)) && prompt+=" $yellow+$num_ahead"
-	((num_behind)) && prompt+=" $red-$num_behind"
+	prompt+="$branch_color $branch$ahead_text$behind_text"
 }
 append_git_prompt
 
