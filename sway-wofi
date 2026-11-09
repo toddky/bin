@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# USAGE: sway-wofi [WOFI_ARGS...]
+# DESCRIPTION: Runs wofi with the given arguments, or reports how to install it when it is missing.
+
+# Launched from bar clicks and key bindings, where nobody sees stderr, so the error also pops up as a notification.
+if ! command -v wofi >/dev/null; then
+	message='wofi command not found. Run `sudo apt install wofi`'
+	print-error "$message"
+	notify-send -u critical "$message"
+	exit 2
+fi
+
+exec wofi "$@"
