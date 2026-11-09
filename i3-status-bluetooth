@@ -1,27 +1,64 @@
 #!/usr/bin/env bash
 # USAGE: i3-status-bluetooth
-# DESCRIPTION: i3blocks bluetooth block showing power state and connected devices
+# DESCRIPTION: i3blocks bluetooth block showing power state and connected devices; a left click opens sway-bluetooth-picker.
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+# The bar shows only stdout, so problems are also printed there to be seen at all.
+if ! command -v bluetoothctl >/dev/null; then
+    print-error "bluetoothctl not found, install it with: sudo apt install bluez"
+    echo "🔵 no bluetoothctl"
+    exit 0
+fi
 
-powered=$(bluetoothctl show 2>/dev/null | grep -c "Powered: yes")
+# ==============================================================================
+# CLICK
+# ==============================================================================
+# i3blocks sets BLOCK_BUTTON to 1 on a left click; setsid -f keeps the open menu from stalling this block.
+# No exit after launching: i3blocks shows this run's output, so the status below must still print or the block blanks.
+if ((BLOCK_BUTTON == 1)); then
+    setsid -f sway-bluetooth-picker > /dev/null 2>&1
+fi
 
-if [[ "$powered" -eq 0 ]]; then
+# ==============================================================================
+# STATUS
+# ==============================================================================
+if ! controller_info="$(bluetoothctl show 2>&1)"; then
+    print-error "bluetoothctl show failed ($controller_info); check that bluetooth.service is running"
+    echo "🔵 error"
+    exit 0
+fi
+
+# Powered: yes
+powered=0
+if grep -q "Powered: yes" <<< "$controller_info"; then
+    powered=1
+fi
+if ((powered == 0)); then
     echo "🔵 off"
     exit 0
 fi
 
-# `bluetoothctl devices Connected` is unreliable on bluez 5.72 - it returns
-# nearby BLE scan results instead of actually-connected devices. Check
-# connection status against the (small, stable) paired-devices list instead.
-names=""
+# As of bluez 5.72 `bluetoothctl devices Connected` also lists nearby BLE scan results, not just connected devices.
+# Checking each paired device instead keeps the list small and right.
+connected_names=()
+# Device 98:47:44:79:62:10 Soundcore Home
 while read -r _ mac name; do
-    [[ -z "$mac" ]] && continue
-    if bluetoothctl info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
-        names+="${names:+, }$name"
+    if [[ -z "$mac" ]]; then
+        continue
     fi
-done <<< "$(bluetoothctl devices Paired 2>/dev/null)"
+    # 	Connected: yes
+    if bluetoothctl info "$mac" | grep -q "Connected: yes"; then
+        connected_names+=("$name")
+    fi
+done < <(bluetoothctl devices Paired)
 
-if [[ -n "$names" ]]; then
-    echo "🔵 $names"
-else
+if ((${#connected_names[@]} == 0)); then
     echo "🔵"
+    exit 0
 fi
+
+# Soundcore Home, Keyboard
+joined_names="$(printf '%s, ' "${connected_names[@]}")"
+echo "🔵 ${joined_names%, }"
+
