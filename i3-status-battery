@@ -1,6 +1,102 @@
 #!/usr/bin/env bash
-# USAGE: i3-battery
-# DESCRIPTION: i3blocks battery block with emoji for charging state
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-/usr/share/i3blocks/battery | sed 's/ CHR/⚡/g; s/ DIS//g; 1s/^/🔋/; 2s/^/🔋/'
+# USAGE: i3-status-battery
+# DESCRIPTION: i3blocks battery block with emoji for charging state.
+
+# Reads sysfs instead of the stock i3blocks battery block, which prints nothing on "Not charging".
+# Color thresholds and urgency match it (vivien/i3blocks@37a77492 line 59)
+# https://github.com/vivien/i3blocks/blob/37a77492a1eead537892086c68c6de57b4bfa51c/scripts/battery#L59
+RED_BELOW_PERCENT=20
+ORANGE_BELOW_PERCENT=40
+YELLOW_BELOW_PERCENT=60
+GREEN_BELOW_PERCENT=85
+URGENT_BELOW_PERCENT=5
+# i3blocks marks a block urgent when its command exits 33.
+URGENT_EXIT_CODE=33
+# Warning icon thresholds are personal picks, nothing measured.
+WARNING_BELOW_PERCENT=60
+LOW_BELOW_PERCENT=30
+REALLY_LOW_BELOW_PERCENT=10
+
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+# i3blocks sets BLOCK_INSTANCE from the block's instance= line, which picks the battery number.
+battery_dir="/sys/class/power_supply/BAT${BLOCK_INSTANCE:-0}"
+if [[ ! -r "$battery_dir/capacity" ]]; then
+	echo "ERROR: no readable battery at $battery_dir; set instance= in i3blocks.conf to a BAT number that exists" 1>&2
+	exit 1
+fi
+
+
+# ==============================================================================
+# READ BATTERY
+# ==============================================================================
+percent="$(<"$battery_dir/capacity")"
+status="$(<"$battery_dir/status")"
+
+short_text="🔋${percent}%"
+if ((percent < REALLY_LOW_BELOW_PERCENT)); then
+	short_text+="‼️"
+elif ((percent < LOW_BELOW_PERCENT)); then
+	short_text+="❗"
+elif ((percent < WARNING_BELOW_PERCENT)); then
+	short_text+="⚠️"
+fi
+
+# Plugged in but not charging shows as "Not charging" or "Full", depending on the charge limit.
+if [[ "$status" == Charging ]]; then
+	short_text+="⚡"
+elif [[ "$status" != Discharging ]]; then
+	short_text+="🔌"
+fi
+
+
+# ==============================================================================
+# TIME LEFT
+# ==============================================================================
+time_left=""
+if [[ -r "$battery_dir/energy_now" && -r "$battery_dir/power_now" ]]; then
+	energy_now="$(<"$battery_dir/energy_now")"
+	energy_full="$(<"$battery_dir/energy_full")"
+	power_now="$(<"$battery_dir/power_now")"
+
+	num_minutes=""
+	if ((power_now > 0)) && [[ "$status" == Discharging ]]; then
+		num_minutes=$((energy_now * 60 / power_now))
+	elif ((power_now > 0)) && [[ "$status" == Charging ]]; then
+		num_minutes=$(((energy_full - energy_now) * 60 / power_now))
+	fi
+
+	if [[ -n "$num_minutes" ]]; then
+		printf -v time_left ' (%02d:%02d)' $((num_minutes / 60)) $((num_minutes % 60))
+	fi
+fi
+
+
+# ==============================================================================
+# OUTPUT
+# ==============================================================================
+# i3blocks reads full text, short text, then color, one per line.
+echo "${short_text}${time_left}"
+echo "$short_text"
+
+# Color and urgency only matter while running on battery.
+if [[ "$status" != Discharging ]]; then
+	exit 0
+fi
+
+if ((percent < RED_BELOW_PERCENT)); then
+	echo "#FF0000"
+elif ((percent < ORANGE_BELOW_PERCENT)); then
+	echo "#FFAE00"
+elif ((percent < YELLOW_BELOW_PERCENT)); then
+	echo "#FFF600"
+elif ((percent < GREEN_BELOW_PERCENT)); then
+	echo "#A8FF00"
+fi
+
+if ((percent < URGENT_BELOW_PERCENT)); then
+	exit "$URGENT_EXIT_CODE"
+fi
 exit 0
