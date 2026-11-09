@@ -27,11 +27,38 @@ case "$cmd" in
 		;;
 esac
 
-# Popup notification for volume
-notify-send \
-	-t 400 \
-	-u normal \
-	-h string:x-canonical-private-synchronous:volume \
-	"Volume (sink $sink)" \
-	"$(volume-info-pactl "$sink")"
+# ==============================================================================
+# NOTIFY
+# ==============================================================================
+# Volume: front-left: 22931 /  35% / -27.36 dB,   front-right: 22931 /  35% / -27.36 dB
+volume_percent="$(pactl get-sink-volume "$sink" | grep -o -m 1 '[0-9]*%' | head -1)"
+volume_percent="${volume_percent%\%}"
+
+# Mute: yes
+muted=0
+if pactl get-sink-mute "$sink" | grep -q "Mute: yes"; then
+	muted=1
+fi
+
+if ((muted)); then
+	title="🔇 Muted"
+elif ((volume_percent < 34)); then
+	title="🔈 Volume ${volume_percent}%"
+elif ((volume_percent < 67)); then
+	title="🔉 Volume ${volume_percent}%"
+else
+	title="🔊 Volume ${volume_percent}%"
+fi
+
+# [{"name": "bluez_output.98_47_44_79_62_10.1", "description": "Soundcore Space A40", ...}]
+sink_name="$(pactl get-default-sink)"
+device_name="$(pactl -f json list sinks | jq -r --arg name "$sink_name" '.[] | select(.name == $name) | .description')"
+
+notify_args=()
+notify_args+=(-t 400)
+notify_args+=(-u normal)
+notify_args+=(-h string:x-canonical-private-synchronous:volume)
+# dunst draws int:value as a progress bar; pactl allows volume past 100%, which the bar shows as full.
+notify_args+=(-h "int:value:$volume_percent")
+notify-send "${notify_args[@]}" "$title" "$device_name"
 
