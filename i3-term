@@ -6,7 +6,7 @@
 while [[ $# -ge 1 ]]; do
 	arg="$1" && shift
 	case "$arg" in
-		--name) name="$1" && shift;;
+		--title) title="$1" && shift;;
 	esac
 done
 
@@ -16,7 +16,7 @@ done
 # ==============================================================================
 if command -v ghostty &> /dev/null; then
 	term_cmd=(ghostty)
-	[[ -n "$name" ]] && term_cmd+=(--title="$name")
+	[[ -n "$title" ]] && term_cmd+=(--title="$title")
 	exec "${term_cmd[@]}"
 fi
 
@@ -26,7 +26,7 @@ fi
 # ==============================================================================
 if command -v alacritty &> /dev/null; then
 	term_cmd=(alacritty)
-	[[ -n "$name" ]] && term_cmd+=(--title "$name")
+	[[ -n "$title" ]] && term_cmd+=(--title "$title")
 	exec "${term_cmd[@]}"
 fi
 
@@ -41,7 +41,7 @@ if command -v gnome-terminal &> /dev/null; then
 
 	term_cmd=(gnome-terminal)
 	term_cmd+=(--hide-menubar)
-	[[ -n "$name" ]] && term_cmd+=(--title="$name")
+	[[ -n "$title" ]] && term_cmd+=(--title="$title")
 	exec "${term_cmd[@]}"
 fi
 
