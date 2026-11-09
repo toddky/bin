@@ -8,10 +8,18 @@ if ! (type brightnessctl >/dev/null 2>&1); then
 fi
 
 # Increase/decrease brightness
+brightness_change=""
 if [[ "$1" == "up" ]]; then
-	brightnessctl -q set +10%
+	brightness_change="+10%"
 elif [[ "$1" == "down" ]]; then
-	brightnessctl -q set 10%-
+	brightness_change="10%-"
+fi
+# Can't modify brightness: Permission denied
+# Writing the backlight needs the video group, so say how to join it instead of showing an unchanged level.
+if [[ -n "$brightness_change" ]] && ! output="$(brightnessctl -q set "$brightness_change" 2>&1)"; then
+	first_line="$(head -1 <<< "$output")"
+	notify-send -u critical "Brightness not changed" "$first_line. Run \`sudo usermod -aG video \$USER\` and log in again."
+	exit 1
 fi
 
 # Current brightness as a percentage
