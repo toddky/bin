@@ -1,0 +1,360 @@
+#!/usr/bin/env bash
+# USAGE: sway-bluetooth-picker [--discovered]
+# DESCRIPTION: wofi menu that connects, disconnects, scans for, and pairs Bluetooth devices, and turns Bluetooth on or off.
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+show_discovered=0
+while [[ $# -ge 1 ]]; do
+	arg="$1" && shift
+	case "$arg" in
+		--discovered) show_discovered=1;;
+		*) print-error "unknown argument: $arg"; echo "USAGE: sway-bluetooth-picker [--discovered]" 1>&2; exit 2;;
+	esac
+done
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+# A headset connect takes a few seconds; 15s is a guess that leaves room for a slow one.
+CONNECT_TIMEOUT_SECONDS=15
+# Pairing adds a key exchange on top of connecting; 20s is a guess.
+PAIR_TIMEOUT_SECONDS=20
+# 8s is a guess; as of 2026-11-09 a scan that long here finds 10 named devices nearby.
+SCAN_SECONDS=8
+# One wofi line in 0xProto 11 measures 35px, so 12 lines fit above the bar on a 1080p screen.
+MAX_MENU_LINES=12
+# Must match signal= on the [bluetooth] block in ~/.config/i3/i3blocks.conf.
+BAR_SIGNAL=12
+# 0.1s between size checks, up to 1s in all; guesses, since wofi's resize timing is not documented.
+MENU_SETTLE_INTERVAL_SECONDS=0.1
+MENU_SETTLE_ATTEMPTS=10
+
+# sway-wofi reports a missing wofi itself, so wofi is not checked here.
+declare -A tool_packages=([bluetoothctl]=bluez [notify-send]=libnotify-bin [swaymsg]=sway [jq]=jq)
+for tool in "${!tool_packages[@]}"; do
+	if ! command -v "$tool" >/dev/null; then
+		print-error "$tool not found, install it with: sudo apt install ${tool_packages[$tool]}"
+		exit 1
+	fi
+done
+
+if [[ -z "$WAYLAND_DISPLAY" ]]; then
+	print-error "wofi needs Wayland; run sway-bluetooth-picker from inside a sway session"
+	exit 1
+fi
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+# Launched from a bar click, where nobody sees stderr, so errors also pop up as a notification.
+function fail() {
+	local message="$1"
+	print-error "$message"
+	notify-send -u critical "Bluetooth" "$message"
+	exit 1
+}
+
+# device_icon audio-headset -> 🎧
+# device_icon unknown-thing -> 🔵
+function device_icon() {
+	local icon_name="$1"
+	case "$icon_name" in
+		audio-headset|audio-headphones) echo "🎧";;
+		audio-card) echo "🔊";;
+		input-keyboard) echo "⌨️";;
+		input-mouse|input-tablet) echo "🖱️";;
+		input-gaming) echo "🎮";;
+		phone) echo "📱";;
+		computer) echo "💻";;
+		*) echo "🔵";;
+	esac
+}
+
+# device_label "Soundcore Space A40" "$(bluetoothctl info <MAC>)" -> 🎧 Soundcore Space A40  🔋85%
+function device_label() {
+	local device_name="$1"
+	local device_info="$2"
+
+	# 	Icon: audio-headset
+	local icon_name
+	icon_name="$(sed -n 's/^\s*Icon: //p' <<< "$device_info")"
+	local label
+	label="$(device_icon "$icon_name") $device_name"
+
+	# 	Battery Percentage: 0x55 (85)
+	local battery_percent
+	battery_percent="$(sed -n 's/^\s*Battery Percentage: .*(\([0-9]*\))$/\1/p' <<< "$device_info")"
+	if [[ -n "$battery_percent" ]]; then
+		label+="  🔋${battery_percent}%"
+	fi
+	echo "$label"
+}
+
+function connect_device() {
+	local device_mac="$1"
+	local device_name="$2"
+	local output
+	output="$(timeout "$CONNECT_TIMEOUT_SECONDS" bluetoothctl connect "$device_mac" 2>&1)"
+	local exit_code=$?
+	if ((exit_code == 124)); then
+		fail "connecting to $device_name ($device_mac) timed out after ${CONNECT_TIMEOUT_SECONDS}s; check that it is on and in range"
+	fi
+	if ((exit_code != 0)); then
+		fail "could not connect to $device_name ($device_mac): $output"
+	fi
+	notify-send "Bluetooth" "🟢 Connected $device_name"
+}
+
+# Centers the menu on the pointer, then pulls it back inside the workspace when the pointer is near an edge or on the bar.
+function place_menu_at_pointer() {
+	swaymsg -q '[app_id="^wofi$"] move position mouse'
+
+	# wofi grows a moment after it appears (380x90, then 392x134), so fit it only once two reads agree.
+	local menu_rect=""
+	local previous_rect=""
+	local attempt
+	for ((attempt = 1; attempt <= MENU_SETTLE_ATTEMPTS; attempt++)); do
+		# {"x":5250,"y":983,"width":392,"height":134}
+		menu_rect="$(swaymsg -t get_tree | jq -c 'first(.. | objects | select(.app_id? == "wofi") | .rect)')"
+		if [[ -n "$menu_rect" && "$menu_rect" == "$previous_rect" ]]; then
+			break
+		fi
+		previous_rect="$menu_rect"
+		sleep "$MENU_SETTLE_INTERVAL_SECONDS"
+	done
+	if [[ -z "$menu_rect" ]]; then
+		return
+	fi
+
+	# A visible workspace's rect leaves out the bar, so fitting the menu inside it keeps the menu above the bar.
+	local workspace_rect
+	workspace_rect="$(swaymsg -t get_workspaces | jq -c --argjson menu "$menu_rect" '
+		($menu.x + $menu.width / 2) as $center_x
+		| first(.[] | select(.visible and .rect.x <= $center_x and $center_x < .rect.x + .rect.width) | .rect)')"
+	if [[ -z "$workspace_rect" ]]; then
+		return
+	fi
+
+	local position
+	position="$(jq -n -r --argjson menu "$menu_rect" --argjson area "$workspace_rect" '
+		([$menu.x, $area.x + $area.width - $menu.width] | min | [., $area.x] | max) as $x
+		| ([$menu.y, $area.y + $area.height - $menu.height] | min | [., $area.y] | max) as $y
+		| "\($x | floor) \($y | floor)"')"
+	swaymsg -q "[app_id=\"^wofi\$\"] move absolute position $position"
+}
+
+# wofi has no close-on-click-away option, so a click on another window, seen as a focus change, kills it.
+# The menu's own first focus event means its window exists, which is when it can be placed.
+function place_menu_and_close_on_click_away() {
+	local wofi_pid="$1"
+	local placed=0
+	local app_id
+	# {"change": "focus", "container": {"app_id": "com.mitchellh.ghostty", ...}}
+	swaymsg -m -r -t subscribe '["window"]' | jq --unbuffered -r 'select(.change == "focus") | .container.app_id // ""' | while read -r app_id; do
+		if [[ "$app_id" == wofi ]] && ((placed == 0)); then
+			place_menu_at_pointer
+			placed=1
+		fi
+		# Focus changes from before the menu appeared, or to the menu itself, are not a click away.
+		if [[ "$app_id" == wofi ]] || ((placed == 0)); then
+			continue
+		fi
+		kill "$wofi_pid" 2>/dev/null
+		break
+	done
+}
+
+# ==============================================================================
+# BUILD MENU
+# ==============================================================================
+if ! controller_info="$(bluetoothctl show 2>&1)"; then
+	fail "bluetoothctl show failed ($controller_info); check that bluetooth.service is running"
+fi
+# 	Powered: yes
+if ! grep -q "Powered:" <<< "$controller_info"; then
+	fail "no Bluetooth controller found; check rfkill list bluetooth and that bluetooth.service is running"
+fi
+powered=0
+if grep -q "Powered: yes" <<< "$controller_info"; then
+	powered=1
+fi
+
+# Parallel arrays, one entry per menu line, since wofi returns the picked line number.
+menu_labels=()
+menu_actions=()
+menu_macs=()
+menu_names=()
+
+# Device A4:77:58:49:E9:14 Soundcore Space A40
+while read -r _ mac name; do
+	if [[ -z "$mac" ]]; then
+		continue
+	fi
+	device_info="$(bluetoothctl info "$mac")"
+	label="$(device_label "$name" "$device_info")"
+
+	# 	Connected: yes
+	if grep -q "Connected: yes" <<< "$device_info"; then
+		menu_labels+=("🟢 $label")
+		menu_actions+=(disconnect)
+	else
+		menu_labels+=("⚫ $label")
+		menu_actions+=(connect)
+	fi
+	menu_macs+=("$mac")
+	menu_names+=("$name")
+done < <(bluetoothctl devices Paired)
+
+# bluez forgets scanned devices 30s after the scan (TemporaryTimeout in /etc/bluetooth/main.conf).
+# So a scan reruns this script right away to list them, and pairing fails if the pick comes later.
+if ((show_discovered)); then
+	# Device D0:4E:6D:2D:7C:0A June
+	while read -r _ mac name; do
+		if [[ -z "$mac" ]]; then
+			continue
+		fi
+		# Device 76:9B:B2:53:DF:01 76-9B-B2-53-DF-01
+		# Nameless devices, mostly BLE beacons, show their address as the name and cannot be told apart.
+		if [[ "$name" == "${mac//:/-}" ]]; then
+			continue
+		fi
+		device_info="$(bluetoothctl info "$mac")"
+		# 	Paired: yes
+		if grep -q "Paired: yes" <<< "$device_info"; then
+			continue
+		fi
+		menu_labels+=("➕ $(device_label "$name" "$device_info")")
+		menu_actions+=(pair)
+		menu_macs+=("$mac")
+		menu_names+=("$name")
+	done < <(bluetoothctl devices)
+fi
+
+menu_labels+=("🔄 Scan for devices")
+menu_actions+=(scan)
+menu_macs+=("")
+menu_names+=("")
+
+if ((powered)); then
+	menu_labels+=("⏻ Turn Bluetooth off")
+	menu_actions+=(power-off)
+else
+	menu_labels+=("⏻ Turn Bluetooth on")
+	menu_actions+=(power-on)
+fi
+menu_macs+=("")
+menu_names+=("")
+
+# ==============================================================================
+# PICK
+# ==============================================================================
+num_lines="${#menu_labels[@]}"
+if ((num_lines > MAX_MENU_LINES)); then
+	num_lines="$MAX_MENU_LINES"
+fi
+
+wofi_args=()
+wofi_args+=(--dmenu)
+# A normal window takes focus, so a click elsewhere shows up as a focus change; sway/config floats it at the pointer.
+wofi_args+=(--normal-window)
+# 380px fits a long headset name plus the battery reading in 0xProto 11 without truncating.
+wofi_args+=(--width 380)
+wofi_args+=(--lines "$num_lines")
+wofi_args+=(--hide-scroll)
+wofi_args+=(--define hide_search=true)
+wofi_args+=(--define single_click=true)
+# Prints the picked line's 0-based number instead of its text, and turns off wofi's reordering cache.
+wofi_args+=(--define dmenu-print_line_num=true)
+
+# Hovering another window must not take focus, or the watcher would close the menu on the way to it.
+# Turned back on to match focus_follows_mouse yes in ~/.config/i3/common.conf.
+choice_file="$(mktemp)"
+swaymsg -q focus_follows_mouse no
+trap 'swaymsg -q focus_follows_mouse yes; rm -f "$choice_file"' EXIT
+
+printf '%s\n' "${menu_labels[@]}" | sway-wofi "${wofi_args[@]}" > "$choice_file" &
+wofi_pid=$!
+place_menu_and_close_on_click_away "$wofi_pid" &
+watcher_pid=$!
+
+# Escape or a click on another window exits wofi with no output, which means the user cancelled.
+wait "$wofi_pid"
+# The watcher goes first, or it prints "Terminated" when its pipeline dies; its children are looked up before that.
+watcher_child_pids="$(pgrep -P "$watcher_pid")"
+kill "$watcher_pid" 2>/dev/null
+wait "$watcher_pid" 2>/dev/null
+for child_pid in $watcher_child_pids; do
+	kill "$child_pid" 2>/dev/null
+done
+
+index="$(<"$choice_file")"
+swaymsg -q focus_follows_mouse yes
+rm -f "$choice_file"
+trap - EXIT
+
+if [[ ! "$index" =~ ^[0-9]+$ ]] || ((index >= ${#menu_labels[@]})); then
+	exit 0
+fi
+
+action="${menu_actions[$index]}"
+mac="${menu_macs[$index]}"
+name="${menu_names[$index]}"
+
+# ==============================================================================
+# APPLY
+# ==============================================================================
+# Connecting, pairing, and scanning need the adapter on, so picking one while Bluetooth is off turns it on first.
+if [[ "$action" == connect || "$action" == pair || "$action" == scan ]] && ((powered == 0)); then
+	if ! output="$(bluetoothctl power on 2>&1)"; then
+		fail "could not turn Bluetooth on ($output); check rfkill list bluetooth"
+	fi
+fi
+
+case "$action" in
+	connect)
+		connect_device "$mac" "$name"
+		;;
+	disconnect)
+		if ! output="$(bluetoothctl disconnect "$mac" 2>&1)"; then
+			fail "could not disconnect $name ($mac): $output"
+		fi
+		notify-send "Bluetooth" "⚫ Disconnected $name"
+		;;
+	pair)
+		output="$(timeout "$PAIR_TIMEOUT_SECONDS" bluetoothctl pair "$mac" 2>&1)"
+		exit_code=$?
+		if ((exit_code == 124)); then
+			fail "pairing with $name ($mac) timed out after ${PAIR_TIMEOUT_SECONDS}s; put it in pairing mode and scan again"
+		fi
+		# Device 00:23:06:FC:CE:A4 not available
+		if grep -q "not available" <<< "$output"; then
+			fail "$name ($mac) dropped off the scan list (bluez keeps it 30s); scan again and pick it sooner"
+		fi
+		if ((exit_code != 0)); then
+			fail "could not pair with $name ($mac): $output"
+		fi
+		# Trusted devices reconnect on their own later without asking.
+		if ! output="$(bluetoothctl trust "$mac" 2>&1)"; then
+			fail "paired with $name ($mac) but could not trust it: $output; run bluetoothctl trust $mac"
+		fi
+		connect_device "$mac" "$name"
+		;;
+	scan)
+		notify-send -t "$((SCAN_SECONDS * 1000))" "Bluetooth" "🔄 Scanning for ${SCAN_SECONDS}s…"
+		if ! output="$(bluetoothctl --timeout "$SCAN_SECONDS" scan on 2>&1)"; then
+			fail "Bluetooth scan failed: $output"
+		fi
+		exec "${BASH_SOURCE[0]}" --discovered
+		;;
+	power-on|power-off)
+		state="${action#power-}"
+		if ! output="$(bluetoothctl power "$state" 2>&1)"; then
+			fail "could not turn Bluetooth $state ($output); check rfkill list bluetooth"
+		fi
+		;;
+esac
+
+# Refresh the bar now instead of waiting for the block's next interval.
+pkill --signal "SIGRTMIN+$BAR_SIGNAL" -x i3blocks
+exit 0
