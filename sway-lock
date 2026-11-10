@@ -18,21 +18,23 @@ function log() {
 	echo "$(date '+%F %T') $*" >> "$log_file"
 }
 
-function preparing_for_sleep() {
-	local busctl_args=() property
+function wait_until_awake() {
+	local busctl_args=()
 	busctl_args+=(org.freedesktop.login1 /org/freedesktop/login1)
 	busctl_args+=(org.freedesktop.login1.Manager PreparingForSleep)
-	property="$(busctl get-property "${busctl_args[@]}")"
-	[[ "$property" == "b true" ]]
-}
-
-function wait_until_awake() {
-	while preparing_for_sleep; do
+	# 1s poll is a guess; the flag only matters for the few seconds around a suspend or resume.
+	while [[ "$(busctl get-property "${busctl_args[@]}")" == "b true" ]]; do
 		sleep 1
 	done
 }
 
 log "started by $(ps -o comm= -p "$PPID")"
+
+# Sway allows one lock at a time, so a second swaylock fails and its cleanup would undo the first one's.
+if pgrep -u "$USER" -x swaylock > /dev/null; then
+	log "swaylock already running, nothing to do"
+	exit 0
+fi
 
 
 # ==============================================================================
@@ -46,7 +48,9 @@ killall -SIGUSR1 dunst
 # ==============================================================================
 # LOCK SCREEN
 # ==============================================================================
+# --daemonize returns once the screen is locked, so swayidle -w before-sleep can let the suspend go ahead.
 swaylock_args=()
+swaylock_args+=(--daemonize)
 swaylock_args+=(--show-failed-attempts)
 swaylock_args+=(--ignore-empty-password)
 swaylock_args+=(--color=101030)
@@ -54,14 +58,22 @@ if [[ -f "$background_file" ]]; then
 	swaylock_args+=(--image="$background_file")
 	swaylock_args+=(--tiling)
 fi
-swaylock "${swaylock_args[@]}" &
-swaylock_pid=$!
+if ! swaylock "${swaylock_args[@]}"; then
+	log "ERROR: swaylock failed to lock; run swaylock by hand to see why"
+	killall -SIGUSR2 dunst
+	exit 1
+fi
+swaylock_pid="$(pgrep -n -u "$USER" -x swaylock)"
+if [[ -z "$swaylock_pid" ]]; then
+	log "ERROR: swaylock locked but its pid was not found; fingerprint unlock is off for this lock"
+	exit 1
+fi
 
 
 # ==============================================================================
 # FINGERPRINT UNLOCK
 # ==============================================================================
-# The reader firmware gets stuck when a suspend hits while fprintd has it open (~/FINGERPRINTS.md, Nov 9 2026).
+# The reader firmware gets stuck when a suspend hits while fprintd has it open.
 # So never open it while logind is preparing for sleep, and let go of it as soon as a suspend starts.
 has_fingerprint=0
 if command -v fprintd-verify > /dev/null; then
@@ -72,33 +84,37 @@ if ((has_fingerprint)); then
 	# Killing fprintd-verify on PrepareForSleep(true) also ends its systemd-inhibit, so the suspend can go ahead.
 	exec {sleep_signal_fd}< <(gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1)
 	sleep_monitor_pid=$!
-	(while read -r line; do
-		[[ "$line" == *"PrepareForSleep (true,)"* ]] || continue
-		log "suspend starting, releasing fingerprint reader"
-		pkill -u "$USER" -x fprintd-verify
-	done <&"$sleep_signal_fd") &
+	(
+		while read -r line; do
+			[[ "$line" == *"PrepareForSleep (true,)"* ]] || continue
+			log "suspend starting, releasing fingerprint reader"
+			pkill -u "$USER" -x fprintd-verify
+		done <&"$sleep_signal_fd"
+	) &
 	sleep_watch_pid=$!
 	exec {sleep_signal_fd}<&-
 
-	(wait_until_awake
-	if ! "$script_dir/fingerprint-check" > /dev/null 2>&1; then
-		log "fingerprint reader stuck, password only (fix: sudo ~/bin/fingerprint-reset)"
-		exit 0
-	fi
-	# A delay inhibitor gives the sleep watcher time to release the reader before the suspend proceeds.
-	inhibit_args=()
-	inhibit_args+=(--what=sleep --mode=delay)
-	inhibit_args+=(--who=sway-lock --why="Release the fingerprint reader before suspend")
-	while kill -0 "$swaylock_pid" 2>/dev/null; do
+	(
 		wait_until_awake
-		if systemd-inhibit "${inhibit_args[@]}" fprintd-verify "$USER"; then
-			log "fingerprint matched"
-			"$script_dir/sway-unlock" "$swaylock_pid"
-			break
+		if ! "$script_dir/fingerprint-check" > /dev/null 2>&1; then
+			log "fingerprint reader stuck, password only (fix: sudo ~/bin/fingerprint-reset)"
+			exit 0
 		fi
-		# Backoff so a failing or instant verify can never busy-loop.
-		sleep 1
-	done) &
+		# A delay inhibitor gives the sleep watcher time to release the reader before the suspend proceeds.
+		inhibit_args=()
+		inhibit_args+=(--what=sleep --mode=delay)
+		inhibit_args+=(--who=sway-lock --why="Release the fingerprint reader before suspend")
+		while kill -0 "$swaylock_pid" 2>/dev/null; do
+			wait_until_awake
+			if systemd-inhibit "${inhibit_args[@]}" fprintd-verify "$USER"; then
+				log "fingerprint matched"
+				"$script_dir/sway-unlock" "$swaylock_pid"
+				break
+			fi
+			# Backoff so a failing or instant verify can never busy-loop.
+			sleep 1
+		done
+	) &
 	fingerprint_loop_pid=$!
 fi
 
@@ -106,17 +122,17 @@ fi
 # ==============================================================================
 # WAIT FOR UNLOCK
 # ==============================================================================
-# Wait for swaylock only: on a password unlock fprintd-verify blocks forever holding the device claim.
-# The kills below release it, else later fprintd calls fail with "already claimed" (Jul 31 2026, ~/FREEZE.md).
-wait "$swaylock_pid"
-log "swaylock exited with $?"
-
-if ((has_fingerprint)); then
-	kill "$fingerprint_loop_pid" 2>/dev/null
-	pkill -u "$USER" -x fprintd-verify 2>/dev/null
-	kill "$sleep_watch_pid" "$sleep_monitor_pid" 2>/dev/null
-fi
-
-# https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
-killall -SIGUSR2 dunst
+# Runs in the background so sway-lock exits as soon as the screen is locked.
+# On a password unlock fprintd-verify blocks forever holding the device claim, so it must be killed here.
+(
+	tail --pid="$swaylock_pid" -f /dev/null
+	log "swaylock exited"
+	if ((has_fingerprint)); then
+		kill "$fingerprint_loop_pid" 2>/dev/null
+		pkill -u "$USER" -x fprintd-verify 2>/dev/null
+		kill "$sleep_watch_pid" "$sleep_monitor_pid" 2>/dev/null
+	fi
+	# https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
+	killall -SIGUSR2 dunst
+) &
 
