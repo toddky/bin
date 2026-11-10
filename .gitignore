@@ -106,6 +106,7 @@
 !/i3-*
 !/i3blocks-*
 !/sway-*
+!/waybar-*
 
 # tmux
 !/t
