@@ -1,44 +1,74 @@
 #!/usr/bin/env bash
-# Reset the Synaptics fingerprint reader (06cb:00f9) without a cold shutdown.
-# Needs root: sudo ,fp-reset
-set -euo pipefail
+# USAGE: sudo fingerprint-reset
+# DESCRIPTION: Reset the Synaptics fingerprint reader (06cb:00f9) without a cold shutdown.
 
-if [[ $EUID -ne 0 ]]; then
-	echo "run as root: sudo ,fp-reset" >&2
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+vendor_id="06cb"
+product_id="00f9"
+
+if ((EUID != 0)); then
+	echo "ERROR: run as root: sudo fingerprint-reset" 1>&2
 	exit 1
 fi
 
-sysdev=""
-for d in /sys/bus/usb/devices/*; do
-	[[ -f "$d/idVendor" ]] || continue
-	if [[ "$(cat "$d/idVendor")" == "06cb" && "$(cat "$d/idProduct")" == "00f9" ]]; then
-		sysdev="$d"
-		break
-	fi
+
+# ==============================================================================
+# FIND READER
+# ==============================================================================
+device_dir=""
+for candidate_dir in /sys/bus/usb/devices/*; do
+	[[ -f "$candidate_dir/idVendor" ]] || continue
+	[[ "$(cat "$candidate_dir/idVendor")" == "$vendor_id" ]] || continue
+	[[ "$(cat "$candidate_dir/idProduct")" == "$product_id" ]] || continue
+	device_dir="$candidate_dir"
+	break
 done
-[[ -n "$sysdev" ]] || { echo "reader 06cb:00f9 not found on USB bus" >&2; exit 1; }
+if [[ -z "$device_dir" ]]; then
+	echo "ERROR: reader $vendor_id:$product_id not found on the USB bus; check lsusb" 1>&2
+	exit 1
+fi
+echo "found reader at $device_dir"
 
-name=$(basename "$sysdev")
-echo "found reader at $sysdev"
 
-# Step 1: ioctl USBDEVFS_RESET (like a soft replug)
-bus=$(printf '%03d' "$(cat "$sysdev/busnum")")
-dev=$(printf '%03d' "$(cat "$sysdev/devnum")")
-python3 - "/dev/bus/usb/$bus/$dev" <<'EOF'
+# ==============================================================================
+# RESET READER
+# ==============================================================================
+bus_num="$(printf '%03d' "$(cat "$device_dir/busnum")")"
+device_num="$(printf '%03d' "$(cat "$device_dir/devnum")")"
+# 0x5514 is USBDEVFS_RESET: a soft replug.
+if ! python3 - "/dev/bus/usb/$bus_num/$device_num" <<'EOF'
 import fcntl, os, sys
 fd = os.open(sys.argv[1], os.O_WRONLY)
 try:
-    fcntl.ioctl(fd, 0x5514, 0)  # USBDEVFS_RESET
+    fcntl.ioctl(fd, 0x5514, 0)
     print("USBDEVFS_RESET ok")
 finally:
     os.close(fd)
 EOF
+then
+	echo "ERROR: USBDEVFS_RESET failed for /dev/bus/usb/$bus_num/$device_num; power off for ~30s to recover" 1>&2
+	exit 1
+fi
 
-# Step 2: deauthorize/reauthorize = full re-enumeration (harder reset)
-echo 0 > "$sysdev/authorized"
+# Deauthorize/reauthorize forces a full re-enumeration, which clears more than the ioctl alone.
+if ! echo 0 > "$device_dir/authorized"; then
+	echo "ERROR: cannot deauthorize $device_dir; check that you ran this with sudo" 1>&2
+	exit 1
+fi
+# 1s off and 2s to re-enumerate are guesses that have worked since 2026-08-02, not measured minimums.
 sleep 1
-echo 1 > "$sysdev/authorized"
+if ! echo 1 > "$device_dir/authorized"; then
+	echo "ERROR: cannot reauthorize $device_dir; replug or reboot to recover" 1>&2
+	exit 1
+fi
 sleep 2
-echo "re-enumerated $name"
+echo "re-enumerated $(basename "$device_dir")"
 
-echo "--- verify (as your user, not root): fprintd-list \$USER ---"
+# fprintd caches the init failure; stopping it makes the next client D-Bus-activate a fresh probe.
+if ! systemctl stop fprintd; then
+	echo "WARNING: cannot stop fprintd; if fingerprint-check still says STUCK, run: sudo systemctl restart fprintd" 1>&2
+fi
+echo "verify as your user, not root: fingerprint-check"
+
