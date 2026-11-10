@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Pause media
+,media pause
+
+# Pause Dunst notifications
+# https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
+killall -SIGUSR1 dunst
+
+# nofork so $! below is the real lock process, not a forked-away launcher.
+i3lock_args=(--nofork)
+i3lock_args+=(--show-failed-attempts)
+i3lock_args+=(--ignore-empty-password)
+i3lock_args+=(--color=101030)
+
+# Check background image
+background="$HOME/.config/i3/background.png"
+if [[ -f "$background" ]]; then
+	i3lock_args+=(--image="$background")
+	i3lock_args+=(--tiling)
+fi
+i3lock "${i3lock_args[@]}" &
+i3lock_pid=$!
+
+# Killing i3lock unlocks an X session.
+"$script_dir/fingerprint-unlock" "$i3lock_pid" kill "$i3lock_pid" >> "$HOME/i3_lock_debug.log" 2>&1 &
+
+wait "$i3lock_pid"
+
+# Resume Dunst notifications
+# https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
+killall -SIGUSR2 dunst
+

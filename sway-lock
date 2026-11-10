@@ -18,16 +18,6 @@ function log() {
 	echo "$(date '+%F %T') $*" >> "$log_file"
 }
 
-function wait_until_awake() {
-	local busctl_args=()
-	busctl_args+=(org.freedesktop.login1 /org/freedesktop/login1)
-	busctl_args+=(org.freedesktop.login1.Manager PreparingForSleep)
-	# 1s poll is a guess; the flag only matters for the few seconds around a suspend or resume.
-	while [[ "$(busctl get-property "${busctl_args[@]}")" == "b true" ]]; do
-		sleep 1
-	done
-}
-
 log "started by $(ps -o comm= -p "$PPID")"
 
 # Sway allows one lock at a time, so a second swaylock fails and its cleanup would undo the first one's.
@@ -73,65 +63,16 @@ fi
 # ==============================================================================
 # FINGERPRINT UNLOCK
 # ==============================================================================
-# The reader firmware gets stuck when a suspend hits while fprintd has it open.
-# So never open it while logind is preparing for sleep, and let go of it as soon as a suspend starts.
-has_fingerprint=0
-if command -v fprintd-verify > /dev/null; then
-	has_fingerprint=1
-fi
-
-if ((has_fingerprint)); then
-	# Killing fprintd-verify on PrepareForSleep(true) also ends its systemd-inhibit, so the suspend can go ahead.
-	exec {sleep_signal_fd}< <(gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1)
-	sleep_monitor_pid=$!
-	(
-		while read -r line; do
-			[[ "$line" == *"PrepareForSleep (true,)"* ]] || continue
-			log "suspend starting, releasing fingerprint reader"
-			pkill -u "$USER" -x fprintd-verify
-		done <&"$sleep_signal_fd"
-	) &
-	sleep_watch_pid=$!
-	exec {sleep_signal_fd}<&-
-
-	(
-		wait_until_awake
-		if ! "$script_dir/fingerprint-check" > /dev/null 2>&1; then
-			log "fingerprint reader stuck, password only (fix: sudo ~/bin/fingerprint-reset)"
-			exit 0
-		fi
-		# A delay inhibitor gives the sleep watcher time to release the reader before the suspend proceeds.
-		inhibit_args=()
-		inhibit_args+=(--what=sleep --mode=delay)
-		inhibit_args+=(--who=sway-lock --why="Release the fingerprint reader before suspend")
-		while kill -0 "$swaylock_pid" 2>/dev/null; do
-			wait_until_awake
-			if systemd-inhibit "${inhibit_args[@]}" fprintd-verify "$USER"; then
-				log "fingerprint matched"
-				"$script_dir/sway-unlock" "$swaylock_pid"
-				break
-			fi
-			# Backoff so a failing or instant verify can never busy-loop.
-			sleep 1
-		done
-	) &
-	fingerprint_loop_pid=$!
-fi
+"$script_dir/fingerprint-unlock" "$swaylock_pid" "$script_dir/sway-unlock" "$swaylock_pid" >> "$log_file" 2>&1 &
 
 
 # ==============================================================================
 # WAIT FOR UNLOCK
 # ==============================================================================
 # Runs in the background so sway-lock exits as soon as the screen is locked.
-# On a password unlock fprintd-verify blocks forever holding the device claim, so it must be killed here.
 (
 	tail --pid="$swaylock_pid" -f /dev/null
 	log "swaylock exited"
-	if ((has_fingerprint)); then
-		kill "$fingerprint_loop_pid" 2>/dev/null
-		pkill -u "$USER" -x fprintd-verify 2>/dev/null
-		kill "$sleep_watch_pid" "$sleep_monitor_pid" 2>/dev/null
-	fi
 	# https://wiki.archlinux.org/title/Dunst#Disable_dunst_temporarily
 	killall -SIGUSR2 dunst
 ) &

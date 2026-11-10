@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# USAGE: fingerprint-unlock <locker_pid> <unlock_command> [unlock_args...]
+# DESCRIPTION: Run the unlock command on a fingerprint match; exits when the locker exits.
+
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+if [[ "${1:-}" == "--help" ]]; then
+	sed -n '2,3p' "$0"
+	exit 0
+fi
+if (($# < 2)); then
+	echo "ERROR: expected a locker pid and an unlock command; see: fingerprint-unlock --help" 1>&2
+	exit 1
+fi
+locker_pid="$1" && shift
+unlock_command=("$@")
+
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# xss-lock hands its sleep delay lock to the locker; holding a copy here would stall every suspend.
+if [[ -n "${XSS_SLEEP_LOCK_FD:-}" ]]; then
+	exec {XSS_SLEEP_LOCK_FD}<&-
+fi
+
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+function log() {
+	echo "$(date '+%F %T') $*"
+}
+
+function wait_until_awake() {
+	local busctl_args=()
+	busctl_args+=(org.freedesktop.login1 /org/freedesktop/login1)
+	busctl_args+=(org.freedesktop.login1.Manager PreparingForSleep)
+	# 1s poll is a guess; the flag only matters for the few seconds around a suspend or resume.
+	while [[ "$(busctl get-property "${busctl_args[@]}")" == "b true" ]]; do
+		sleep 1
+	done
+}
+
+if ! command -v fprintd-verify > /dev/null; then
+	log "fprintd-verify not installed, password only (install the fprintd package)"
+	exit 0
+fi
+if ! kill -0 "$locker_pid" 2>/dev/null; then
+	log "ERROR: locker pid $locker_pid is not running; pass the pid of the running locker"
+	exit 1
+fi
+
+
+# ==============================================================================
+# WATCH FOR SUSPEND
+# ==============================================================================
+# The reader firmware gets stuck when a suspend hits while fprintd has it open.
+# Killing fprintd-verify on PrepareForSleep(true) also ends its systemd-inhibit, so the suspend can go ahead.
+exec {sleep_signal_fd}< <(gdbus monitor --system --dest org.freedesktop.login1 --object-path /org/freedesktop/login1)
+sleep_monitor_pid=$!
+(
+	while read -r line; do
+		[[ "$line" == *"PrepareForSleep (true,)"* ]] || continue
+		log "suspend starting, releasing fingerprint reader"
+		pkill -u "$USER" -x fprintd-verify
+	done <&"$sleep_signal_fd"
+) &
+sleep_watch_pid=$!
+exec {sleep_signal_fd}<&-
+
+
+# ==============================================================================
+# VERIFY
+# ==============================================================================
+(
+	wait_until_awake
+	if ! "$script_dir/fingerprint-check" > /dev/null 2>&1; then
+		log "fingerprint reader stuck, password only (fix: sudo ~/bin/fingerprint-reset)"
+		exit 0
+	fi
+	# A delay inhibitor gives the sleep watcher time to release the reader before the suspend proceeds.
+	inhibit_args=()
+	inhibit_args+=(--what=sleep --mode=delay)
+	inhibit_args+=(--who=fingerprint-unlock --why="Release the fingerprint reader before suspend")
+	while kill -0 "$locker_pid" 2>/dev/null; do
+		wait_until_awake
+		if systemd-inhibit "${inhibit_args[@]}" fprintd-verify "$USER"; then
+			log "fingerprint matched"
+			if ! "${unlock_command[@]}"; then
+				log "ERROR: unlock command failed: ${unlock_command[*]}; unlock with your password"
+			fi
+			break
+		fi
+		# Backoff so a failing or instant verify can never busy-loop.
+		sleep 1
+	done
+) &
+verify_loop_pid=$!
+
+
+# ==============================================================================
+# WAIT FOR LOCKER
+# ==============================================================================
+# On a password unlock fprintd-verify blocks forever holding the device claim, so it must be killed here.
+tail --pid="$locker_pid" -f /dev/null
+kill "$verify_loop_pid" 2>/dev/null
+pkill -u "$USER" -x fprintd-verify 2>/dev/null
+kill "$sleep_watch_pid" "$sleep_monitor_pid" 2>/dev/null
