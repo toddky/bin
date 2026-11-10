@@ -263,6 +263,21 @@ A command-line tool that copies finished reports to a shared directory.
 ## Usage
 ```
 
+### CR-A16: No Private References
+A violation is a comment, help text, or message that points the reader to a file only the author can open, such as a personal notes file (`~/TODO.md`), a local scratch path, or a private doc. The rule is followed when the comment states the reason itself, or links something every reader of the repo can open (CR-A7). Code with no such references follows the rule. Why: other readers hit a dead end, and the note can move or vanish without the code changing.
+
+Bad:
+```bash
+# See ~/TODO.md for why this sleeps.
+sleep 5
+```
+
+Good:
+```bash
+# NFS dentry cache can hide a lock made on another host; 5s is the observed max staleness.
+sleep 5
+```
+
 ## CR-B: Formatting and readability
 
 ### CR-B1: No Golfing
