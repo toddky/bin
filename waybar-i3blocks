@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# USAGE: waybar-i3blocks <command> [args...]
+# DESCRIPTION: Run an i3blocks block script and print its output as Waybar custom-module JSON, keeping the block's color and urgency.
+# The same scripts then feed i3blocks under i3 and Waybar under sway without changes.
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+if (($# == 0)); then
+	echo "USAGE: waybar-i3blocks <command> [args...]" 1>&2
+	exit 1
+fi
+
+if ! command -v jq >/dev/null; then
+	echo '{"text":"no jq","tooltip":"install it with: sudo apt install jq"}'
+	exit 0
+fi
+
+# A block whose script is missing hides itself, like the [vpn] block in i3blocks.conf.
+if ! command -v "$1" >/dev/null; then
+	echo '{"text":""}'
+	exit 0
+fi
+
+# i3blocks marks a block urgent when its command exits 33.
+URGENT_EXIT_CODE=33
+
+
+# ==============================================================================
+# RUN
+# ==============================================================================
+output="$("$@")"
+exit_code=$?
+
+# i3blocks reads full text, short text, then color, one per line.
+# 🔋71% (03:00)
+# 🔋71%
+# #A8FF00
+full_text=""
+short_text=""
+color=""
+{
+	IFS= read -r full_text
+	IFS= read -r short_text
+	IFS= read -r color
+} <<< "$output"
+
+
+# ==============================================================================
+# OUTPUT
+# ==============================================================================
+# Waybar renders the text as pango markup, so escape it before adding a color span.
+text="${full_text//&/&amp;}"
+text="${text//</&lt;}"
+text="${text//>/&gt;}"
+if [[ "$color" =~ ^#[0-9A-Fa-f]{6}$ ]]; then
+	text="<span color='$color'>$text</span>"
+fi
+
+class=""
+if ((exit_code == URGENT_EXIT_CODE)); then
+	class="urgent"
+fi
+
+jq -cn --arg text "$text" --arg tooltip "$short_text" --arg class "$class" \
+	'{text: $text, tooltip: $tooltip, class: $class}'
