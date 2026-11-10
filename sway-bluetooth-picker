@@ -24,7 +24,8 @@ PAIR_TIMEOUT_SECONDS=20
 SCAN_SECONDS=8
 # One wofi line in 0xProto 11 measures 35px, so 12 lines fit above the bar on a 1080p screen.
 MAX_MENU_LINES=12
-# Must match signal= on the [bluetooth] block in ~/.config/i3/i3blocks.conf.
+# Must match signal= on the [bluetooth] block in ~/.config/i3/i3blocks.conf,
+# and "signal" on custom/bluetooth in ~/.config/i3/sway/waybar/config.jsonc.
 BAR_SIGNAL=12
 # 0.1s between size checks, up to 1s in all; guesses, since wofi's resize timing is not documented.
 MENU_SETTLE_INTERVAL_SECONDS=0.1
@@ -356,5 +357,7 @@ case "$action" in
 esac
 
 # Refresh the bar now instead of waiting for the block's next interval.
+# Waybar is the bar under sway; i3blocks is checked too in case swaybar is back.
+pkill --signal "SIGRTMIN+$BAR_SIGNAL" -x waybar
 pkill --signal "SIGRTMIN+$BAR_SIGNAL" -x i3blocks
 exit 0
