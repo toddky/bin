@@ -62,7 +62,7 @@ Don't hedge with "it appears that", "it seems like", or "it would seem". If you'
 Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". It's a classic LLM tell. The same goes for a trailing "and" clause that adds emphasis but no information: not "Rerun the test and see whether the failure comes back", but "Rerun the test".
 
 ### HM-B9: No AI Vocabulary
-Don't use the words that mark text as AI-written: delve, crucial, pivotal, underscore, showcase, foster, garner, intricate, interplay, enduring, vibrant, testament, tapestry, and "landscape" for anything that isn't land. Use the plain word: not "this underscores a crucial gap", but "this shows a gap".
+Don't use the words that mark text as AI-written: delve, crucial, pivotal, underscore, showcase, foster, garner, intricate, interplay, enduring, vibrant, testament, tapestry, wedged, and "landscape" for anything that isn't land. Use the plain word: not "this underscores a crucial gap", but "this shows a gap", and not "the reader is wedged", but "the reader is stuck".
 
 ### HM-B10: Say Is
 Say "is" or "has". Not "the script serves as the entry point" or "the dashboard boasts three views", but "the script is the entry point" and "the dashboard has three views".
