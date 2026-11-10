@@ -80,6 +80,27 @@ function handle_request() {
   exit 124
   ```
 
+- When only pass or fail matters, test the failure with `if !`, handle it first, and let the pass case fall through. Capture output in the same test with `if ! output="$(cmd)"`:
+
+  ```bash
+  # Good: failure first, no exit code variable, one exit per path
+  if ! repo_dir="$(git rev-parse --show-toplevel 2>&1)"; then
+      echo "ERROR: not inside a git repo: $repo_dir" 1>&2
+      exit 1
+  fi
+  echo "repo: $repo_dir"
+
+  # Bad: pass case first, so the failure handling sits at the bottom with its own exit
+  repo_dir="$(git rev-parse --show-toplevel 2>&1)"
+  exit_code=$?
+  if ((exit_code == 0)); then
+      echo "repo: $repo_dir"
+      exit 0
+  fi
+  echo "ERROR: not inside a git repo: $repo_dir" 1>&2
+  exit 1
+  ```
+
 ## Boolean Flags
 
 Use integer flags checked with `(( ))`, not `true`/`false` strings.
@@ -319,6 +340,22 @@ sed "${sed_args[@]}"
 sed 's/^ *//' | sed 's/  \+v[0-9].*//'
 ```
 
+## No Inline Interpreters
+
+Don't embed a Python, Perl, or Ruby heredoc in a Bash script when a command-line tool does the same job. Look for the tool first, such as `jq` for JSON. If no tool exists, write the logic as its own script in that language and call it.
+
+```bash
+# Good
+version="$(jq -r .version "$package_json")"
+
+# Bad
+version="$(python3 - "$package_json" <<'EOF'
+import json, sys
+print(json.load(open(sys.argv[1]))["version"])
+EOF
+)"
+```
+
 ## Prefer Directory Arguments Over Subshell cd
 
 Many tools take the target directory as an argument. Use it instead of wrapping the call in a `(cd "$dir" && ...)` subshell. The subshell exists only to keep the caller's cwd unchanged, which the flag does for free.
@@ -355,6 +392,22 @@ When a command genuinely needs a changed cwd, `umask`, or other process state th
 umask 077
 cd "$build_dir"
 ./configure && make
+```
+
+## Background Subshells
+
+Put the `(` of a background subshell on its own line, indent the body one level, and put `) &` on its own line. The reader then sees at a glance that the whole block runs in the background.
+
+```bash
+# Good
+(
+    sleep "$timeout_sec"
+    kill "$job_pid" 2>/dev/null
+) &
+
+# Bad: the ( and ) & hide at the ends of the first and last lines
+(sleep "$timeout_sec"
+kill "$job_pid" 2>/dev/null) &
 ```
 
 ## Paths and Environment
