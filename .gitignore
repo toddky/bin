@@ -57,6 +57,7 @@
 !/du*
 !/fz*
 !/find*
+!/fingerprint-*
 !/format-*
 /fzf
 /fzf.git
