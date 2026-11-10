@@ -2,6 +2,9 @@
 /*
 !/.gitignore
 !/.todd
+!/.claude
+/.claude/*
+!/.claude/skills
 !/README.md
 !/,*
 
