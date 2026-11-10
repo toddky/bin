@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# USAGE: i3-gather [WORKSPACE]
+# DESCRIPTION: Move every workspace onto the primary output, switch to
+# WORKSPACE (default 2), and focus a terminal window on it (i3 + sway).
+# Sway has no "primary output" concept; like i3-focus-primary, use the
+# leftmost active output (x=0) there.
+
+# ==============================================================================
+# ENVIRONMENT
+# ==============================================================================
+target_workspace="${1:-2}"
+
+msg_bin=i3-msg
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	msg_bin=swaymsg
+fi
+
+# Sway reports Wayland-native terminals by app_id and XWayland ones by class.
+terminal_regex='^(com\.mitchellh\.ghostty|Alacritty|kitty|Gnome-terminal|org\.gnome\.Terminal)$'
+
+
+# ==============================================================================
+# PRIMARY OUTPUT
+# ==============================================================================
+primary_filter='[.[] | select(.active and .primary)][0].name // empty'
+if [[ -n "$WAYLAND_DISPLAY" ]]; then
+	primary_filter='[.[] | select(.active)] | sort_by(.rect.x)[0].name // empty'
+fi
+
+primary_output="$("$msg_bin" -t get_outputs | jq -r "$primary_filter")"
+if [[ -z "$primary_output" ]]; then
+	echo "ERROR: $msg_bin found no primary output" 1>&2
+	exit 1
+fi
+
+
+# ==============================================================================
+# MOVE WORKSPACES
+# ==============================================================================
+# One IPC call with every move chained, so the screens only redraw once.
+commands=()
+while IFS= read -r workspace_name; do
+	commands+=("workspace --no-auto-back-and-forth \"$workspace_name\"; move workspace to output \"$primary_output\"")
+done < <("$msg_bin" -t get_workspaces | jq -r --arg output "$primary_output" '.[] | select(.output != $output) | .name')
+
+commands+=("workspace --no-auto-back-and-forth \"$target_workspace\"")
+
+joined_commands="$(printf '%s; ' "${commands[@]}")"
+"$msg_bin" "$joined_commands" > /dev/null
+
+
+# ==============================================================================
+# FOCUS TERMINAL
+# ==============================================================================
+# Prefer the terminal that last had focus on the workspace: walk each
+# container's focus stack, most recent first.
+read -r -d '' terminal_filter <<'EOF'
+def leaves: if (.nodes + .floating_nodes) == [] then . else
+	(.focus as $order | (.nodes + .floating_nodes) | sort_by(.id as $id | $order | index($id)) | .[] | leaves) end;
+.. | objects | select(.type? == "workspace" and .name == $workspace)
+| [leaves | select(((.app_id // .window_properties.class? // "") | test($regex)))][0].id // empty
+EOF
+
+terminal_id="$("$msg_bin" -t get_tree | jq -r --arg workspace "$target_workspace" --arg regex "$terminal_regex" "$terminal_filter")"
+if [[ -z "$terminal_id" ]]; then
+	exit 0
+fi
+
+"$msg_bin" "[con_id=$terminal_id] focus" > /dev/null
+
