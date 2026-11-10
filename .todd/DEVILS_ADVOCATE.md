@@ -78,6 +78,8 @@ Tags such as (CR-E4) point to the matching rule in CODE_REVIEW.md in this direct
 16. **Loops between automated parts:** If its output can start another run of itself, directly or through another system such as a retry, a webhook, or a job that queues another job, say what stops the loop and what each round costs.
 17. **Private data:** For data only some users may see, check every path that can return it, such as search results, caches, exports, notifications, and counts, not just the main page. Check that access ends when someone loses it, and that access is checked when the data is read, not only when it was saved.
 18. **State between runs:** If it keeps a file, table, cache, or memory from one run to the next, ask what limits its size and age (CR-F16), who can read it later (item 17), and how someone resets it by hand when an entry goes bad.
+    If it saves what the user typed or ran, such as a command line, a URL, or an argument list, check whether a password or token can end up in the saved copy, and whether that file can be committed, synced, or shared.
+    A file kept private only by its name or a `.gitignore` entry, such as `settings.local.json`, is one `git add -A` away from public. Pass secrets by reference, such as an environment variable name or a file path, never by value (CR-I1).
 
 ## Output
 
