@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # USAGE: fingerprint-check
-# DESCRIPTION: Report whether the fingerprint reader is usable (exit 0) or wedged (exit 1).
+# DESCRIPTION: Report whether the fingerprint reader is usable (exit 0) or stuck (exit 1).
 
 # ==============================================================================
 # ARGUMENTS
@@ -17,17 +17,14 @@ done
 # ==============================================================================
 # MAIN
 # ==============================================================================
-output="$(fprintd-list "$USER" 2>&1)"
-exit_code=$?
-if ((exit_code == 0)); then
-	echo "OK: $output"
-	exit 0
-fi
-cat <<EOF
-WEDGED: $output
+if ! output="$(fprintd-list "$USER" 2>&1)"; then
+	cat <<EOF
+STUCK: $output
 
 Fix with: sudo ~/bin/fingerprint-reset
 If that doesn't help, power off for ~30s (a reboot is not enough).
 EOF
-exit 1
+	exit 1
+fi
+echo "OK: $output"
 
