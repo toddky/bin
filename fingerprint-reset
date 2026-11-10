@@ -37,18 +37,9 @@ echo "found reader at $device_dir"
 # ==============================================================================
 bus_num="$(printf '%03d' "$(cat "$device_dir/busnum")")"
 device_num="$(printf '%03d' "$(cat "$device_dir/devnum")")"
-# 0x5514 is USBDEVFS_RESET: a soft replug.
-if ! python3 - "/dev/bus/usb/$bus_num/$device_num" <<'EOF'
-import fcntl, os, sys
-fd = os.open(sys.argv[1], os.O_WRONLY)
-try:
-    fcntl.ioctl(fd, 0x5514, 0)
-    print("USBDEVFS_RESET ok")
-finally:
-    os.close(fd)
-EOF
-then
-	echo "ERROR: USBDEVFS_RESET failed for /dev/bus/usb/$bus_num/$device_num; power off for ~30s to recover" 1>&2
+# usbreset (from usbutils) does a USBDEVFS_RESET ioctl: a soft replug.
+if ! usbreset "$bus_num/$device_num"; then
+	echo "ERROR: usbreset $bus_num/$device_num failed; power off for ~30s to recover" 1>&2
 	exit 1
 fi
 
