@@ -274,6 +274,18 @@ IFS=$'\t' read -r action target scope <<< "$line"
   done
   ```
 
+## Clean Up Stale State
+
+When iterating over state files (markers, locks, pidfiles), clean up stale entries on the error path:
+
+```bash
+# Good: remove stale marker before skipping
+pane_info="$(tmux display-message -t "$pane_id" -p '...' 2>/dev/null)" || { rm -f "$marker_file"; continue; }
+
+# Bad: silently skip, stale files accumulate
+pane_info="$(tmux display-message -t "$pane_id" -p '...' 2>/dev/null)" || continue
+```
+
 ## Output Formatting
 
 - Prefer native formatting options over post-processing. Use `tmux list-panes -F` format strings instead of piping through `cut`/`awk`/`sed` to rearrange fields.

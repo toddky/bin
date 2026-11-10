@@ -204,6 +204,40 @@ $stderr.puts 'error: no token found'
 exit 1
 ```
 
+## Be Flat and Obvious
+
+Resolve inputs and their defaults once at the top, then run a single straight
+path. Do not thread "is it set?" checks down through the logic, and do not add a
+separate branch for each case when one default unifies them.
+
+```ruby
+# Good: default the range up front, one loop handles whole-file and range alike
+start_line = args['start_line'] || 1
+end_line = args['end_line']
+```
+
+## Guard at the Point of Failure
+
+Do not wrap a whole section in one giant `begin/rescue`. Check the specific thing
+that can fail (LBYL), and rescue a narrow class only where a real syscall can raise.
+
+```ruby
+# Good
+exit 1 unless File.file?(path)
+
+# Bad: a defensive begin/rescue around the whole results section
+```
+
+## Stdlib Has No expandvars
+
+`File.expand_path` handles `~` only. `$VAR` expansion needs a one-line `gsub`;
+do not reach for a multi-capture-group version.
+
+```ruby
+path = input.gsub(/\$\{?(\w+)\}?/) { ENV[$1] || $& }
+path = File.expand_path(path)
+```
+
 ## Comments and Section Structure
 
 - Use a small set of standard up-front headers, then describe the steps the code actually performs.

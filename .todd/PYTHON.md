@@ -146,6 +146,18 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 - Never expose secrets (API tokens, passwords, etc.) in command arguments; they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
 - Never write directly to `/tmp`. Use `tempfile.mkdtemp()` or `tempfile.NamedTemporaryFile()` and clean up with a `try/finally` or context manager.
 
+## Docstring Examples and Names
+
+- Every function gets a docstring with a concrete input -> output example:
+
+  ```python
+  def names_in_k_expression(expression):
+      """"tsc_access_sanity or data_mover_basic" -> ["tsc_access_sanity", "data_mover_basic"]"""
+  ```
+
+- Names say what the thing does: `check_smoke_results.py` with `read_outcomes`, not `smoke_check.py` with `verdicts`.
+- When reviewing, flag missing examples and vague names.
+
 ## Comments and Section Structure
 
 - Keep comment blocks to max 2 lines. One sentence per line. Write short sentences that fit in 120 columns.
