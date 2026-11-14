@@ -17,12 +17,12 @@ Rules are grouped by letter:
 
 Per-language mechanics live in BASH.md, PYTHON.md, GO.md, RUBY.md, and JAVASCRIPT.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
 
-Each rule is written for a reviewer reading one file or one diff. The first sentence says exactly what counts as a violation. The second says when the rule is followed, including when the code has nothing the rule applies to. Then comes why, and the Bad and Good examples.
+Each rule is written for a reviewer reading one file or one diff. The first sentence says exactly what counts as a violation. The second says when the rule is followed, including when the code has nothing the rule applies to. Then comes why, and the Bad and Good examples. The Bad and Good examples do the same job, are code someone would write, and were run to show what the rule claims. A Good example uses the library's function, not a hand-written one (CR-D3).
 
 ## CR-A: Comments and documentation
 
 ### CR-A1: Short Comments
-A violation is a comment block longer than 2 lines, a comment line wider than 120 columns, or a comment line holding more than one sentence. The rule is followed when every comment is 1 or 2 lines with one sentence per line. Lines that quote an example input (CR-A3), a usage example (CR-A6), a permalink on its own line (CR-A7), section header banners (CR-B9), and a script's USAGE and DESCRIPTION header lines do not count toward the limit. Why: a paragraph of comment stops being read and goes stale first.
+A violation is a comment block longer than 2 lines, a comment line wider than 120 columns (count a tab as 4), or a comment line holding more than one sentence. The rule is followed when every comment is 1 or 2 lines with one sentence per line. Lines that quote an example input (CR-A3), a usage example (CR-A6), a permalink on its own line (CR-A7), section header banners (CR-B9), and a script's USAGE and DESCRIPTION header lines do not count toward the limit. Why: a paragraph of comment stops being read and goes stale first.
 
 ```python
 # NFS dentry cache can hide a lock made on another host.
@@ -276,6 +276,33 @@ Good:
 ```bash
 # NFS dentry cache can hide a lock made on another host; 5s is the observed max staleness.
 sleep 5
+```
+
+### CR-A17: Promises In Comments Are Tested
+A violation is a comment that promises a guarantee, such as "always removes the work dir" or "sent once per message", with no test that fails when the guarantee breaks. The rule is followed when a test covers the case the comment promises, or the comment is reworded to say only what the code does. Why: the next reader takes the comment as fact, and an untested promise is often false in the very case it names.
+
+Bad:
+The comment promises the work dir is always removed, but when `build` fails the cleanup line never runs:
+```python
+# Always removes the work dir, so nothing is left behind.
+build(work_dir)
+shutil.rmtree(work_dir)
+```
+
+Good:
+The code keeps the promise, and a test breaks if it stops:
+```python
+# Removes the work dir even when build() fails.
+try:
+    build(work_dir)
+finally:
+    shutil.rmtree(work_dir)
+```
+```python
+def test_work_dir_removed_when_build_fails(tmp_path):
+    with pytest.raises(BuildError):
+        run_build(tmp_path / "work", fail=True)
+    assert not (tmp_path / "work").exists()
 ```
 
 ## CR-B: Formatting and readability
@@ -844,7 +871,7 @@ def get_output_dir(settings):
 ## CR-E: Change hygiene
 
 ### CR-E1: Delete Dead Code
-A violation is an unused import, variable, or function, a commented-out block of code, or leftover debug scaffolding. The rule is followed when everything in the code is used. Within a diff, this applies only to code the change touches (CR-E3).
+A violation is an unused import, variable, or function, a commented-out block of code, a condition that guards nothing, or leftover debug scaffolding. The rule is followed when everything in the code is used. A condition is dead when removing it changes no result, because nothing reads what it guards: delete it instead of writing a test for it. Within a diff, this applies only to code the change touches (CR-E3).
 
 ### CR-E2: Reachable Features
 A violation is a new branch for a value that the argument parser or enumeration does not allow, so the branch can never run. The rule is followed when the allowed values are updated in the same change as the new branch.
@@ -870,7 +897,7 @@ if args.format == "yaml":
 A violation is a change that includes unrelated edits, such as reformatting, renaming, or moving code it is not fixing. The rule is followed when every edit serves the change. This rule needs a diff; a whole file reviewed without history follows it.
 
 ### CR-E4: One Source
-A violation is the same value defined in two places, such as a default set in both the argument parser and the function it feeds, or a constant declared in two files. The rule is followed when each value is defined once. When one rule has to exist in two places that can't share code, such as a filter written in both Python and SQL, each copy names the other in a comment and a test checks that both give the same answer. For a CLI, the parser holds the default and the function takes the value as a required parameter.
+A violation is the same value defined in two places, such as a default set in both the argument parser and the function it feeds, or a constant declared in two files. The rule is followed when each value is defined once. When one rule has to exist in two places that can't share code, such as a filter written in both Python and SQL, each copy names the other in a comment and a test checks that both give the same answer, such as one fixture file that both test suites read. For a CLI, the parser holds the default and the function takes the value as a required parameter.
 
 Bad:
 The same default lives in two places:
@@ -941,6 +968,95 @@ def get_orders(customer_id, by_activity=False):
     if by_activity:
         return sorted(orders, key=lambda order: order.last_activity, reverse=True)
     return sorted(orders, key=lambda order: order.id)
+```
+
+### CR-E8: Removing A Step Keeps Saved State Loadable
+A violation is a change that deletes a step, check, or job type while saved data outside the repo, such as queued jobs or users' config files, still names it. The rule is followed when the same change migrates that data, or keeps a stub under the old name that does nothing and says it was retired, and a test loads data saved before the change. Why: every saved item that names the step fails when it runs, often with an error that does not mention the missing step, long after the change merged.
+
+Bad:
+The `thumbnail` step is deleted, but queued jobs still say `thumbnail`, so each one fails with `KeyError: 'thumbnail'`:
+```python
+HANDLERS = {"resize": resize_image, "watermark": add_watermark}
+handler = HANDLERS[job.kind]
+```
+
+Good:
+```python
+def skip_retired_step(job):
+    log.info("job %s: the thumbnail step was removed, nothing to do", job.id)
+
+HANDLERS = {"resize": resize_image, "watermark": add_watermark, "thumbnail": skip_retired_step}
+handler = HANDLERS[job.kind]
+```
+
+### CR-E9: Design Notes Change With The Code
+A violation is a change that makes the code behave differently from a README or design note that describes it, such as a different id format or a check moved to another place, while the note stays as it was. The rule is followed when the same change updates the note, or cuts the note down to point at the code. CR-E6 covers renames, and this covers behavior. Why: readers trust the note over the code, so the next reviewer reports the drift as a bug or builds on the wrong behavior.
+
+Bad:
+The README says the cache key is the URL. The change adds the user id to the key, and the README is left as it was:
+```python
+# README.md: "The cache key is the URL."
+key = f"{user_id}:{url}"
+```
+
+Good:
+The same change updates the README sentence to: "The cache key is the user id and the URL."
+
+### CR-E10: Derive, Do Not Mark
+A violation is writing state onto other records when it can be worked out from data already kept, such as marking older orders "replaced" when a newer one arrives. The rule is followed when that state is computed from the source when it is read. Why: marks written into several records race with concurrent writers and drift away from the source, so a record can show the wrong state.
+
+Bad:
+Each new order edits every older order. Two runs at once can leave an old order marked wrong:
+```python
+for older in pending_orders(customer):
+    older["replaced_by"] = new_order.id
+    save_order(older)
+```
+
+Good:
+```python
+def is_replaced(order, all_orders):
+    return any(other.id > order.id and other.customer == order.customer for other in all_orders)
+```
+
+### CR-E11: Old-Version Fallbacks Only For Separately Deployed Parts
+A violation is code that tolerates an older version of another part that always ships and restarts with it, or a fallback for an older part with no comment saying which part and why it can lag. The rule is followed when a fallback exists only for a part deployed on its own schedule, and its comment names that part. Why: a fallback for a part that can't lag is dead code that hides a real error as "old version".
+
+Bad:
+The client and the server are in one repo and deploy together, so a 404 here is a bug, not an old server. The fallback hides it:
+```python
+response = api.get("/api/tags")
+if response.status == 404:
+    return []
+```
+
+Good:
+```python
+# The sync agent runs on other hosts and can lag behind the server, so an older server has no /api/tags.
+response = api.get("/api/tags")
+if response.status == 404:
+    return []
+```
+
+### CR-E12: Claim Wire Numbers Before Using Them
+A violation is a branch that adds a field to a shared message format, such as a protobuf message, by taking the next free number, while other branches can take the same number. The rule is followed when the number is first claimed in one shared place, such as a registry file, and a number that has shipped is never reused or renumbered. Why: two branches pick the same number, the second to merge must renumber, and any build made in between reads one field as the other.
+
+Bad:
+Two branches each take 73, the next free number on their own branch, for different fields:
+```proto
+// branch add-title
+SetTitle set_title = 73;
+
+// branch add-pause
+Pause pause = 73;
+```
+
+Good:
+Each branch first adds its number to a registry file that everyone merges from, so the second branch sees 73 is taken and uses 74:
+```text
+# WIRE_NUMBERS.md
+73  ClientCommand.set_title
+74  ClientCommand.pause
 ```
 
 ## CR-F: Errors and failure handling
@@ -1179,7 +1295,7 @@ except OSError as error:
 ```
 
 ### CR-F12: Kill The Process Group On Timeout
-A violation is a timeout on a child process that can start children of its own, such as a shell script or a build tool, where the timeout kills only the direct child. The rule is followed when the child runs in its own process group and the timeout kills the whole group. The code keeps the child's pid until it has been waited for, so a cleanup that runs during a slow stop, such as on Ctrl-C, still finds and kills it. Code with no subprocess timeouts, or whose children start no processes, follows the rule. Why: the grandchildren keep running after the timeout and pile up with every run.
+A violation is a timeout on a child process that can start children of its own, such as a shell script or a build tool, where the timeout kills only the direct child. The rule is followed when the child runs in its own process group and the timeout kills the whole group. The code keeps the child's pid until it has been waited for, so a cleanup that runs during a slow stop, such as on Ctrl-C, still finds and kills it. Once the child exits, normally or not, the code also kills what is left in its group, since a background process it started keeps running and can hold the child's output open. Code with no subprocess timeouts, or whose children start no processes, follows the rule. Why: the grandchildren keep running after the timeout and pile up with every run.
 
 Bad:
 `subprocess.run` kills only `check-tool`, and the processes it started keep running:
@@ -1284,6 +1400,155 @@ SEEN_MAX_AGE_SECONDS = 30 * 24 * 3600
 seen = json.loads(seen_file.read_text())
 cutoff = time.time() - SEEN_MAX_AGE_SECONDS
 seen = {report_id: seen_at for report_id, seen_at in seen.items() if seen_at > cutoff}
+```
+
+### CR-F17: Advance After Success
+A violation is recording that work is done before the work has succeeded. That includes saving a "done up to here" marker, such as the id of the last message handled, and removing an item from a saved queue. The rule is followed when the marker is saved, or the item removed, only after every step it stands for has succeeded, so a failed step is tried again later. Why: once the message is marked done or the item is gone, nothing goes back for the work that failed.
+
+Bad:
+If `send_email` fails, the message is already marked as sent and is never retried:
+```python
+mark_as_sent(message.id)
+send_email(message)
+```
+
+Good:
+```python
+send_email(message)
+mark_as_sent(message.id)
+```
+
+### CR-F18: One Record Per Request
+A violation is keeping pending work under a key coarser than what a reply names, such as one slot per user when each reply answers one request. The rule is followed when each request has its own record and a reply finds the record it names. Why: a second request silently overwrites the first, and the first can never be answered.
+
+Bad:
+A user who files three expense reports leaves only the last one waiting for approval. The first two are overwritten:
+```python
+pending_approvals[user_id] = report
+```
+
+Good:
+```python
+pending_approvals[report.id] = report
+```
+
+### CR-F19: Retry Keys Name One Attempt
+A violation is a retry key, such as an id the server uses to drop duplicate requests, built from the content plus a scope that outlives one attempt, such as a whole account. The rule is followed when the key's scope is one attempt, so a real retry matches and a second, intended identical action does not. Why: a long-lived scope turns a second identical action into a retry, and it is dropped without a word.
+
+Bad:
+Two separate $5 transfers from the same account get the same key, so the server drops the second as a retry:
+```python
+key = sha256(f"{account_id}:{amount}")
+create_transfer(account_id, amount, key)
+```
+
+Good:
+`attempt_id` is made once per transfer and reused only when that same transfer is retried:
+```python
+key = sha256(f"{attempt_id}:{account_id}:{amount}")
+create_transfer(account_id, amount, key)
+```
+
+### CR-F20: Timers Start In This Run
+A violation is a timeout that measures saved jobs from a start time written by an earlier run, before this run has started them. The rule is followed when saved jobs are left out of the timer until this run starts them. Why: the saved time includes every minute the program was off, so the timeout fires on the first check after a restart, for work this run never touched.
+
+Bad:
+The program was off for an hour. After a restart every saved job looks an hour old, so all of them are reported stuck:
+```python
+for job in load_saved_jobs():
+    if time.time() - job.started_at > JOB_TIMEOUT_SECONDS:
+        report_stuck(job)
+```
+
+Good:
+`started_at` is set when this run starts the job:
+```python
+for job in load_saved_jobs():
+    job.started_at = None
+
+for job in saved_jobs:
+    if job.started_at is None:
+        continue
+    if time.monotonic() - job.started_at > JOB_TIMEOUT_SECONDS:
+        report_stuck(job)
+```
+
+### CR-F21: Age Limits Measure From Creation
+A violation is an age limit on retried work, such as dropping a job after 7 days, that measures from the last attempt instead of from when the work was created. The rule is followed when the age is measured from the creation time, which a retry never changes. Why: every retry resets the age, so work that keeps failing is retried at every start and never expires.
+
+Bad:
+Each run sets `last_attempt_at` before the next run checks it, so a job that always fails is never dropped:
+```python
+for job in load_saved_jobs():
+    if time.time() - job.last_attempt_at > MAX_AGE_SECONDS:
+        drop(job)
+        continue
+    job.last_attempt_at = time.time()
+    retry(job)
+```
+
+Good:
+```python
+for job in load_saved_jobs():
+    if time.time() - job.created_at > MAX_AGE_SECONDS:
+        drop(job)
+        continue
+    job.last_attempt_at = time.time()
+    retry(job)
+```
+
+### CR-F22: Close A Stream After A Failed Write
+A violation is writing to a stream that carries one message at a time, such as a socket with one JSON message per line, again after a write to it failed or timed out. The rule is followed when a failed write closes the stream, so the next connection starts clean. Code that writes no such stream follows the rule. Why: a write cut off partway leaves half a message, and the next message is glued to it and misread.
+
+Bad:
+The write fails partway, the connection stays open, and the next call sends its message right after the half-sent one:
+```go
+if _, err := conn.Write(message); err != nil {
+	return fmt.Errorf("write message: %w", err)
+}
+```
+
+Good:
+```go
+if _, err := conn.Write(message); err != nil {
+	conn.Close()
+	return fmt.Errorf("write message, so the connection was closed: %w", err)
+}
+```
+
+### CR-F23: Caches Keep Only Settled Results
+A violation is a cache that stores the result of a step that failed because of its surroundings, such as a timeout, a killed worker, or a file another run deleted, as if the input had caused the failure. The rule is followed when only results the input decides are cached, and failures from the surroundings are retried or left out. Why: the cached failure is replayed on every later run, so a good input fails forever, and nobody can fix it without deleting the cache by hand.
+
+Bad:
+A network timeout is cached as the answer for this URL, so the link is reported broken on every later run:
+```python
+status = check_link(url)
+cache[url] = status
+```
+
+Good:
+```python
+status = check_link(url)
+if status in ("ok", "not_found"):
+    cache[url] = status
+```
+
+### CR-F24: Elapsed Time On A Monotonic Clock
+A violation is code that measures how much time has passed within one run, such as a timeout or an idle check, from wall-clock readings like `time.time()`. The rule is followed when elapsed time comes from a monotonic clock, such as `time.monotonic()`. A time saved to a file and compared after a restart needs the wall clock, since a monotonic reading means nothing after a restart. Why: when the system clock is corrected, the wall clock jumps, so a timeout fires early or never.
+
+Bad:
+If the clock is set back an hour while the loop runs, the idle check never fires:
+```python
+started = time.time()
+if time.time() - started > IDLE_TIMEOUT_SECONDS:
+    mark_idle()
+```
+
+Good:
+```python
+started = time.monotonic()
+if time.monotonic() - started > IDLE_TIMEOUT_SECONDS:
+    mark_idle()
 ```
 
 ## CR-G: Arguments and CLI design
@@ -1508,7 +1773,7 @@ def test_is_expired():
 ```
 
 ### CR-H8: Red-Green Fixes
-A violation is a bug fix with no test that fails without it. The rule is followed when the fix is done red-green-refactor: a test that reproduces the bug fails first (red), the fix makes it pass (green), and any cleanup keeps it passing (refactor). Why: a test written after the fix may never have failed, so nobody knows it catches the bug.
+A violation is a bug fix with no test that fails without it. The rule is followed when the fix is done red-green-refactor: a test that reproduces the bug fails first (red), the fix makes it pass (green), and any cleanup keeps it passing (refactor). A fix to glue code that the language guide leaves untested, where no pure decision can be pulled out of it, may ship without a test if the commit message says so. Why: a test written after the fix may never have failed, so nobody knows it catches the bug.
 
 Bad:
 The empty-input fix ships with no test:
@@ -1696,6 +1961,64 @@ tests/test_report_utf8.py
 Good:
 ```text
 tests/test_report.py
+```
+
+### CR-H17: Negative Tests Show They Ran
+A violation is a test that checks something did not happen, such as no email sent or no warning shown, without first checking that the code reached the point where it would have happened. The rule is followed when the test asserts a sign that the path ran, such as a call the fake recorded, before it asserts the absence. Why: a fake that answers in the wrong shape, or a slow setup, stops the code early, and the test passes without testing anything.
+
+Bad:
+The fake returns `{}` where the code expects a list, so the code stops before the branch the test means to cover, and the test passes anyway:
+```python
+fake_api.set_body("GET /discounts", {})
+checkout.handle(free_order)
+assert fake_api.emails_sent() == []
+```
+
+Good:
+```python
+fake_api.set_body("GET /discounts", [])
+checkout.handle(free_order)
+assert fake_api.num_requests("GET /discounts") == 1
+assert fake_api.emails_sent() == []
+```
+
+### CR-H18: Test Data Cannot Collide With Real Data
+A violation is a test that writes records into state that real data also uses, with ids or names a real record can take. The rule is followed when the test's records use values real data never has, such as ids that start with `test-`. Why: when real ids shift, the test overwrites or deletes the record it meant to keep, and fails for no reason anyone can see.
+
+Bad:
+The test writes jobs 1 to 50. A real job with id 7 already exists, so the test overwrites it:
+```python
+for job_id in range(1, 51):
+    write_job(queue_dir, job_id)
+```
+
+Good:
+```python
+for index in range(1, 51):
+    write_job(queue_dir, f"test-job-{index}")
+```
+
+### CR-H19: Tests That Share A Resource Lock It Themselves
+A violation is a test that only passes when the test runner keeps it apart from other tests, through runner settings such as a serial group, a `pytest-xdist` mark, or a CI job that runs one file at a time. The rule is followed when the test takes the shared resource for itself, such as its own port or temp dir, so any runner can run it beside the others. Why: a developer who runs the plain runner sees failures that CI never shows, and a change to the CI settings brings the races back.
+
+Bad:
+Both tests start a server on port 8080. They pass in CI only because the CI config runs them one at a time, and they fail when run in parallel:
+```python
+def test_server_starts():
+    server = start_server(port=8080)
+    ...
+
+def test_server_stops():
+    server = start_server(port=8080)
+    ...
+```
+
+Good:
+Each test asks the OS for a free port, so nothing is shared:
+```python
+def test_server_starts():
+    server = start_server(port=0)
+    ...
 ```
 
 ## CR-I: Security
@@ -1952,6 +2275,61 @@ text = result.stdout.decode(errors="replace")
 print(UNSAFE_CONTROL.sub(lambda match: f"\\x{ord(match.group()):02x}", text))
 ```
 
+### CR-I14: Empty Secrets Never Match
+A violation is a secret check, such as a shared token compared with `hmac.compare_digest`, that passes when both the configured secret and the one sent are empty. The rule is followed when an empty configured secret turns the feature off with its own error, and a test sets the secret empty, sends an empty value, and expects a refusal. Why: a constant-time compare of two empty strings is a match, so the "no secret set" check is the only thing keeping an unconfigured server open, and nothing notices if it is dropped.
+
+Bad:
+```python
+if not hmac.compare_digest(sent_token, config.join_token):
+    abort(403, "join token is wrong")
+```
+
+Good:
+```python
+if config.join_token == "":
+    abort(403, "joining is off: join_token is empty in the server config")
+if not hmac.compare_digest(sent_token, config.join_token):
+    abort(403, "join token is wrong")
+```
+
+### CR-I15: Line-Based Formats Refuse Control Characters
+A violation is a value from outside the program, such as a username or host name, written into text that is later read back line by line, such as a log, an HTTP header, or a `key: value` file, without refusing newlines and other control characters. The rule is followed when the value is refused at entry if it holds a control character, and the code that reads the lines back refuses a repeated key instead of letting the last one win. Why: a newline in the value starts a line of its own, and whoever reads the lines back acts on a forged entry.
+
+Bad:
+A username of `bob\nlogin ok user=admin` adds a second, forged log line:
+```python
+log_file.write(f"login ok user={username}\n")
+```
+
+Good:
+```python
+if not username.isprintable():
+    raise ValueError(f"username {username!r} holds a control character such as a newline; send the bare name")
+log_file.write(f"login ok user={username}\n")
+```
+
+### CR-I16: Open Calls That Create Visible Content Need A Gate
+A violation is a call anyone can make without credentials, such as a request for an account, that creates something other people see, such as an entry in a review queue, and is protected only by a global cap on how many may wait. The rule is followed when the call needs a secret that only real callers hold, such as the sign-up token the server already uses, or the cap counts per caller. Why: one stranger fills the global cap and every real caller is refused, while the entries they create pile up for the people who have to clear them.
+
+Bad:
+```python
+@route("POST /account-requests")
+def request_account(body):
+    if count_pending_requests() >= MAX_PENDING_REQUESTS:
+        abort(429, "too many requests are pending")
+    add_to_review_queue(body["username"])
+```
+
+Good:
+```python
+@route("POST /account-requests")
+def request_account(body):
+    check_signup_token(body.get("signup_token"))
+    if count_pending_requests() >= MAX_PENDING_REQUESTS:
+        abort(429, "too many requests are pending")
+    add_to_review_queue(body["username"])
+```
+
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
@@ -1972,7 +2350,7 @@ config_yaml = config_home / "tool" / "config.yaml"
 ```
 
 ### CR-J3: Private Temp Files
-A violation is writing to a fixed path under `/tmp`, such as `/tmp/output.txt`, instead of a path created by `mktemp` or `tempfile`, or removing a temp file on the last line instead of in an exit trap or context manager. The rule is followed when temp files are private and cleaned up when the process exits. Code with no temp files follows the rule. Why: a predictable name on a shared machine collides with another user's run.
+A violation is writing to a fixed path under `/tmp`, such as `/tmp/output.txt`, instead of a path created by `mktemp` or `tempfile`, or removing a temp file on the last line instead of in an exit trap or context manager. The rule is followed when temp files are private and cleaned up when the process exits, and cleanup removes only the paths this run created, by exact path, never by a glob in a shared directory. Code with no temp files follows the rule. Why: a predictable name on a shared machine collides with another user's run, and a glob such as `rm -rf /tmp/tmp.*` deletes other users' and other sessions' temp dirs.
 
 Bad:
 ```python
@@ -2033,7 +2411,7 @@ CREATE TABLE uploads (id INTEGER PRIMARY KEY AUTOINCREMENT, filename TEXT NOT NU
 ```
 
 ### CR-J7: Name A File For Its Purpose
-A violation is a file named after how it works instead of what it is for, such as `curl-loop.sh` for a script that waits until a deploy finishes. The rule is followed when someone who has never opened the file can tell from its name why they would run or read it. Changes that add or rename no files follow the rule. Why: the mechanism is the part most likely to change, and a listing of mechanism names makes the reader open every file to find the one they need.
+A violation is a file named after how it works instead of what it is for, such as `curl-loop.sh` for a script that waits until a deploy finishes. The rule is followed when someone who has never opened the file can tell from its name why they would run or read it. A file that holds several jobs is split by job, each part named for its own job, not renamed to something broad enough to cover them all. Changes that add or rename no files follow the rule. Why: the mechanism is the part most likely to change, and a listing of mechanism names makes the reader open every file to find the one they need.
 
 Bad:
 ```text
@@ -2067,4 +2445,24 @@ try:
 finally:
     # After a successful replace the temp name is gone, so this only cleans up a failed write.
     Path(temp_name).unlink(missing_ok=True)
+```
+
+### CR-J9: Each Run Owns Its Scratch Dir
+A violation is a program that deletes and reuses a fixed work dir, such as `cache/replay/`, while another run of the same program can be using it. The rule is followed when each run makes its own dir with a unique name, such as `mkdtemp`, and deletes only that dir. Why: one run deletes files another run is still reading, and the second run fails with an error that looks like a bug in its input.
+
+Bad:
+A second run starts and wipes the dir the first run is still using:
+```python
+replay_dir = cache_dir / "replay"
+shutil.rmtree(replay_dir, ignore_errors=True)
+replay_dir.mkdir()
+```
+
+Good:
+```python
+replay_dir = Path(tempfile.mkdtemp(prefix="replay-", dir=cache_dir))
+try:
+    run_replay(replay_dir)
+finally:
+    shutil.rmtree(replay_dir)
 ```
