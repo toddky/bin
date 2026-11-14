@@ -30,12 +30,14 @@ Go-specific rules. The cross-language rules (naming basics, control flow, string
 - Use `json.RawMessage` for schema/payload fields that pass through unparsed.
 - Watch `omitempty` on fields a server requires: an empty-but-required field needs a sentinel value, not omission.
 - Decode request bodies with a `json.Decoder` and `DisallowUnknownFields()`, so a misspelled field is refused (CR-F6) instead of quietly left at its zero value.
+- `json.Marshal` escapes `<`, `>` and `&` to six bytes each (`<`). When the output is not HTML, or its size is capped, encode with a `json.Encoder` and `SetEscapeHTML(false)`.
 
 ## Concurrency
 
 - Prefer goroutines writing to distinct pre-sized slice slots over mutex-guarded appends; note the invariant in a comment.
 - Use `context.WithTimeout` around exec and network calls; check `ctx.Err() == context.DeadlineExceeded` to report timeouts distinctly.
-- Set `cmd.WaitDelay` on `exec.Cmd` so a child's hung pipes cannot stall the process after a kill.
+- Set `cmd.WaitDelay` on `exec.Cmd` so a child's hung pipes cannot stall the process after a kill. On an `exec.Command` with no context the delay starts when the child exits, so a child that leaves a background process holding its stdout returns `exec.ErrWaitDelay`. Treat that as the child's own result with the output cut, and kill the process group after `Wait` either way (CR-F12).
+- `time.Unix(0, n)` has no monotonic reading. To share a timestamp between goroutines, for example in an `atomic.Int64`, store `time.Since(start)` for a `start` taken once with `time.Now()`, and compare durations (CR-F24).
 
 ## Building Commands
 
@@ -82,6 +84,8 @@ cmd := exec.Command("git", args...)
 - No fixtures checked in; tests build their inputs in `t.TempDir()`.
 - To test a failure partway through a series of OS calls, route the call through a package-level var (`var rename = os.Rename`) that the test swaps and restores with `t.Cleanup`. A test that swaps one cannot use `t.Parallel`.
 - For a SQLite query on a table that can grow, a test runs `EXPLAIN QUERY PLAN` and checks the intended index is named (`USING INDEX jobs_by_state`). Without `ANALYZE` statistics SQLite picks plans by fixed guesses; a unary `+` on a column (`+state = ?`) keeps it off an index that would be slower.
+- A test package that builds the program's binary itself, in `TestMain` for example, is cached by `go test` on its own files, so a change to the program can reuse a stale pass. Run such packages with `-count=1` after changing the code under test, and in every mutation check.
+- Deleting a line in Go often leaves a variable unused, so the mutated code does not compile and proves nothing. Mutate by replacing the condition with `true` or `false`, or keep the variable used with `_ = name`, and check the run failed on an assertion, not on `[build failed]`.
 
 ## Comments
 
@@ -91,3 +95,5 @@ cmd := exec.Command("git", args...)
 ## Verification
 
 After writing or editing Go code, run `gofmt -l .` (must print nothing), `go build ./...`, and `go vet ./...`. Run `go test ./...` when tests exist.
+
+To tell which commit a binary was built from, read `vcs.revision` in `go version -m <binary>`. Untracked files also set `vcs.modified`. Do not use the file's modification time: `go build -o` leaves an up-to-date binary untouched.
