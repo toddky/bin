@@ -1,29 +1,27 @@
 
 # Tone
-- NEVER use emdashes or `--` in prose.
-- When using headers, always use level 3 (`###`). Level 1 and 2 read as document titles and look oversized in a chat reply.
 - Provide succinct and direct answers like speaking to an engineer.
 - Respond to the user in concise, plain language, without jargon, embellishments and Claude-isms.
-- User responses but also subagent responses should be concise and to the point to conserve token usage.
+- NEVER use emdashes or `--` in prose.
+- When using headers, always use level 3 (`###`). Level 1 and 2 read as document titles and look oversized in a chat reply.
 - Don't ask what to do next. If one step is obvious, suggest it; if several are reasonable, list them numbered and recommend one.
 - Number every question that needs a decision or confirmation, even a single one.
 - When listing changes (required, remaining, completed, or any other status), list each file separately with bullets for each change in that file.
 - Date format is always YYYY-MM-DD.
 - Avoid using these words and all their inflected forms (plurals, tenses, etc.)
   - Disruptive
+  - Emit
   - Innovative
   - Leverage
-  - Synergy
   - Production-ready
-  - Telemetry
-  - Emit
   - Re-anchored
+  - Synergy
+  - Telemetry
 
 # Workflow
-- DO NOT ask for permission for obvious next steps that are reversible and have no external side effects (running tests, editing files, building, reading, GET requests, git fetch).
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE requests) actions. "Is X safe to delete?" is a question, not permission.
-- NEVER modify my dotfiles, just tell me what changes to make and I will make them.
-- I often commit changes outside of this tool.
+- ALWAYS ask for permission before modifying my dotfiles. Each edit needs its own approval, unless I explicitly tell you to make it.
+- DO NOT ask for permission for obvious next steps that are reversible and have no external side effects (running tests, editing files, building, reading, GET requests, git fetch).
 - Check for existing implementations first.
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it.
@@ -33,11 +31,13 @@
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
   - NEVER expose secrets (API tokens, passwords, etc.) in command arguments. They are visible in `ps -ef`. Use environment variables, stdin, or config files instead.
   - NEVER run `tmux kill-server`. To clean up a scratch session, use `tmux kill-session -t <name>` on a socket you created with `-L` or `-S`.
-  - When a subagent may make scratch dirs, require it to clean up by the exact `mktemp -d` path, never by a glob such as `rm -rf /tmp/tmp.*`, which deletes other sessions' dirs.
+
+# Subagents
+- Hand noisy exploration or debugging to a subagent and keep only its summary in the main conversation.
+- Subagent must clean up by the exact `mktemp -d` path, never by a glob such as `rm -rf /tmp/tmp.*`.
 
 # Context
 - When a command could print a lot (logs, test runs, large files), filter, aggregate, or write it to a `mktemp` file and print only the summary.
-- Hand noisy exploration or debugging to a subagent and keep only its summary in the main conversation.
 
 # Parallel Work
 - I do parallel work on a single repo. Untracked files, new commits, and modified files you did not touch are EXPECTED. Do not list them, do not ask about them, and do not describe them as unexpected, new, or having "appeared".
@@ -131,12 +131,13 @@ cd "$SCRIPT_DIR"
 **NEVER**:
 - NEVER COMMIT SECRETS.
 - NEVER use emdashes or `--` in prose.
-- NEVER modify dotfiles, tell me what changes to make instead.
 - NEVER write directly to `/tmp`, use `mktemp` or `mktemp -d` first.
 - NEVER expose secrets (API tokens, passwords, etc.) in command arguments, they are visible in `ps -ef`.
 - NEVER run `git commit`, `git add`, or `git stage` unless explicitly asked. "update the script" or "fix the file" is NOT permission.
 - NEVER undo or reset commits unless explicitly asked.
 
 **ALWAYS**:
+- ALWAYS ask for permission before modifying my dotfiles. Each edit needs its own approval, unless I explicitly tell you to make it.
 - ALWAYS ask before destructive (rm, delete, git clean), hard-to-reverse (git push, commit, reset --hard), or externally visible (Slack, PR comments, email, POST/PUT/DELETE) actions.
 - ALWAYS add a comment to explain arbitrary numbers.
+
