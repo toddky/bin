@@ -80,8 +80,9 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
    Run only the fast tests the change adds or touches three extra ways: twice in a row without cleanup, each test alone, and under `TZ=Pacific/Kiritimati`.
    A different result means the test depends on leftover state, test order, or the local date. Skip tests that take more than about a minute each (a guess at where three extra runs stop being cheap).
    Does any test run the startup path, the code that runs once when the program or page first loads? A bug there breaks every run, and tests that start after setup never see it.
-9. **Tests that guard the change:** Delete each condition the change adds, one at a time, and run the tests. If they still pass, no test guards that condition. Make sure you deleted the code under test, since the same line can appear in more than one place.
+9. **Tests that guard the change:** Delete each condition the change adds, one at a time, and run the tests. If they still pass, no test guards that condition. A mutation that does not compile, or a test run that reuses a cached pass, proves nothing. Check that the run built the mutated code and failed on an assertion; in Go, see GO.md Testing. Make sure you deleted the code under test, since the same line can appear in more than one place.
    Do this even when the author says they already did; that claim is often wrong.
+   Mutate what the fakes answer too. A fake that returns the wrong shape can stop the code before the condition, so a test passes without reaching it (CR-H17). A condition whose removal changes no result points to dead code (CR-E1), not a missing test.
 10. **Strongest objection:** What would a skeptical senior engineer say first?
 
 ### When the change touches security, money, or user data
@@ -93,7 +94,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
     Verify blank, whitespace, or missing credentials cannot bypass checks, auto-initialize accounts, or trigger permissive fallbacks.
     Auxiliary features in security paths (password feedback asterisks, redraws, audit hooks) must not write to input buffers or mutate auth state.
 12. **Private data:** For data only some users may see, check every path that can return it, such as search results, caches, exports, notifications, and counts, not just the main page. Check that access ends when someone loses it, and that access is checked when the data is read, not only when it was saved.
-13. **Requests at the same time:** Find code that checks a limit before it acts, such as allowing 5 failed logins a minute. Send 40 wrong passwords at once to a throwaway copy. If the code checks more than 5, the limit breaks when requests arrive together.
+13. **Requests at the same time:** Find code that checks a limit before it acts, such as allowing 5 failed logins a minute. Send 40 wrong passwords at once to a throwaway copy. If the code checks more than 5, the limit breaks when requests arrive together. If a run rewrites records another run may also write, check whether two runs at once can bring back a record that was already used or deleted.
 14. **Fix of a finding:** If the change fixes an earlier review finding, does the fix open a new hole of the same kind nearby? Ask for a test that covers that whole kind of bug, not just the input that was reported.
 
 ### When it runs at scale, repeatedly, or keeps state
@@ -104,6 +105,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 16. **Loops between automated parts:** If its output can start another run of itself, directly or through another system such as a retry, a webhook, or a job that queues another job, say what stops the loop and what each round costs.
 17. **State between runs:** If it keeps a file, table, cache, or memory from one run to the next, ask what limits its size and age, who can read it later (item 12), and how someone resets it by hand when an entry goes bad.
     If a run saves a progress marker or empties a queue, check it happens after the work succeeds (CR-F17).
+    For an item the next run carries over, ask what happens when that run skips it (kept or lost), and whether any timer or age limit measures it from the earlier run's times (CR-F20, CR-F21).
     If the same person or object shows up in more than one thread, job, or session, check that each one sees the others' history, so one stream does not repeat or contradict another.
     If it saves what the user typed or ran, such as a command line, a URL, or an argument list, check whether a password or token can end up in the saved copy, and whether that file can be committed, synced, or shared.
     A file kept private only by its name or a `.gitignore` entry, such as `settings.local.json`, is one `git add -A` away from public. Pass secrets by reference, such as an environment variable name or a file path, never by value.
@@ -115,7 +117,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 ### Lower priority
 
 19. **Cost of change:** If requirements shift a little, how much has to be rewritten?
-20. **Fit:** Does it match the surrounding code's idioms, naming, and conventions, or bring in a new pattern?
+20. **Fit:** Does it match the surrounding code's idioms, naming, and conventions, or bring in a new pattern? Read CODE_REVIEW.md and the guide for each language in the change (BASH.md, GO.md, PYTHON.md, RUBY.md, JAVASCRIPT.md). Report each broken rule with its id, marked blocks merge.
 
 ## Output
 
