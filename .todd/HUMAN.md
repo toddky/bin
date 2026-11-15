@@ -33,7 +33,19 @@ Don't open a new message or thread with "it" or a bare "this"; the reader has no
 Write whole sentences with their articles and verbs. No arrows, symbol-speak, or verbless fragments the reader has to decode: not "bad date → exit 2, no write", but "The parser rejects a bad date, exits with code 2, and writes nothing".
 
 ### HM-A7: Condition First
-When an instruction applies only in some cases, put the case first so the reader can skip what doesn't apply. Not "Rerun with `--verbose` if the build fails", but "If the build fails, rerun with `--verbose`".
+When an instruction applies only in some cases, put the case first so the reader can skip what doesn't apply. Not "Rerun with `--verbose` if the build fails", but "If the build fails, rerun with `--verbose`". In a warning, put the instruction before the risk. Not "This deletes rows, so don't run it on production", but "Don't run this on production because it deletes rows".
+
+### HM-A8: Name What A Step Needs
+When you tell someone to run a command or take a step, name the host, flag, or earlier step it depends on. Not "Restart the service", but "Restart the `sync` service on the host that runs the nightly job".
+
+### HM-A9: State The Assumptions
+When you give a root cause or a finding, list what you took as true without checking it. Not "the job died because the disk filled", but "the job died because the disk filled. I assumed it wrote to `/scratch`; I didn't check its config".
+
+### HM-A10: Quote Errors Exactly
+Paste error text and warnings exactly as printed, in a code block. Don't shorten, reword, or fix the spelling. For a long log, quote the failing line whole and link the rest (HM-E4).
+
+### HM-A11: Don't, Then Instead
+When an instruction has both a thing not to do and a thing to do, write the don't first, then "instead", then the do. Not "When a file can't be read, say so, and say what your answer is based on instead", but "When you can't read a file, don't answer as if you had. Instead say you couldn't read it". When there is no don't, don't add "instead".
 
 ## HM-B: Tone
 
@@ -62,7 +74,7 @@ Don't hedge with "it appears that", "it seems like", or "it would seem". If you'
 Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". It's a classic LLM tell. The same goes for a trailing "and" clause that adds emphasis but no information: not "Rerun the test and see whether the failure comes back", but "Rerun the test".
 
 ### HM-B9: No AI Vocabulary
-Don't use the words that mark text as AI-written: delve, crucial, pivotal, underscore, showcase, foster, garner, intricate, interplay, enduring, vibrant, testament, tapestry, wedged, and "landscape" for anything that isn't land. Use the plain word: not "this underscores a crucial gap", but "this shows a gap", and not "the reader is wedged", but "the reader is stuck".
+Don't use the words that mark text as AI-written: delve, crucial, pivotal, underscore, showcase, foster, garner, intricate, interplay, enduring, vibrant, testament, tapestry, wedged, simply, seamlessly, robust, powerful, comprehensive, and "landscape" for anything that isn't land. Use the plain word: not "this underscores a crucial gap", but "this shows a gap", and not "the reader is wedged", but "the reader is stuck".
 
 ### HM-B10: Say Is
 Say "is" or "has". Not "the script serves as the entry point" or "the dashboard boasts three views", but "the script is the entry point" and "the dashboard has three views".
@@ -84,6 +96,9 @@ Name the mechanism or a number, not a feeling. Not "the new cache makes builds f
 
 ### HM-B16: Short Noun Stacks
 Don't stack more than three nouns in a row; the reader can't tell which word describes which. Not "the nightly build failure report upload step", but "the step that uploads the nightly failure report".
+
+### HM-B17: No Coined Labels
+Don't refer to something by a label you made up as if the reader knows it. Not "the queue slots are full" or "bump the watermark?", but "five reports are already waiting for review" and "save the id of the last message handled?". Describe it in plain words the first time, and again when it comes back in a later message. The same goes for a real term from outside the reader's field: define it in a few words the first time, as in "idempotent (safe to run twice)". Don't define terms the reader works with every day (HM-C1). HM-B13 asks for one name per thing. This asks that the name be one the reader already has.
 
 ## HM-C: What to leave out
 
@@ -109,6 +124,9 @@ Make it easy to decline. No urgency language ("really need this", "asap"), no gu
 
 ### HM-D4: Bounded Ask
 Bound the request. Ask for one thing now, not a standing commitment. If it goes well, a further ask can come later.
+
+### HM-D5: Ask In The Reader's Terms
+Put a choice in terms of what the reader will see or do, not how the code works. Not "should bot types live in the repo or a separate state dir?", but "should the bot's changes show up in your git status, or stay out of the repo?"
 
 ## HM-E: Mentions and links
 
