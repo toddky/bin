@@ -26,6 +26,7 @@
 - Prefer editing existing files.
 - When writing a new script, also run chmod +x on it.
 - When fixing bugs, fix the root cause, not the symptom.
+- When building something new, don't write every part before any of it runs. Instead get the thinnest version running end to end, then add one piece at a time and run it after each.
 - For a change across several files, check every target before writing any, so a failure never leaves the tree half-edited.
 - Assume this is a shared machine.
   - NEVER write directly to `/tmp`. Always use `mktemp` or `mktemp -d` first.
