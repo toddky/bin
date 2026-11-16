@@ -40,6 +40,7 @@ Report the code review findings first, then the devil's advocate verdict. Report
 | `REPO.md` | Making a repo easier for agents to work in |
 | `REFERENCES.md` | Building something an outside repo already does |
 | `REWARD_HACKING.md` | Building an AI agent flow (prompts, agent loops, evals), or checking an agent's work for shortcuts that fake a passing result |
+| `JAILBREAKS.md` | Building or reviewing an AI agent flow that reads outside text (web pages, email, issues, chat, tool results), holds private data or credentials, or can send anything out. Check the flow against each attack it lists |
 
 `CODE_REVIEW.md` holds the cross-language rules, and each language file holds only that language's mechanics. Read both, even when the task names one language.
 
