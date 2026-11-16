@@ -19,6 +19,7 @@ Lead with the finding or the ask. One sentence of context is usually enough.
 
 ### HM-A2: Prose Over Lists
 No bullet lists for things that read naturally as prose. A bullet list is fine for short, parallel items the reader scans or looks up, such as the kinds of thing HM-E5 says to link. Use a numbered list only for genuinely enumerable steps.
+
 ### HM-A3: No Bold Headers
 No bold section headers like `**Root cause:**` or `**Summary:**`. Just write the sentence.
 
@@ -48,6 +49,12 @@ When an instruction has both a thing not to do and a thing to do, write the don'
 
 ### HM-A12: Sort Word Lists
 Put a list of words, names, or flags in alphabetical order. A reader can then find an entry, and see at once if one is missing or repeated. Not "delve, crucial, pivotal", but "crucial, delve, pivotal". A list whose order carries meaning, such as steps, keeps that order.
+
+### HM-A13: Keep Related Words Together
+Keep the subject next to its verb, and a modifier next to the word it changes. Not "the job, after the third retry on the nightly host, failed", but "the job failed after the third retry on the nightly host". Put "only" directly before the word it limits: "the script deletes only empty files", not "the script only deletes empty files".
+
+### HM-A14: Same Form For Parallel Items
+Write items that do the same job in the same grammatical form. Not "the script checks the config, a lock is taken, and then starting the sync", but "the script checks the config, takes a lock, and starts the sync".
 
 ## HM-B: Tone
 
@@ -101,6 +108,13 @@ Don't stack more than three nouns in a row. Not "the nightly build failure repor
 
 ### HM-B17: No Coined Labels
 Don't refer to something by a label you made up as if the reader knows it. Not "the queue slots are full" or "bump the watermark?", but "five reports are already waiting for review" and "save the id of the last message handled?". Describe it in plain words the first time, and again when it comes back in a later message. The same goes for a real term from outside the reader's field. Define it in a few words the first time, as in "idempotent (safe to run twice)". Don't define terms the reader works with every day (HM-C1).
+
+### HM-B18: Vague Means Unchecked
+When a sentence won't come out plain, don't polish the wording. Instead find the fact it is missing, or say what you don't know. Not "the timeout seems related to load in some cases", but "the job timed out on 3 of the 40 runs. I haven't checked what else ran on the host those three times".
+
+### HM-B19: Say What Is
+State what happened, not what didn't. Not "the test did not pass" or "the change is not without risk", but "the test failed" and "the change can drop queued jobs". Keep "not" for denying something the reader believes, and for the don't in an instruction (HM-A11).
+
 ## HM-C: What to leave out
 
 ### HM-C1: Skip Known Context
