@@ -166,6 +166,9 @@ Walk the case from REQ-A1 through the finished requirements, step by step. Every
 ### REQ-E5: Devil's Advocate Before Review
 Run `DEVILS_ADVOCATE.md` on the draft and fold in its Change items before sending it to reviewers. The cheapest objection is the one you raised yourself.
 
+### REQ-E6: Two Engineers, One Implementation
+For each statement, ask whether two engineers working apart would build the same thing. If they could differ, name the word or missing case that lets them, and fix it. Not "the service shall count active users", but "the service shall count each user with at least one login in the last 30 days".
+
 ## REQ-F: Not Supported
 
 ### REQ-F1: List It, Say Why, Say What Happens Instead
