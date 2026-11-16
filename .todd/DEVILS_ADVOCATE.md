@@ -54,6 +54,11 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
    A limit held only by a doc line or a prompt, such as "never run X", is a finding even if nothing breaks it today; propose the code that would hold it.
    For a changed default of a shared function, endpoint, or flag, list every caller and check the change for each.
    For an agent or automated pipeline, check whether each step sees only the tools it needs. An agent with every tool available at every step will sometimes pick the wrong one.
+   For an agent, check three things: can it read private data, can it read text an outsider controls (a web page, an email, an issue, a chat message, a tool result), and can it send anything out (an HTTP request, a post, a link or image it renders).
+   An agent with all three can be told by that outside text to send the private data away. Split the work so that no single step has all three, and have code check what crosses each boundary between steps.
+   The step that reads outside text passes on only fixed-shape data, such as a number, a choice from a list, or validated fields. Outgoing actions go only to an allowlist of destinations.
+   A screen that asks a model or a pattern list whether text looks like an attack does not count, and neither does a prompt line telling the agent to ignore such instructions.
+   Where the work can't be split, require a person to approve each outgoing action.
    For an agent's tool set, ask whether each tool beats doing the same thing in the shell. A tool earns its place when it does several steps in one call or returns something text cannot, such as a screenshot; one that wraps a single command costs prompt space and is one more wrong choice.
 4. **Failure modes:** Empty or huge input, concurrent runs, shared machine, missing dependency, partial failure. Does it fail loud with a useful message?
    For a change that writes several files or records, check that it validates all of them before writing any. If it can stop halfway, name the state it leaves behind and how someone recovers.
