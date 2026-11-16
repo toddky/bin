@@ -77,6 +77,9 @@ When a conclusion came from a query, say which query and what it returned. The r
 ### DOC-C4: Say Where It Came From
 When evidence is rebuilt from a result rather than taken from a record, say so once, near the top. A list pieced together from what a reply cites is weaker than one copied from a log, and a reader who assumes the stronger one will be misled. One sentence is enough.
 
+### DOC-C5: Name One Limitation
+When explaining a result or a tool to readers who cannot check it themselves, state at least one thing it does not cover or gets wrong. A summary with no limits reads as more complete than the work is. Not "the script finds every stale lock", but "the script finds stale locks owned by the user who runs it, and skips everyone else's".
+
 ## DOC-D: Revising
 
 ### DOC-D1: Counts Track The Body
