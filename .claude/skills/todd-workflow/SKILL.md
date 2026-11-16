@@ -16,14 +16,19 @@ All of it lives under `~/work`, and everything an agent needs to resume after a 
 │   │   ├── .git/                            # bare clone
 │   │   └── main/                            # default-branch worktree, read-only reference
 │   └── workflow -> ~/workflow               # Todd's private workflow repo
-└── AGENTS -> REPOS/workflow/agents          # one dir per session, tracked in the workflow repo
-    └── shop/                                # session agent-shop
-        ├── STATUS.md                        # session header and task table
-        └── 2026-11-16-fix-login/            # task fix-login, window task-fix-login
-            ├── TASK.md                      # status header, goal, MRs
-            ├── DONE.md                      # summary, written when the MR merges
-            └── worktree-webapp/             # git worktree of REPOS/webapp, branch shop/fix-login
+├── AGENTS -> REPOS/workflow/agents          # only files to commit, tracked in the workflow repo
+│   └── shop/                                # session agent-shop
+│       ├── STATUS.md                        # session header and task table
+│       └── 2026-11-16-fix-login/            # task fix-login, window task-fix-login
+│           ├── TASK.md                      # status header, goal, MRs
+│           └── DONE.md                      # summary, written when the MR merges
+└── WORKTREES/                               # checkouts and build output, never committed
+    └── shop/
+        └── 2026-11-16-fix-login/
+            └── webapp/                      # git worktree of REPOS/webapp, branch shop/fix-login
 ```
+
+`AGENTS/` and `WORKTREES/` share the same `WORD/YYYY-MM-DD-TASK` path, so a task's files and its checkout are easy to find from each other.
 
 ## Names
 
@@ -41,13 +46,13 @@ A session has one WORD, a single word with no hyphens. A task has a TASK name, w
 | Extra writer | `agent-WORD-TASK.N` | `agent-shop-fix-login.2` |
 | Reviewer | `agent-WORD-TASK.review` | `agent-shop-fix-login.review` |
 | Task dir | `AGENTS/WORD/YYYY-MM-DD-TASK` | `AGENTS/shop/2026-11-16-fix-login` |
-| Worktree | `<task dir>/worktree-<repo>` | `.../2026-11-16-fix-login/worktree-webapp` |
+| Worktree | `WORKTREES/WORD/YYYY-MM-DD-TASK/<repo>` | `WORKTREES/shop/2026-11-16-fix-login/webapp` |
 | Branch | `WORD/TASK` | `shop/fix-login` |
 
 - WORD has no hyphens, so the first two hyphens of an agent name always split off `agent` and WORD, and the rest is the TASK.
 - Helpers use a dot, because TASK may contain hyphens and a hyphen suffix would read as part of it.
 - `lead` and `note` are reserved and never a TASK.
-- Only the task dir carries a date. The window, branch and agent names exist only while the task is live, so a reused TASK name cannot collide with an old one.
+- Only the task dir and its worktree dir carry a date. The window, branch and agent names exist only while the task is live, so a reused TASK name cannot collide with an old one.
 - If an old `WORD/TASK` branch is still on the remote, pick a new TASK name.
 
 ## Panes
@@ -66,15 +71,13 @@ Point `~/work` at a large shared disk, not a machine-local disk that disappears 
 
 ```bash
 ln -s <large shared disk>/$USER ~/work
-mkdir -p ~/work/REPOS
+mkdir -p ~/work/REPOS ~/work/WORKTREES
 ln -s ~/workflow ~/work/REPOS/workflow
 ln -s REPOS/workflow/agents ~/work/AGENTS
-printf 'agents/*/*/worktree-*\n' >> ~/workflow/.gitignore
 ```
 
 - `~/workflow` is a private repo, because STATUS.md and TASK.md name internal repos, MRs and people.
-- The `.gitignore` line keeps every worktree out of the workflow repo, whichever repo it comes from.
-- `AGENTS` lives wherever `~/workflow` lives. If that is the home dir, large worktrees count against the home quota.
+- `AGENTS/` holds only files to commit. Worktrees and build output never go in it, so the workflow repo stays small enough to live in the home dir.
 
 ## Clone a repo once
 
@@ -103,30 +106,34 @@ Then start an agent in each pane, name it after the pane title, and write the se
 
 ```bash
 word=shop task=fix-login repo=webapp
-task_dir=~/work/AGENTS/$word/$(date +%F)-$task
-mkdir -p "$task_dir"
+dated=$(date +%F)-$task
+task_dir=~/work/AGENTS/$word/$dated
+worktree=~/work/WORKTREES/$word/$dated/$repo
+mkdir -p "$task_dir" "$(dirname "$worktree")"
 git -C ~/work/REPOS/$repo fetch origin
-git -C ~/work/REPOS/$repo worktree add "$task_dir/worktree-$repo" -b "$word/$task" origin/main
-pane=$(tmux new-window -t "agent-$word" -n "task-$task" -c "$task_dir/worktree-$repo" -P -F '#{pane_id}')
+git -C ~/work/REPOS/$repo worktree add "$worktree" -b "$word/$task" origin/main
+pane=$(tmux new-window -t "agent-$word" -n "task-$task" -c "$worktree" -P -F '#{pane_id}')
 tmux select-pane -t "$pane" -T "agent-$word-$task"
 ```
 
 - Base the branch on the repo's working branch, which is not always `main`.
 - One task is one MR. If the work splits into several MRs, make several tasks.
-- A task that touches several repos gets one `worktree-<repo>/` per repo in the same task dir, all on the same `WORD/TASK` branch name. Its window starts in the task dir.
+- A task that touches several repos gets one `<repo>/` worktree per repo under the same `WORKTREES/WORD/YYYY-MM-DD-TASK/`, all on the same `WORD/TASK` branch name. Its window starts in that dir.
+- Write the worktree path into TASK.md, so a restarted agent finds it.
 
 ## Finish a task
 
 After the MR merges, the main writer writes `DONE.md`. Then the lead removes the worktree and closes the window.
 
 ```bash
-git -C ~/work/REPOS/$repo worktree remove "$task_dir/worktree-$repo"
+git -C ~/work/REPOS/$repo worktree remove "$worktree"
+rmdir "$(dirname "$worktree")"
 tmux kill-window -t "agent-$word:task-$task"
 ```
 
-- Never `rm -rf` a task dir that still holds a worktree, because git keeps a stale entry. If one is left, `git -C ~/work/REPOS/<repo> worktree prune` cleans it up.
-- The task dir stays, holding `TASK.md` and `DONE.md`.
-- After moving `REPOS/` or `AGENTS/`, run `git -C ~/work/REPOS/<repo> worktree repair <each worktree path>`.
+- Never `rm -rf` a `WORKTREES/` dir that still holds a worktree, because git keeps a stale entry. If one is left, `git -C ~/work/REPOS/<repo> worktree prune` cleans it up.
+- The task dir in `AGENTS/` stays, holding `TASK.md` and `DONE.md`.
+- After moving `REPOS/` or `WORKTREES/`, run `git -C ~/work/REPOS/<repo> worktree repair <each worktree path>`.
 
 ## Files every session keeps
 
@@ -157,6 +164,7 @@ TASK.md, in the task dir, is the main writer's file. It starts with a status hea
 
 Status: MR open
 Branch: `shop/fix-login`
+Worktree: `~/work/WORKTREES/shop/2026-11-16-fix-login/webapp`
 MR: <link>
 Updated: 2026-11-16
 Next: address review comments
@@ -187,10 +195,11 @@ It runs `git pull --rebase` before every push.
 ## Restart after a reboot
 
 1. For each dir in `~/work/AGENTS/`, recreate the `agent-WORD` session and its `lead` window as in "Start a session".
-2. For each open task in STATUS.md, open a `task-TASK` window in its worktree and title the pane.
+2. For each open task in STATUS.md, open a `task-TASK` window in the worktree its TASK.md names, and title the pane.
 3. Start the agents. Each one reads its own file first: the lead and note taker read STATUS.md, and each main writer reads its TASK.md.
 
 ## Gotchas
 
 - When an agent harness exports `UV_PROJECT_ENVIRONMENT` or `VIRTUAL_ENV` for its own venv, a bare `uv sync` in a worktree installs that repo into the harness's venv. Run uv in worktrees as `env -u UV_PROJECT_ENVIRONMENT -u VIRTUAL_ENV uv ...`.
+- A sandboxed agent (for example one under bubblewrap) can have its starting directory mounted inside the sandbox. Renaming or moving that directory from outside then fails, or leaves the agent on the old copy. Quit the agents before moving their directories, and restart them in the new path.
 - A session with no repo, such as one that edits dotfiles in place, still gets `AGENTS/WORD/` for its STATUS.md, but its task windows work in those directories directly and have no worktrees.
