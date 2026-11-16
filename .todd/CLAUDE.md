@@ -35,6 +35,7 @@
 # Subagents
 - Hand noisy exploration or debugging to a subagent and keep only its summary in the main conversation.
 - Subagent must clean up by the exact `mktemp -d` path, never by a glob such as `rm -rf /tmp/tmp.*`.
+- When asking an agent to document, summarize, or review something, give it the thing itself (the file path, the diff, the log), not your description of it. A description from memory leaves the agent to fill gaps with guesses that read like facts.
 
 # Context
 - When a command could print a lot (logs, test runs, large files), filter, aggregate, or write it to a `mktemp` file and print only the summary.
