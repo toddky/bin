@@ -48,13 +48,16 @@ Paste error text and warnings exactly as printed, in a code block. Don't shorten
 When an instruction has both a thing not to do and a thing to do, write the don't first, then "instead", then the do. Not "When a file can't be read, say so, and say what your answer is based on instead", but "When you can't read a file, don't answer as if you had. Instead say you couldn't read it". When there is no don't, don't add "instead".
 
 ### HM-A12: Sort Word Lists
-Put a list of words, names, or flags in alphabetical order. A reader can then find an entry, and see at once if one is missing or repeated. Not "delve, crucial, pivotal", but "crucial, delve, pivotal". A list whose order carries meaning, such as steps, keeps that order.
+Put a list of words, names, or flags in alphabetical order. A reader can then find an entry, and see at once if one is missing or repeated. Not "delve, crucial, pivotal", but "crucial, delve, pivotal". A list whose order carries meaning, such as steps, keeps that order. Put numbered items in number order and write a run as a range: not "hosts 3, 1, 4, and 2 failed", but "hosts 1 through 4 failed".
 
 ### HM-A13: Keep Related Words Together
 Keep the subject next to its verb, and a modifier next to the word it changes. Not "the job, after the third retry on the nightly host, failed", but "the job failed after the third retry on the nightly host". Put "only" directly before the word it limits: "the script deletes only empty files", not "the script only deletes empty files".
 
 ### HM-A14: Same Form For Parallel Items
 Write items that do the same job in the same grammatical form. Not "the script checks the config, a lock is taken, and then starting the sync", but "the script checks the config, takes a lock, and starts the sync".
+
+### HM-A15: Group Long Lists
+When a list of steps, findings, or options runs past seven items, split it into groups of three or four, with at most four groups. Name each group in words the reader already uses, and keep its items together. Not twelve setup steps in one numbered list, but "Install", "Configure", and "Verify" with four steps each. A list the reader looks things up in, such as a word list (HM-A12), stays flat.
 
 ## HM-B: Tone
 
