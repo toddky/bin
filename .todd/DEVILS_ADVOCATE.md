@@ -130,7 +130,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 
 ## Output
 
-Use this shape. Keep it short; include only objections that changed or nearly changed the verdict. List objections you checked and disproved under "Ruled out", one line each, so nobody spends time on them again. Mark every change as blocks merge or can follow, so the merge decision does not need inferring.
+Use this shape. Keep it short; include only objections that changed or nearly changed the verdict. List concerns you checked and found need no action under "No action needed", one line each, so nobody spends time on them again. Mark every change as blocks merge or recommended, so the merge decision does not need inferring.
 
 ```
 ### Verdict: <Keep | Change | Replace | Drop>
@@ -149,12 +149,12 @@ Reversibility: <one-way | two-way>; undo takes <time/steps>
 ### Objections that mattered
 - <objection>: <evidence> -> <outcome>
 
-### Ruled out
-- <objection>: <evidence it does not hold>
+### No action needed
+- <concern>: <evidence it is fine>
 
 ### Changes (Change or Replace only)
 - `<file>`
-  - <edit> (blocks merge | can follow)
+  - <edit> (blocks merge | recommended)
 
 ### Decisions for the user
 1. <decision>: <options>; recommend <option> because <reason>
