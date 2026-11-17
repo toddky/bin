@@ -22,6 +22,44 @@ Run each pass in its own subagent, both at once, so neither pass sees the other'
 Give each subagent the full path to `references/` and the goal of the change, not your own opinion of it.
 Report the code review findings first, then the devil's advocate verdict. Report only: do not edit files, post comments, or commit unless asked.
 
+## Looping until /todd passes
+
+"Keep going until /todd passes", "until you pass /todd", or "yes" to a question about fixing review findings means a loop, not one round:
+
+1. Fix every finding from both passes: blocking and recommended, 🔴 and 🟡 alike. A finding is not optional because a reviewer called it recommended.
+2. Commit, push, and wait for the pipeline to pass.
+3. Run both passes again in fresh subagents. Tell them the previous round's findings, so they can confirm each one, and the findings the repo settles (its formatter, a stated constraint), so they are not raised again.
+4. Repeat until the code review lists no findings and the devil's advocate verdict is Keep with no 🔴 or 🟡 items.
+
+Run steps 1 to 4 back to back, pausing only for a decision only the user can make, such as a force-push, then report the rounds, what each fixed, and anything left for the user.
+
+## Posting a review on an MR or PR
+
+When asked to post the review, the two passes go up in different shapes.
+
+Code review: one line comment per finding, anchored on the line that has to change.
+Never post code review findings as one summary note. A finding with no line in the diff, such as a missing test file, goes on the nearest changed line it concerns.
+
+Devil's advocate: one note, shaped like this.
+
+```
+## 😈 Devil's Advocate 😈
+
+1. **Verdict: <Keep | Change | Replace | Drop>.** <one or two sentences on why>
+2. 🔴 **<finding>** (`<file>:<line>`)
+   <risk in one or two sentences>. Fix: <what to change>.
+3. 🟡 **<finding>** (`<file>:<line>`)
+   <risk>. Fix: <what to change>.
+4. 🟢 **No action needed:** <concern>: <evidence it is fine>.
+
+Open questions:
+1. <question>: <answer, or what would settle it>
+```
+
+- 🔴 marks a change that blocks merge, 🟡 a recommended change that does not block merge, 🟢 a concern that was checked and needs no action.
+- The verdict is item 1: Keep (ship as is), Change (ship after the listed fixes), Replace (another approach wins) or Drop (not needed).
+- Number every item, and list them in that order: the verdict, all 🔴, then 🟡, then 🟢.
+
 ## Which files to read
 
 | File | Read when |
