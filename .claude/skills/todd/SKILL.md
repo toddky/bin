@@ -1,11 +1,20 @@
 ---
 name: todd
-description: Todd's coding, review, and writing rules. Load before a code review, a devil's advocate pass, or checking an agent's work for reward hacking; before building or changing an AI agent flow (prompts, agent loops, evals, test harnesses an agent runs against); before writing or editing Bash, Python, Go, Ruby, or JavaScript; and before writing a document, requirements, repo layout, or any text other people will read (commit messages, Slack, PR comments). Also load when the user asks for a "todd review" or says to run todd on an MR, PR, branch, or diff, which means a code review plus a devil's advocate pass.
+description: Todd's coding, review, and writing rules. Load before a code review, a devil's advocate pass, or checking an agent's work for reward hacking; before building or changing an AI agent flow (prompts, agent loops, evals, test harnesses an agent runs against); before writing or editing Bash, Python, Go, Ruby, or JavaScript; and before writing a document, requirements, repo layout, or any text other people will read (commit messages, Slack, PR comments). Also load when the user asks for a "todd review" or says to run todd on an MR, PR, branch, or diff, which means a code review plus a devil's advocate pass. Also load before proposing changes to these rules, the `.todd` files, or this skill.
 ---
 
 # Todd's rules
 
 The rules live in `references/`, a symlink to `~/bin/.todd`. Read the files for the task before starting, and follow them over your defaults.
+
+## Proposing rule changes
+
+When asked to propose changes to these rules, the `.todd` files, or this skill:
+
+1. Before giving a rule an id, check the target file and every open `PROPOSAL-*.md` for ids already taken, and use the next free one.
+2. Write the proposal to a new file, `~/bin/.todd/PROPOSAL-<topic>.md`, where `<topic>` is a short kebab-case name for where the findings came from, such as `PROPOSAL-agent-hooks-review-loop.md`. Pick a name no existing `PROPOSAL-*.md` uses, and never add to or overwrite another proposal file. Don't edit the rules themselves.
+3. Follow the shape of the existing proposal files: what was seen and how often, then paste-ready text in the house rule shape, then the findings the current rules already cover.
+4. Leave out internal repo names, MR numbers, hostnames, paths, and people's names, since `~/bin` is public.
 
 ## Review shortcut
 
