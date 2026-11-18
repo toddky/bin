@@ -47,8 +47,8 @@ Paste error text and warnings exactly as printed, in a code block. Don't shorten
 ### HM-A11: Don't, Then Instead
 When an instruction has both a thing not to do and a thing to do, write the don't first, then "instead", then the do. Not "When a file can't be read, say so, and say what your answer is based on instead", but "When you can't read a file, don't answer as if you had. Instead say you couldn't read it". When there is no don't, don't add "instead".
 
-### HM-A12: Sort Word Lists
-Put a list of words, names, or flags in alphabetical order. A reader can then find an entry, and see at once if one is missing or repeated. Not "delve, crucial, pivotal", but "crucial, delve, pivotal". A list whose order carries meaning, such as steps, keeps that order. Put numbered items in number order and write a run as a range: not "hosts 3, 1, 4, and 2 failed", but "hosts 1 through 4 failed".
+### HM-A12: Alphabetize Lists
+Alphabetize a list when its order does not matter.
 
 ### HM-A13: Keep Related Words Together
 Keep the subject next to its verb, and a modifier next to the word it changes. Not "the job, after the third retry on the nightly host, failed", but "the job failed after the third retry on the nightly host". Put "only" directly before the word it limits: "the script deletes only empty files", not "the script only deletes empty files".
@@ -65,7 +65,7 @@ When a list of steps, findings, or options runs past seven items, split it into 
 Write like an engineer talking to another engineer. Keep it short and direct.
 
 ### HM-B2: No Dashes
-No emdashes (`—`) or double dashes (`--`). Use a period, comma, or parentheses, and restructure the sentence if needed.
+No emdashes (`—`) or double dashes (`--`). Use a comma, parentheses, or period, and restructure the sentence if needed.
 
 ### HM-B3: Rare Exclamations
 No exclamation points unless you'd actually say it out loud.
@@ -74,13 +74,13 @@ No exclamation points unless you'd actually say it out loud.
 Use active voice. Not "it was determined that" or "this can be seen in".
 
 ### HM-B5: No Filler Openers
-Don't open with "Great question", "Certainly", "Of course", or similar. Don't open a sentence with a signpost like "Note that", "It's worth noting that", or "Importantly" either. State the point.
+Don't open with "Certainly", "Great question", "Of course", or similar. Don't open a sentence with a signpost like "Importantly", "It's worth noting that", or "Note that" either. Instead state the point.
 
 ### HM-B6: No Closing Pleasantries
 Don't end with "Hope that helps", "Let me know if you have questions", "Let me know if you need anything else", or similar.
 
 ### HM-B7: No Hedging
-Don't hedge with "it appears that", "it seems like", or "it would seem". If you have evidence, say it plainly.
+Don't hedge with "it appears that", "it seems like", or "it would seem". Instead say it plainly when you have evidence.
 
 ### HM-B8: No Parallel Nouns
 Avoid the "correct X and Y" parallel-noun construction, such as "Can you confirm X has the correct Y and Z". The same goes for a trailing "and" clause that adds emphasis but no information: not "Rerun the test and see whether the failure comes back", but "Rerun the test".
@@ -95,7 +95,7 @@ Say "is" or "has". Not "the script serves as the entry point" or "the dashboard 
 State the point instead of framing it against something nobody claimed. Not "it's not just a cache, it's the source of truth", but "it's the source of truth".
 
 ### HM-B12: Natural Counts
-Don't force ideas into groups of three. Give as many as there are: not "fast, reliable, and scalable" when only the speed was measured, but "fast".
+Don't force ideas into groups of three. Instead give as many as there are: not "fast, reliable, and scalable" when only the speed was measured, but "fast".
 
 ### HM-B13: One Name Per Thing
 Pick one name for a thing and repeat it. Not "the runner", then "the executor", then "the job engine" for the same program.
@@ -104,7 +104,7 @@ Pick one name for a thing and repeat it. Not "the runner", then "the executor", 
 Don't use an abstract metaphor noun where a concrete word exists: flywheel, harness, locus, nexus, north star, paradigm, primitive, scaffolding, substrate, vector, or "surface" as in "API surface". Not "the harness exposes a small surface", but "the test runner has three public functions".
 
 ### HM-B15: Say What It Does
-Name the mechanism or a number, not a feeling. Not "the new cache makes builds feel snappy", but "the new cache cuts a build with no changes from 40 s to 3 s". If the sentence could appear unchanged in another project's docs, it says nothing about this one. Cut it.
+Don't describe a feeling. Instead name the mechanism or a number. Not "the new cache makes builds feel snappy", but "the new cache cuts a build with no changes from 40 s to 3 s". If the sentence could appear unchanged in another project's docs, it says nothing about this one. Cut it.
 
 ### HM-B16: Short Noun Stacks
 Don't stack more than three nouns in a row. Not "the nightly build failure report upload step", but "the step that uploads the nightly failure report".
@@ -144,7 +144,7 @@ Make it easy to decline. No urgency language ("really need this", "asap"), no gu
 Ask for one thing now. Not "can you review all my MRs from now on", but "can you review this MR".
 
 ### HM-D5: Ask In The Reader's Terms
-Put a choice in terms of what the reader will see or do, not how the code works. Not "should bot types live in the repo or a separate state dir?", but "should the bot's changes show up in your git status, or stay out of the repo?"
+Don't put a choice in terms of how the code works. Instead put it in terms of what the reader will see or do. Not "should bot types live in the repo or a separate state dir?", but "should the bot's changes show up in your git status, or stay out of the repo?"
 
 ## HM-E: Mentions and links
 
@@ -158,15 +158,15 @@ Secondary recipients go at the bottom on their own line as `cc @username`. Never
 Slack renders `@` mentions with the user's full display name, and you can't shorten it to a first name inside a real mention. In prose that isn't a mention, use the first name only.
 
 ### HM-E4: Link, Don't Paste
-Never paste a bare URL when you can link it. Make the text clickable.
+Never paste a bare URL when you can link it. Instead make the text clickable.
 
 ### HM-E5: Short Link Text
 Use the shortest meaningful link text. Link these:
-- Commit SHAs (shortened to 8 characters)
-- Merge requests and pull requests (`!1234`, `#5678`)
 - CI job numbers (`#2905205`)
-- Jira ticket keys (`PROJ-123`)
+- Commit SHAs (shortened to 8 characters)
 - Issue numbers
+- Jira ticket keys (`PROJ-123`)
+- Merge requests and pull requests (`!1234`, `#5678`)
 
 ### HM-E6: Unambiguous Dates
 When talking to people, use `Mon D` (three-letter month and day, like `May 4`). Avoid `5/4`, which reads as April 5 in many locales. Always use `YYYY-MM-DD`, like `2026-05-04`, in a list of items that need sorting, in code, and in timelines where the year might matter.
