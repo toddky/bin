@@ -57,7 +57,7 @@ Keep the subject next to its verb, and a modifier next to the word it changes. N
 Write items that do the same job in the same grammatical form. Not "the script checks the config, a lock is taken, and then starting the sync", but "the script checks the config, takes a lock, and starts the sync".
 
 ### HM-A15: Group Long Lists
-When a list of steps, findings, or options runs past seven items, split it into groups of three or four, with at most four groups. Name each group in words the reader already uses, and keep its items together. Not twelve setup steps in one numbered list, but "Install", "Configure", and "Verify" with four steps each. A list the reader looks things up in, such as a word list (HM-A12), stays flat.
+When a list of findings, options, or steps runs past seven items, split it into groups of three or four, with at most four groups. Name each group in words the reader already uses, and keep its items together. Not twelve setup steps in one numbered list, but "Install", "Configure", and "Verify" with four steps each. A list the reader looks things up in, such as a word list, stays flat.
 
 ## HM-B: Tone
 
@@ -116,7 +116,7 @@ Don't refer to something by a label you made up as if the reader knows it. Not "
 When a sentence won't come out plain, don't polish the wording. Instead find the fact it is missing, or say what you don't know. Not "the timeout seems related to load in some cases", but "the job timed out on 3 of the 40 runs. I haven't checked what else ran on the host those three times".
 
 ### HM-B19: Say What Is
-State what happened, not what didn't. Not "the test did not pass" or "the change is not without risk", but "the test failed" and "the change can drop queued jobs". Keep "not" for denying something the reader believes, and for the don't in an instruction (HM-A11).
+Don't describe what didn't happen. Instead state what did. Not "the test did not pass" or "the change is not without risk", but "the test failed" and "the change can drop queued jobs". Keep "not" for denying something the reader believes, and for the don't in an instruction (HM-A11).
 
 ## HM-C: What to leave out
 
