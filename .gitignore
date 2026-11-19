@@ -2,6 +2,7 @@
 /*
 !/.gitignore
 !/.todd
+!/.agents
 !/.claude
 /.claude/*
 !/.claude/skills
