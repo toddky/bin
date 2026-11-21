@@ -31,6 +31,9 @@ Only say "done" or "tests pass" if you ran them in this session and saw them pas
 ### RH-A6: Giving Up Is Fine
 If you can't solve the task, say so and explain what blocked you.
 
+### RH-A7: Name What You Read
+Only say "every file was read", "no findings", or "nothing missing" for a scope you can list. Include the list of files you read in full, and list every file in the scope you skimmed or did not open. A verdict covers only the files on the first list.
+
 ## RH-B: Guardrails for the user
 
 ### RH-B1: Lock Test Files
@@ -62,4 +65,7 @@ Skim the agent's reasoning, not just its final answer. It often says it plans to
 
 ### RH-B10: Watch Hard Tasks Closest
 Agents rarely hack easy tasks and do it more as tasks get harder ([Hack-Verifiable Terminal Bench](https://arxiv.org/pdf/2608.22103)). Review harder tasks more closely.
+
+### RH-B11: Check The Read List Against The File List
+Before you accept a review, audit, or search verdict from an agent, compare its list of files read against the real file list of the scope, such as `git ls-files` for the directory. Treat every file missing from the agent's list as unreviewed, and a "none found" verdict with no list as no verdict. In one audit an agent wrote "every file was read" above a list naming a third of the package, and the unread part held both high findings.
 
