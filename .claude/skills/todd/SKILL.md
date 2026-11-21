@@ -25,7 +25,7 @@ If more than one fits, list them as a numbered list, recommend the most recent, 
 
 Run each pass in its own subagent, both at once, so neither pass sees the other's conclusions:
 
-1. Code review: tell it the target and to read and follow `references/CODE_REVIEW.md` and the language file for each changed language.
+1. Code review: tell it the target and to read and follow `references/CODE_REVIEW.md` and the language file for each changed language. If the change is in a service that has users, accounts, roles, or rooms, tell it to read and follow `references/SECURITY.md` too.
 2. Devil's advocate: tell it the target and to read and follow `references/DEVILS_ADVOCATE.md`.
 
 Give each subagent the full path to `references/` and the goal of the change, not your own opinion of it.
@@ -88,6 +88,7 @@ Open questions:
 | `REFERENCES.md` | Building something an outside repo already does |
 | `REWARD_HACKING.md` | Building an AI agent flow (prompts, agent loops, evals), or checking an agent's work for shortcuts that fake a passing result |
 | `JAILBREAKS.md` | Building or reviewing an AI agent flow that reads outside text (web pages, email, issues, chat, tool results), holds private data or credentials, or can send anything out. Check the flow against each attack it lists |
+| `SECURITY.md` | Writing, reviewing, or auditing a service that has users, accounts, roles, or rooms. The security rules for any program, including a single script, are CR-I in `CODE_REVIEW.md` |
 
 `CODE_REVIEW.md` holds the cross-language rules, and each language file holds only that language's mechanics. Read both, even when the task names one language.
 
