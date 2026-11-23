@@ -7,6 +7,8 @@ description: Todd's coding, review, and writing rules. Load before a code review
 
 The rules live in `references/`, a symlink to `~/bin/.todd`. Read the files for the task before starting, and follow them over your defaults.
 
+These files are also where a general lesson goes. When a skill falls short and the lesson is about how to write, review, or check code or prose, the fix belongs in the matching file here, even when another skill was running. A lesson about one tool, repo, or workflow belongs in that tool's skill.
+
 ## Proposing rule changes
 
 When asked to propose changes to these rules, the `.todd` files, or this skill:
