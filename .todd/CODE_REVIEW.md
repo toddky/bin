@@ -2330,6 +2330,80 @@ def request_account(body):
     add_to_review_queue(body["username"])
 ```
 
+### CR-I17: Validate The Decoded Form
+A violation is a check on a path, URL, or identifier that runs on the raw string when a later step decodes percent escapes, backslashes, or path parts before it uses the value. The rule is followed when the check decodes the input the same way that later step will and validates the decoded form, or refuses any input that holds an escape. Input that no later step decodes follows the rule. Why: a check that `/api/v1/items%2f..%2fadmin` has no `..` part passes, and a server that decodes `%2f` before routing then sends the request to `/api/v1/admin`.
+
+Bad:
+```python
+def has_dot_part(path):
+    return ".." in path.split("/")
+```
+
+Good:
+```python
+from urllib.parse import unquote
+
+def has_dot_part(raw_path):
+    decoded = unquote(raw_path)
+    return any(part in {".", ".."} for part in decoded.split("/"))
+```
+
+### CR-I18: One Escaper Per Context
+A violation is more than one helper that escapes text for the same context (HTML, an HTML attribute, a shell word) in one codebase, or an HTML escaper that leaves `'` alone. The rule is followed when every place that puts text into that context calls one shared escaper, and for HTML that escaper covers `&`, `<`, `>`, `"`, and `'`. Code that escapes nothing follows the rule. Why: with a four-character escaper and a five-character one in the same codebase, the page is safe only until someone uses the short one inside a single-quoted attribute.
+
+Bad:
+```python
+def escape_html(text):
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+link = f"<a title='{escape_html(name)}'>"
+```
+
+Good:
+```python
+import html
+
+link = f"<a title='{html.escape(name)}'>"
+```
+
+### CR-I19: Strip Environment Namespaces By Prefix
+A violation is code that cleans a child process's environment by deleting a fixed list of names from a dangerous group of variables, such as `GIT_*` or `LD_*`, and passes the rest of the environment on. The rule is followed when the code builds the environment from an allowlist of safe variables, or removes every variable with the prefix (`GIT_`, `LD_`, `DYLD_`) and then adds back the ones it needs. Code that does not clean a child's environment follows the rule. Why: removing `GIT_DIR` and `GIT_WORK_TREE` by name leaves `GIT_SSH_COMMAND`, `GIT_ASKPASS`, and `GIT_CONFIG_COUNT` set, and each one lets whoever set it run a command or change the config of the child `git`.
+
+Bad:
+```python
+git_env = dict(os.environ)
+for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"):
+    git_env.pop(name, None)
+subprocess.run(["git", "status"], env=git_env, check=True)
+```
+
+Good:
+```python
+git_env = {
+    name: value
+    for name, value in os.environ.items()
+    if not name.startswith(("GIT_", "LD_", "DYLD_"))
+}
+subprocess.run(["git", "status"], env=git_env, check=True)
+```
+
+### CR-I20: Refuse Non-Finite Numbers
+A violation is a number parsed from outside the program that is stored or compared without refusing `NaN`, `inf`, and `-inf`, or without an upper limit. The rule is followed when the code refuses non-finite values and values outside a stated range before the number reaches storage. Input that can only be an integer follows the rule. Why: `inf` passes a "not negative" check. A strict JSON encoder then refuses to write it, so every later save of that store fails, and a lenient one writes `Infinity`, which other JSON parsers refuse to read.
+
+Bad:
+```python
+spend_usd = float(body["spend_usd"])
+if spend_usd < 0:
+    raise BadRequest("spend_usd must not be negative")
+```
+
+Good:
+```python
+spend_usd = float(body["spend_usd"])
+if not math.isfinite(spend_usd) or not 0 <= spend_usd <= MAX_SPEND_USD:
+    raise BadRequest(f"spend_usd must be between 0 and {MAX_SPEND_USD}, got {body['spend_usd']!r}")
+```
+
 ## CR-J: Files
 
 ### CR-J1: Prose Extensions
