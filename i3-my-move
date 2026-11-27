@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# USAGE: i3-my-move <left|right|up|down>
+# DESCRIPTION: Move the focused window. Moving up or down out of a tab group splits that group's column, not the whole workspace.
+
+# ==============================================================================
+# ARGUMENTS
+# ==============================================================================
+direction="${1:-}"
+case "$direction" in
+    left|right|up|down) ;;
+    *) echo "ERROR: unknown direction: '$direction'; expected left, right, up or down" 1>&2; exit 1;;
+esac
+
+# ==============================================================================
+# HELPERS
+# ==============================================================================
+# Prints the focused window's id, then its parent's id, layout, type, number of children and position among its siblings.
+# Then prints the grandparent's layout, type and number of children.
+function print_focus_info() {
+    local jq_filter
+    read -r -d '' jq_filter <<'EOF'
+(first(paths(objects | select(.focused == true))) // empty) as $focus_keys
+| select(($focus_keys | length) >= 4)
+| getpath($focus_keys) as $window
+| getpath($focus_keys[:-2]) as $parent
+| getpath($focus_keys[:-4]) as $grandparent
+| $window.id, $parent.id, $parent.layout, $parent.type, ($parent.nodes | length), $focus_keys[-3],
+  $grandparent.layout, $grandparent.type, ($grandparent.nodes | length)
+EOF
+    swaymsg -t get_tree | jq -r "$jq_filter"
+}
+
+# Sets the focus_* globals; returns 1 when nothing tiled is focused.
+function read_focus_info() {
+    local focus_info
+    mapfile -t focus_info < <(print_focus_info)
+    if ((${#focus_info[@]} != 9)); then
+        return 1
+    fi
+    focus_window_id="${focus_info[0]}"
+    focus_parent_id="${focus_info[1]}"
+    focus_parent_layout="${focus_info[2]}"
+    focus_parent_type="${focus_info[3]}"
+    focus_num_tabs="${focus_info[4]}"
+    focus_parent_index="${focus_info[5]}"
+    focus_grandparent_layout="${focus_info[6]}"
+    focus_grandparent_type="${focus_info[7]}"
+    focus_num_rows="${focus_info[8]}"
+}
+
+# ==============================================================================
+# MAIN
+# ==============================================================================
+# i3 has no workspace-wide rejigger to work around, and this script's steps are only tested on sway.
+if [[ -z "$WAYLAND_DISPLAY" ]]; then
+    exec i3-msg -q move "$direction"
+fi
+if [[ "$direction" == left || "$direction" == right ]]; then
+    exec swaymsg -q move "$direction"
+fi
+if ! read_focus_info || [[ "$focus_parent_type" != con || "$focus_parent_layout" != tabbed ]]; then
+    exec swaymsg -q move "$direction"
+fi
+
+if ((focus_num_tabs == 1)); then
+    in_column=0
+    if [[ "$focus_grandparent_type" == con && "$focus_grandparent_layout" == splitv ]]; then
+        in_column=1
+    fi
+    at_edge=0
+    if [[ "$direction" == up ]] && ((focus_parent_index == 0)); then
+        at_edge=1
+    fi
+    if [[ "$direction" == down ]] && ((focus_parent_index == focus_num_rows - 1)); then
+        at_edge=1
+    fi
+    # A lone window with no row to move into would make sway turn the whole workspace into rows.
+    if ((!in_column || at_edge)); then
+        exit 0
+    fi
+fi
+
+# Without a vertical split around the tab group, sway turns the whole workspace into rows.
+if ((focus_num_tabs >= 2)) && [[ "$focus_grandparent_layout" != splitv ]]; then
+    swaymsg -q "[con_id=$focus_parent_id] split vertical"
+fi
+window_id="$focus_window_id"
+swaymsg -q "[con_id=$window_id] move $direction"
+
+if ! read_focus_info; then
+    exit 0
+fi
+# Only windows placed directly on a workspace get a tab group of their own, so give this one a group too.
+if [[ "$focus_parent_layout" == splitv ]]; then
+    swaymsg -q "[con_id=$window_id] split horizontal, layout tabbed"
+fi
+# Joining the only other row leaves a column with one row; drop the column so the tree stays flat.
+if [[ "$focus_parent_layout" == tabbed && "$focus_grandparent_type" == con ]] && ((focus_num_rows == 1)); then
+    swaymsg -q "[con_id=$focus_parent_id] split none"
+fi
