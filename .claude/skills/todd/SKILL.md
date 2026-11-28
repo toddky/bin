@@ -72,7 +72,7 @@ Open questions:
 ```
 
 - 🔴 marks a change that blocks merge, 🟡 a recommended change that does not block merge, 🟢 a concern that was checked and needs no action.
-- The verdict is item 1: Keep (ship as is), Change (ship after the listed fixes), Replace (another approach wins) or Drop (not needed).
+- The verdict is item 1: Keep (ship as is), Change (ship after the 🔴 fixes), Replace (another approach wins) or Drop (not needed).
 - Number every item, and list them in that order: the verdict, all 🔴, then 🟡, then 🟢.
 
 Approve only when the head pipeline has finished green, or when every failure is outside the change, such as a known flaky test in code the change does not touch, and say which in the approval note.

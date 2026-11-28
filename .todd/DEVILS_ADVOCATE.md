@@ -35,6 +35,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 7. Pick a verdict:
    - **Keep:** the original wins. State the strongest objection and why it does not hold.
    - **Change:** the original wins with specific edits. List each edit by file. For a bug fix, list the edits in red-green-refactor order: the test that reproduces the bug and fails first, then the fix that makes it pass, then any cleanup.
+     Use Change only when at least one edit blocks merge. When every edit is recommended, the verdict is Keep, and the edits are listed as recommended.
    - **Replace:** an alternative wins. Say which and why, and what it costs to switch.
    - **Drop:** the change is not needed, or something that exists already covers the goal. Name the evidence, or the existing thing and how to use it.
 8. Answer every open question from step 3. If one cannot be answered with evidence, say what would settle it.
@@ -86,6 +87,8 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 7. **Assumptions:** List each assumption. Mark it verified or guessed.
    Rerun every speed or size figure the change quotes, such as "renders in under 1 s"; a figure nobody reran is a guess.
    A fact taken from a secondary source, such as a blog post, a screenshot, or a forum answer, is a guess until checked against the primary doc.
+   A fact shown on a different branch, job, host, or environment is a guess for this one. Check it where the claim applies, such as the change's own pipeline.
+   A finding whose severity rests on a library's default, such as a size limit, timeout, or retry count, is a guess until checked against the code that builds the client, since a wrapper can override the default.
 8. **Testability:** Can it be checked independently, without trusting the author's own summary?
    When you run the change or its tests, read what it prints, not only the exit code. A run that exits 0 while printing errors or warnings is a finding.
    Can its tests be hermetic? A design that reads the clock, the network, environment variables, or fixed paths directly, instead of taking them as inputs, can only be tested by tests that fail for reasons nobody caused.
@@ -93,6 +96,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
    Run only the fast tests the change adds or touches three extra ways: twice in a row without cleanup, each test alone, and under `TZ=Pacific/Kiritimati`.
    A different result means the test depends on leftover state, test order, or the local date. Skip tests that take more than about a minute each (a guess at where three extra runs stop being cheap).
    Does any test run the startup path, the code that runs once when the program or page first loads? A bug there breaks every run, and tests that start after setup never see it.
+   Before reporting a failure from a local run, rerun it the way CI runs it: in a git checkout or worktree of the head, with your shell's startup files left out, such as `env -u BASH_ENV -u ENV`. A failure message that names something from your own setup, such as a wrapper on PATH, a home-directory path, or a missing `.git`, is your machine's, not the change's.
 9. **Tests that guard the change:** Delete each condition the change adds, one at a time, and run the tests. If they still pass, no test guards that condition. A mutation that does not compile, or a test run that reuses a cached pass, proves nothing. Check that the run built the mutated code and failed on an assertion; in Go, see GO.md Testing. Make sure you deleted the code under test, since the same line can appear in more than one place.
    Do this even when the author says they already did; that claim is often wrong.
    Mutate what the fakes answer too. A fake that returns the wrong shape can stop the code before the condition, so a test passes without reaching it (CR-H17). A condition whose removal changes no result points to dead code (CR-E1), not a missing test.
@@ -106,6 +110,8 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
     Check whether oversized input truncates silently into a collision or unintended state instead of rejecting outright.
     Verify blank, whitespace, or missing credentials cannot bypass checks, auto-initialize accounts, or trigger permissive fallbacks.
     Auxiliary features in security paths (password feedback asterisks, redraws, audit hooks) must not write to input buffers or mutate auth state.
+    For a token, key, or session, ask what stops a copy from working: binding to the holder's key, a single-use id, or a short life. Ask what ends it early when its signing key is removed, its owner loses access, or a one-time code is used twice. Check that every cache or revoked list keeps the answer at the same scope it was given, so revoking a person blocks all their sessions, not only the one that was checked.
+    For a guard, such as a hook, a lint rule, or a policy check, first ask who it is meant to stop: an accident, a common shortcut, or someone working against it on purpose. If it runs where that someone can run code, it can't stop them, so ask for the guard's docs to say so and to name the layer that does. Rate a bypass by that stated scope: inside it, a bypass blocks merge; outside it, name the layer that should catch it.
 12. **Private data:** For data only some users may see, check every path that can return it, such as search results, caches, exports, notifications, and counts, not just the main page. Check that access ends when someone loses it, and that access is checked when the data is read, not only when it was saved.
     If the list that grants access is reloaded from a file or a service, check what a failed reload does. Keeping the old list means a removal never takes effect; a failed reload should refuse, or at least alert, never keep the old list silently.
     For a fix to a leak or a missed check, ask what the bug already wrote, granted, or exposed, and whether the fix needs a one-time cleanup, a migration, or at least a tracked issue for that data.
@@ -134,6 +140,10 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 
 19. **Cost of change:** If requirements shift a little, how much has to be rewritten?
 20. **Fit:** Does it match the surrounding code's idioms, naming, and conventions, or bring in a new pattern? Read CODE_REVIEW.md and the guide for each language in the change (BASH.md, GO.md, PYTHON.md, RUBY.md, RUST.md, JAVASCRIPT.md). Report each broken rule with its id, marked blocks merge.
+
+### When you suggest a fix
+
+21. **Suggested fixes:** Before suggesting a fix that tightens a check, run the change's main case and its common variants through the suggested rule, and say which ones it would now refuse. If it refuses any the goal needs, suggest a rule that doesn't, or say what the fix gives up.
 
 ## Output
 
