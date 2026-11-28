@@ -37,6 +37,9 @@
 - Hand noisy exploration or debugging to a subagent and keep only its summary in the main conversation.
 - Subagent must clean up by the exact `mktemp -d` path, never by a glob such as `rm -rf /tmp/tmp.*`.
 - When asking an agent to document, summarize, or review something, give it the thing itself (the file path, the diff, the log), not your description of it. A description from memory leaves the agent to fill gaps with guesses that read like facts.
+- Before you relay a subagent's report that it changed something, such as posted, approved, merged, or fixed, check it in the system of record, such as the MR page or the pipeline, and name the commit you checked.
+- A long-lived subagent keeps the rule text it read when it started. When a `.todd` file or a skill it follows changes, tell it to re-read the changed files, and say what changed.
+- Before a loop that spawns subagents round after round, such as a review loop, check how much budget is left and estimate each round's cost from the first round. Stop and ask before the loop would use most of what's left, since running out stops every agent on that key, not just the loop.
 
 # Context
 - When a command could print a lot (logs, test runs, large files), filter, aggregate, or write it to a `mktemp` file and print only the summary.
