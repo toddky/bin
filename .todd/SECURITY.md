@@ -91,10 +91,103 @@ def run_step(flow, step):
         tasks.update(step.task_id, step.changes, actor=flow.owner)
 ```
 
+### SEC-A5: Audit Records Name The Verified Identity
+A violation is an audit or security log entry whose actor comes from something the caller sent, such as a request header, a form field, or a name in the message body, rather than from the identity the server verified. The rule is followed when the actor field holds the authenticated identity, and anything the caller claimed goes in a separate field marked as claimed. Why: whoever controls the actor field can put someone else's name on their own actions, and the log meant to find them points at the victim.
+
+Bad:
+```python
+def audit_refusal(request, session, reason):
+    audit_log.write(actor=request.headers.get("X-Acting-As", session.user), action="refused", reason=reason)
+```
+
+Good:
+```python
+def audit_refusal(request, session, reason):
+    audit_log.write(
+        actor=session.user,
+        claimed_actor=request.headers.get("X-Acting-As"),
+        action="refused",
+        reason=reason,
+    )
+```
+
+### SEC-A6: Revoking Needs Only Proof Of Ownership
+A violation is a path that removes access, such as revoke, disable, sign out, or kill, that requires something only the granting path needs, such as a display label in the token, a successful audit write, a reachable dependency, or a rate-limit slot. The rule is followed when the revoke path checks only that the caller owns what is revoked, a later step that fails is logged with the id of what was revoked and does not undo it or report failure, and a test revokes with each grant-only precondition missing. Why: the moment someone needs to revoke is often the moment something else is broken, such as a stolen key during an audit outage, and a revoke that refuses then leaves the attacker in.
+
+Bad:
+```python
+def revoke_key(caller, key_id):
+    key = keys.get(key_id)
+    if key is None or key.owner != caller.account_id or not caller.display_name:
+        raise Forbidden(f"revoke {key_id}: caller {caller.account_id} may not revoke it")
+    audit.write("revoke", key_id, actor=caller.account_id)
+    keys.revoke(key_id)
+```
+
+Good:
+```python
+def revoke_key(caller, key_id):
+    key = keys.get(key_id)
+    if key is None or key.owner != caller.account_id:
+        raise Forbidden(f"revoke {key_id}: caller {caller.account_id} does not own it")
+    keys.revoke(key_id)
+    try:
+        audit.write("revoke", key_id, actor=caller.account_id)
+    except AuditUnavailable as error:
+        log.error("revoked key %s but the audit write failed: %s", key_id, error)
+```
+
+### SEC-A7: Copied Data Keeps Its Source's Label
+A violation is copying data from a labelled or access-controlled source, such as a ticket, a private room, or a file, into a container with weaker access, such as a channel, a task, or a cache, and then serving the copy under the container's access alone. The rule is followed when the copy carries its source's label, every read path compares that label with the reader's access, and a test reads the copy as a container member who could not read the source. Why: each piece of data stays within its own access, but a copy inherits the access of wherever it lands, which is usually wider.
+
+Bad:
+```python
+def copy_ticket_to_task(ticket, task):
+    task.attachments.append(ticket.body)
+
+def read_task(caller, task):
+    require_member(task.channel, caller)
+    return task.attachments
+```
+
+Good:
+```python
+def copy_ticket_to_task(ticket, task):
+    task.attachments.append(Attachment(body=ticket.body, label=ticket.label))
+
+def read_task(caller, task):
+    require_member(task.channel, caller)
+    return [item.body for item in task.attachments if caller.may_read(item.label)]
+```
+
+### SEC-A8: Show The Whole Thing A Person Approves
+A violation is an approval prompt that shows a person a summary, a truncated copy, or the requester's own description of an action, while the approval authorizes the full action, such as a hash of the whole request body. The rule is followed when the prompt shows every field the approval binds, after redaction but without truncation, or the request is refused when it is too long to show. Why: whoever builds the request chooses what falls past the cut, so the person approves text they never saw.
+
+Bad:
+```python
+def approval_card(call):
+    text = json.dumps(redact(call.arguments), sort_keys=True)
+    return {"text": text[:500], "approves": sha256(call)}
+```
+
+Good:
+```python
+# The longest body the approval card can show.
+MAX_CARD_CHARS = 500
+
+def approval_card(call):
+    text = json.dumps(redact(call.arguments), sort_keys=True)
+    if len(text) > MAX_CARD_CHARS:
+        raise TooLongToApprove(f"approve {call.name}: {len(text)} characters won't fit the card's {MAX_CARD_CHARS}; split it")
+    return {"text": text, "approves": sha256(call)}
+```
+
 ## SEC-B: Checks at a shared boundary
 
 ### SEC-B1: Gate Every Path Across The Same Boundary
 A violation is a security check (secret scan, outbound address guard, authorization check, allowlist, or size cap) placed in one caller of an outbound or storage boundary while a sibling caller that reaches the same boundary omits it. The rule is followed when the check runs inside the shared boundary function that performs the send or write, or every path through the boundary calls the same gate helper. Code with a single path follows the rule. Why: a secret scan on the tool-call path does nothing when an agent can send the same payload through the sibling HTTP-target path on the same gateway.
+
+The same holds for a check keyed on an optional request field, such as a per-request room check that a cross-room query passes by sending no room. Apply the check in the code that collects the data or performs the action, for every kind of caller, and test the new path as each kind of caller with an allow-list narrower than what exists. Why: a check keyed on an optional field passes whenever the field is missing, and the new path looks covered in review because the old check sits nearby.
 
 Bad:
 ```python
@@ -147,4 +240,23 @@ def upstream_headers(request_headers):
         for name in FORWARDED_HEADERS
         if name in request_headers
     }
+```
+
+### SEC-B3: State Changes Never Answer GET
+A violation is an HTTP endpoint that changes state, such as creating, revoking, or deleting something, and answers a GET request. The rule is followed when such an endpoint accepts only POST, PUT, PATCH, or DELETE, refuses GET with 405, and a test sends GET and expects the refusal. Why: browsers, link previews, crawlers, and prefetchers send GET without asking, and another site can trigger one with an image tag, so the change runs without anyone meaning it.
+
+Bad:
+```python
+ROUTES = {
+    "/keys": {"GET": list_keys},
+    "/keys/revoke": {"GET": revoke_key, "POST": revoke_key},
+}
+```
+
+Good:
+```python
+ROUTES = {
+    "/keys": {"GET": list_keys},
+    "/keys/revoke": {"POST": revoke_key},
+}
 ```
