@@ -31,6 +31,9 @@ Run each pass in its own subagent, both at once, so neither pass sees the other'
 2. Devil's advocate: tell it the target and to read and follow `references/DEVILS_ADVOCATE.md`.
 
 Give each subagent the full path to `references/` and the goal of the change, not your own opinion of it.
+Give each subagent its own throwaway worktree (`git worktree add --detach <path> <head>`), removed after the round, so it can run the code without touching the author's checkout. Have it write its full report to a file there.
+A reviewer often ends a turn on a progress line; if no report file exists, tell it to finish instead of taking the progress line as the report. If a model refuses a defensive check, rerun that pass on another model and say so.
+When the two passes contradict each other on a fact, settle it before reporting: run the command or read the line that decides it, report the answer with its evidence, and say which pass was wrong. Never report both claims.
 Report the code review findings first, then the devil's advocate verdict. Report only: do not edit files, post comments, or commit unless asked.
 
 ## Looping until /todd passes
@@ -40,9 +43,10 @@ Report the code review findings first, then the devil's advocate verdict. Report
 1. Fix every finding from both passes: blocking and recommended, 🔴 and 🟡 alike. A finding is not optional because a reviewer called it recommended.
 2. Commit, push, and wait for the pipeline to pass.
 3. Run both passes again in fresh subagents. Tell them the previous round's findings, so they can confirm each one, and the findings the repo settles (its formatter, a stated constraint), so they are not raised again.
-4. Repeat until the code review lists no findings and the devil's advocate verdict is Keep with no 🔴 or 🟡 items.
+4. Repeat until the code review lists no findings and the devil's advocate verdict is Keep with no 🔴 or 🟡 items, or until step 5 stops the loop.
+5. Stop and bring the user a decision, rather than run another round, when any of these holds: two rounds in a row found only new spellings of kinds already reported (DEVILS_ADVOCATE item 14); the loop has run 5 rounds (a guess: in one 9-round loop, every round after the 4th found only new spellings); or the spend so far is near the budget. Report the findings per round, what each round fixed, and the options: stop here with the remaining risk stated in the description, change the scope, or keep going.
 
-Run steps 1 to 4 back to back, pausing only for a decision only the user can make, such as a force-push, then report the rounds, what each fixed, and anything left for the user.
+Run steps 1 to 5 back to back, pausing only for a decision only the user can make, such as a force-push, then report the rounds, what each fixed, and anything left for the user.
 
 ## Posting a review on an MR or PR
 
@@ -70,6 +74,10 @@ Open questions:
 - 🔴 marks a change that blocks merge, 🟡 a recommended change that does not block merge, 🟢 a concern that was checked and needs no action.
 - The verdict is item 1: Keep (ship as is), Change (ship after the listed fixes), Replace (another approach wins) or Drop (not needed).
 - Number every item, and list them in that order: the verdict, all 🔴, then 🟡, then 🟢.
+
+Approve only when the head pipeline has finished green, or when every failure is outside the change, such as a known flaky test in code the change does not touch, and say which in the approval note.
+After every push, read the approval and merge state again before relying on it: a push can clear an approval, a rebase that keeps the same tree may keep it, and the MR may merge first. If a posted note no longer matches the MR, reply under it.
+Before resolving a thread, check the fix in the code. If the author resolved it without the fix, reopen it and say why.
 
 ## Which files to read
 
