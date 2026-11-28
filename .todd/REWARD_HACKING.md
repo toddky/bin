@@ -33,6 +33,7 @@ If you can't solve the task, say so and explain what blocked you.
 
 ### RH-A7: Name What You Read
 Only say "every file was read", "no findings", or "nothing missing" for a scope you can list. Include the list of files you read in full, and list every file in the scope you skimmed or did not open. A verdict covers only the files on the first list.
+For a review, an approval, or a resolved thread, read the diff at the head you judge and name that head. A title, description, commit message, or the author's reply is not a read; if you didn't read the diff, say so instead of posting a verdict.
 
 ## RH-B: Guardrails for the user
 
@@ -68,4 +69,20 @@ Agents rarely hack easy tasks and do it more as tasks get harder ([Hack-Verifiab
 
 ### RH-B11: Check The Read List Against The File List
 Before you accept a review, audit, or search verdict from an agent, compare its list of files read against the real file list of the scope, such as `git ls-files` for the directory. Treat every file missing from the agent's list as unreviewed, and a "none found" verdict with no list as no verdict. In one audit an agent wrote "every file was read" above a list naming a third of the package, and the unread part held both high findings.
+
+### RH-B12: Hooks Stop Shortcuts, Not Sabotage
+A hook that runs where the agent can run code catches accidents and common shortcuts, such as editing a test or skipping a linter. It can't stop an agent that means to get past it, since the agent can build the change in a string, write files from a script, or forge what the hook reads. Write that scope into the hook's docs. Catch deliberate evasion in a layer the agent can't touch: a clean-checkout CI run (RH-B4), hidden tests (RH-B7), or a person reviewing every change to an existing test.
+
+### RH-B13: Know The Ways Tests Get Tampered With
+When checking a diff against RH-A, look for these as well as removed asserts and skips. Each one made a failing pytest suite pass without fixing the code:
+- Outcome rewriting: a `pytest_runtest_makereport` hook in a conftest, in a plugin module named by `pytest_plugins`, or in a `pytest11` entry point.
+- Collection: `__test__ = False`, `pytest.importorskip`, `raise pytest.skip.Exception` in an autouse fixture, `testpaths = []` or `addopts = "-k never"` in a new nested config, a `.gitignore` that hides a new conftest.
+- Replacing the runner: a `pytest.py`, `_pytest/`, `sitecustomize.py`, `usercustomize.py` or `*.pth` next to the tests.
+- Ending the run: `os._exit`, `posix._exit`, `os.exec*`, `os.abort`, or `pytest.exit` in a test, often after writing the junit report.
+- Changed expectations: an expected value edited to match the broken code, or a setup line that an assert reads.
+- Wrapped asserts: `contextlib.suppress(AssertionError)`, `try`/`except`, `pytest.raises(AssertionError)`, `for _ in ():`, `while 0:`, an `if` on the broken value, a no-op decorator.
+- The old test no longer runs: a nested def with the same name, an `if/else` pair of defs, a move into a class pytest doesn't collect plus a stub.
+- Patching the code under test: module attribute writes in a conftest or any module the suite imports, `monkeypatch` on the code under test, `sys.modules[...]`, `inspect.getmodule(...)`, `__kwdefaults__`, a parameter default, or a fixture named like an imported name.
+- Hiding the change from git: `assume-unchanged`, `skip-worktree`, `.git/info/exclude`, or a branch named like the base ref.
+- Lint: a nested linter config, a file-level `# ruff: noqa`, `# NOQA`, `# flake8: noqa`, or a lowered version pin.
 
