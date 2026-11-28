@@ -49,6 +49,8 @@ if process.returncode == 0:
 ### CR-A3: Parser Examples
 A violation is a regular expression or string-parsing step, such as `grep -E`, `sed`, `awk`, `=~`, `re.search`, or a split on a delimiter, with no comment directly above it quoting a real input line it handles. The rule is followed when every pattern has an exact sample input line in a comment above it. Code with no regex or text parsing follows the rule. Why: the sample line is the only way to check a pattern without running it.
 
+When the format has headers and a body, such as a diff, an mbox, or a chunked response, also quote a body line that looks like a header, and parse header lines only in the part of the format where headers can appear, such as between `diff --git` and the first `@@`. Why: a line inside the body can spell a header by accident, and a parser that matches it anywhere loses its place for the rest of the file.
+
 Bad:
 ```python
 # Parses error line
@@ -970,8 +972,8 @@ def get_orders(customer_id, by_activity=False):
     return sorted(orders, key=lambda order: order.id)
 ```
 
-### CR-E8: Removing A Step Keeps Saved State Loadable
-A violation is a change that deletes a step, check, or job type while saved data outside the repo, such as queued jobs or users' config files, still names it. The rule is followed when the same change migrates that data, or keeps a stub under the old name that does nothing and says it was retired, and a test loads data saved before the change. Why: every saved item that names the step fails when it runs, often with an error that does not mention the missing step, long after the change merged.
+### CR-E8: Changes Keep Saved State Loadable
+A violation is a change that deletes a step, check, or job type while saved data outside the repo, such as queued jobs or users' config files, still names it, or that adds a required field to a record read back from disk or a queue, such as a JSON object or a serialized struct, with no default. The rule is followed when the same change migrates that data, or keeps a stub under the old name that does nothing and says it was retired, or gives the new field a default, and a test loads data saved before the change. Why: every saved item that names the step, or lacks the field, fails when it is loaded, often with an error that does not mention the change, long after the change merged.
 
 Bad:
 The `thumbnail` step is deleted, but queued jobs still say `thumbnail`, so each one fails with `KeyError: 'thumbnail'`:
@@ -1057,6 +1059,95 @@ Each branch first adds its number to a registry file that everyone merges from, 
 # WIRE_NUMBERS.md
 73  ClientCommand.set_title
 74  ClientCommand.pause
+```
+
+### CR-E13: An Unset Setting Leaves Existing State Alone
+A violation is a setting whose unset value is written over state that already exists, such as a default replica count, retention, or size limit applied to existing tables, streams, or buckets each time the program starts. The rule is followed when an unset setting applies only to things the program creates, changing existing state needs the setting given explicitly or a separate migration command, and a mode that only reads, such as verify or report, opens the store read-only. Why: one process started without the variable, such as a debug run or a maintenance tool, quietly downgrades live data, and nothing reports an error.
+
+Bad:
+With `STREAM_COPIES` unset, `num_copies` is 1, and every start shrinks existing 3-copy streams to one copy:
+```python
+def open_store(client, num_copies):
+    for name in STREAM_NAMES:
+        if client.has_stream(name):
+            client.update_stream(name, num_replicas=num_copies)
+        else:
+            client.create_stream(name, num_replicas=num_copies)
+```
+
+Good:
+The setting applies only to new streams. Changing existing ones is a separate command that needs the count given:
+```python
+def open_store(client, num_copies):
+    for name in STREAM_NAMES:
+        if not client.has_stream(name):
+            client.create_stream(name, num_replicas=num_copies)
+```
+
+### CR-E14: A Gate Reads Its Settings From The Base
+A violation is a check that reads its own settings, such as a tool version pin, a lint rule set, a test path list, or an allow list, from the working tree of the change it is judging, including config files the change adds in subdirectories. The rule is followed when the check reads those settings from the merge base or from a location the change can't write, and a change that adds or edits any file the tool reads as config, in any directory, fails the check or needs a person. Why: a change that may edit the rules can pass any rule, and a nested config file is easy to miss in review because it looks like ordinary project setup.
+
+Bad:
+A change that empties `select` in `ruff.toml`, or adds `pkg/ruff.toml` with `ignore = ["F"]`, passes the lint it just switched off:
+```python
+def lint_settings():
+    return Path("ruff.toml").read_text()
+```
+
+Good:
+```python
+RUFF_CONFIG_NAMES = {"pyproject.toml", "ruff.toml", ".ruff.toml"}
+
+def lint_settings(merge_base, changed_files):
+    changed_configs = [name for name in changed_files if Path(name).name in RUFF_CONFIG_NAMES]
+    if changed_configs:
+        sys.exit(f"ERROR: lint gate: the change edits lint config {changed_configs}; ask a maintainer to review it")
+    return git("show", f"{merge_base}:ruff.toml")
+```
+
+### CR-E15: CI Jobs That Need Outside Settings Fail Alone
+A violation is a change that adds a CI job or gate that depends on something the diff can't ship, such as a project variable, a deploy token, another project's permission, or an outside mirror, when no pipeline on the change's head has run that job and passed, or when the job sits where its failure keeps the build and test jobs from running, such as an earlier stage or a job every later stage waits on. The rule is followed when the prerequisite is set, one pipeline on the head shows the job passing, every tool the job runs is set not to prompt, such as `GIT_TERMINAL_PROMPT=0` for git, so a missing credential fails at once with the variable or permission it needs, and the job runs alongside the build and tests, for example in the same stage or with `needs: []` on the build jobs. Changes that add no such job follow the rule. Why: merged first, or once the setting expires, the job turns every pipeline red and the jobs behind it never run, so every open change loses its build and test results and reviewers can't tell a broken change from a broken setting.
+
+Bad:
+With `MIRROR_TOKEN` unset, git waits for a password on the runner until the job times out, and the build and test stages never start:
+```yaml
+stages: [check, build, test]
+
+dependency-mirror:
+  stage: check
+  script:
+    - git clone https://mirror.example.org/deps.git
+```
+
+Good:
+```yaml
+stages: [build, test]
+
+dependency-mirror:
+  stage: build
+  needs: []
+  variables:
+    GIT_TERMINAL_PROMPT: "0"
+  script:
+    - 'test -n "$MIRROR_TOKEN" || { echo "ERROR: dependency-mirror needs the MIRROR_TOKEN CI/CD variable; ask a maintainer to set it" >&2; exit 1; }'
+    - git clone https://mirror.example.org/deps.git
+```
+
+### CR-E16: Stack On A Change, Don't Copy Its Files
+A violation is a commit that copies files from another open change, or cherry-picks its commits, instead of basing the branch on that change. The rule is followed when the branch is stacked on the change that owns the files. Where a copy can't be avoided, the commit message and the description name the owning change and the commit copied, say which of the two must land second and take the other's latest version, and a check fails when the copy and the owner's current head differ. Changes that copy nothing from an open change follow the rule. Why: the source keeps changing after the copy, so whichever change lands second reverts every fix made in between, often in security code where nothing else notices.
+
+Bad:
+The copy shows up as this branch's own commit, and it misses every fix `auth-mr` makes afterward:
+```bash
+git checkout -b add-verifier main
+git checkout auth-mr -- crates/peercred/
+git commit -m "Add peercred crate for the verifier"
+```
+
+Good:
+The branch carries only its own work, and a rebase picks up each fix to `auth-mr`:
+```bash
+git checkout -b add-verifier auth-mr
 ```
 
 ## CR-F: Errors and failure handling
@@ -1551,6 +1642,92 @@ if time.monotonic() - started > IDLE_TIMEOUT_SECONDS:
     mark_idle()
 ```
 
+### CR-F25: An Empty Or Failed Lookup Fails Closed
+A violation is a security or destructive decision that treats an empty or failed lookup as permission, such as a label that starts at the lowest level and only rises with what a lookup finds, an approval hold that applies only when a lookup returns a name, an overwrite or delete that runs because a read helper turned its error into an empty result, or a setup step that carries on after it could not clear the path it needs. The rule is followed when the decision uses a read that returns its error, a lookup that returns nothing for a caller who should have entries is an error or takes the strictest outcome, the error path does nothing destructive, and a step that must remove or create something checks that it did before anything uses the result. Why: a key mismatch, a missed migration, or one failed read returns the same empty answer as "nothing there", so the bug lifts a restriction or destroys data without any error.
+
+Bad:
+`read_index` returns `[]` when the read fails, so an index that exists but can't be read is overwritten:
+```python
+if not read_index(index_path):
+    write_index(index_path, new_entries)
+```
+
+Good:
+Only a missing file counts as empty; any other read error stops before the write:
+```python
+try:
+    existing = index_path.read_text()
+except FileNotFoundError:
+    existing = ""
+if not existing.strip():
+    write_index(index_path, new_entries)
+```
+
+### CR-F26: A Guard's Tests Include Normal Work
+A violation is a check that refuses actions, such as a hook, a linter rule, or a policy, whose tests cover only the cases it refuses. The rule is followed when each refused case has an allowed case beside it that is close in spelling, such as `perl -i` next to `perl -M`, or `exit(` next to `def exit(self):`. A state the check refuses also needs a tested way back, such as restoring the file from the base. Why: an over-broad guard looks strict in review and blocks the next person doing ordinary work, and a guard that refuses every way back turns a small mistake into a stuck session.
+
+Bad:
+A guard that refuses every `perl -` command passes this test, and so does one that refuses only `-i`:
+```python
+def test_refuses_in_place_edit():
+    assert is_refused("perl -i -pe 's/a/b/' file.txt")
+```
+
+Good:
+```python
+@pytest.mark.parametrize(
+    ("command", "refused"),
+    [
+        ("perl -i -pe 's/a/b/' file.txt", True),
+        ("perl -MJSON -e 'print 1'", False),
+    ],
+)
+def test_in_place_edit(command, refused):
+    assert is_refused(command) == refused
+```
+
+### CR-F27: Decide Something Is Abandoned From Evidence Every Host Can See
+A violation is a sweep, reaper, or lock breaker that decides a shared resource is abandoned from evidence only one host has, such as `/proc` or a local pid, or from a timestamp the owner does not update while it works, such as a directory's own mtime, when the resource sits on storage other hosts use. The rule is followed when the owner refreshes a heartbeat the sweeper reads, or the sweeper asks the system that knows, such as the scheduler or the CI server, and any age limit is well above the heartbeat interval, or above the longest run when there is no heartbeat, with a comment that says where the number came from. Why: a check that can't see another host's process reads "not running here" as "not running", and deletes a live run's files.
+
+Bad:
+The job directory is on a shared mount, so a job running on another host has no entry in this host's `/proc`:
+```python
+def is_abandoned(job_dir):
+    pid = int((job_dir / "pid").read_text())
+    return not Path(f"/proc/{pid}").exists()
+```
+
+Good:
+```python
+# The owner touches the heartbeat every minute; an hour without one is a guess at "gone for good".
+STALE_AFTER_SECONDS = 60 * 60
+
+def is_abandoned(job_dir):
+    heartbeat_age = time.time() - (job_dir / "heartbeat").stat().st_mtime
+    return heartbeat_age > STALE_AFTER_SECONDS
+```
+
+### CR-F28: Decide On Error Types And Codes, Not On Message Text
+A violation is code that decides what to do after a failure, such as whether to retry, stop, or show a hint, by searching the error message for words that code in the same repo wrote. The rule is followed when that error carries a type, a kind field, or an exit code that the deciding code reads, and the message is free to change. Matching text is kept only for words from a tool the repo doesn't control, with a sample line above each pattern (CR-A3) and a test that feeds the tool's real output through. Why: someone rewords the message for a human reader, and the decision changes with no compile error and no failing test.
+
+Bad:
+Rewording the message to "the server closed the connection; it will be retried" quietly stops the retries:
+```python
+def should_retry(error):
+    return "connection reset" in str(error) or "try again" in str(error)
+```
+
+Good:
+```python
+class DeployError(Exception):
+    def __init__(self, message, retryable):
+        super().__init__(message)
+        self.retryable = retryable
+
+def should_retry(error):
+    return error.retryable
+```
+
 ## CR-G: Arguments and CLI design
 
 ### CR-G1: Arguments At The Top
@@ -1648,6 +1825,29 @@ if not args.yes:
         sys.exit("ERROR: refusing to delete without a terminal, pass --yes")
     if input("Delete 40 files? [y/N] ") != "y":
         sys.exit(1)
+```
+
+### CR-G6: Related Settings Fall Back Together
+A violation is a group of settings that only make sense together, such as an address and its token or the fields of one identity, where each setting falls back to another source on its own. The rule is followed when one key setting picks the source, and the whole group is read from that source or the code fails with a message naming the missing fields. Why: a field-by-field fallback can join half of one identity to half of another, and nothing in the output shows the mix.
+
+Bad:
+With only `AGENT_SOCKET` set, this connects to the new socket with the old token and the old admin role:
+```python
+socket_path = os.environ.get("AGENT_SOCKET") or os.environ.get("LEGACY_SOCKET")
+token = os.environ.get("AGENT_TOKEN") or os.environ.get("LEGACY_TOKEN")
+role = os.environ.get("AGENT_ROLE") or os.environ.get("LEGACY_ROLE")
+```
+
+Good:
+```python
+AGENT_FIELDS = ("SOCKET", "TOKEN", "ROLE")
+
+def agent_settings():
+    prefix = "AGENT_" if "AGENT_SOCKET" in os.environ else "LEGACY_"
+    missing = [prefix + field for field in AGENT_FIELDS if prefix + field not in os.environ]
+    if missing:
+        sys.exit(f"ERROR: agent settings come from {prefix}*, but {missing} are unset; set them or unset {prefix}SOCKET")
+    return {field.lower(): os.environ[prefix + field] for field in AGENT_FIELDS}
 ```
 
 ## CR-H: Tests
@@ -2045,6 +2245,83 @@ if result.returncode != 0 or not lines or not SUMMARY_LINE.match(lines[-1]) or m
     sys.exit(f"ERROR: test gate exit {result.returncode}, missing {missing}; run pytest -rA tests/ and restore them")
 ```
 
+### CR-H21: Check Behavior With Tests, Not By Searching Source Text
+A violation is a CI check that enforces how code behaves by searching its source text, such as grepping for a forbidden function or for one call before another, where a test, a type, or a lint rule could check the behavior. The rule is followed when a test that runs the code checks the property, or the wrong use fails to compile, such as a type only the safe constructor returns, or a linter's own rule catches it. A text search is fine for things that are only text, such as a banned word in docs or a version string kept in sync; it then has a sample line above every pattern (CR-A3) and a self-test that makes it fail. Why: one call has many spellings in source, so the check either rejects correct code or misses another spelling, and the team trusts it as proof either way.
+
+Bad:
+`Client.subscribe(client, "orders.*")` skips the permission check, and this search doesn't see it:
+```python
+for source_file in Path("src").rglob("*.py"):
+    if re.search(r"\bclient\.subscribe\(", source_file.read_text()):
+        sys.exit(f"ERROR: {source_file} calls client.subscribe directly; use checked_subscribe")
+```
+
+Good:
+The check moves inside `subscribe`, and a test shows every caller gets it, however the call is spelled:
+```python
+def test_subscribe_without_permission_is_refused():
+    client = Client(FakeBroker(), permissions=set())
+    with pytest.raises(PermissionDenied):
+        client.subscribe("orders.*")
+```
+
+### CR-H22: A Builder And Its Parser Are Tested As A Round Trip
+A violation is code that builds a string or record that another part of the system parses, such as an address, a subject, a token, or a message envelope, with no test that feeds the builder's output to the real parser. The rule is followed when a test builds each kind of value with the production builder and checks that the production parser reads back the same fields, and the format is written down once, in the doc both sides link. Why: each side's tests check it against its own author's reading of the format, so both pass until the two meet in production.
+
+Bad:
+The builder writes an account name and the parser expects a numeric user id, yet both tests pass:
+```python
+def test_build_subject():
+    assert build_subject("alice", "orders") == "inbox.alice.orders"
+
+def test_parse_subject():
+    assert parse_subject("inbox.1001.orders") == {"uid": 1001, "topic": "orders"}
+```
+
+Good:
+This fails on the same code, because the parser can't read what the builder wrote:
+```python
+def test_subject_round_trip():
+    subject = build_subject("alice", "orders")
+    assert parse_subject(subject) == {"account": "alice", "topic": "orders"}
+```
+
+### CR-H23: Build And Test For Every Target And Runtime The Code Runs On
+A violation is code that more than one target or runtime will build or run, such as a body per OS behind `#[cfg(target_os = ...)]`, Go build tags, or `#ifdef`, or a script run by both the system Python and a venv, where CI builds or tests it for only one of them, checks the others by reading their text, or turns a check off when it can't parse a file under one version. The rule is followed when CI compiles each target the code ships for, such as `cargo check --target <TRIPLE>` or `GOOS=<OS> go vet ./...`, runs the tests under each interpreter version that runs the code in use, says which targets run tests and which are only compiled, and a parse or import that fails under one version fails the check. Code with one body and one runtime follows the rule. Why: a type error, a renamed library item, or a syntax or stdlib change in a body or version CI never builds passes every pipeline and fails on the first machine of that kind, and a check that turns itself off when it can't parse fails open for exactly the files it can't read.
+
+Bad:
+The hooks also run under the host's Python 3.9, where `str | None` in a signature fails on import, but the suite runs only under 3.12:
+```make
+test:
+	python3.12 -m pytest tests/
+```
+
+Good:
+```make
+# The hooks run under the host's python3.9 and under the agent runtime's python3.12.
+test:
+	python3.9 -m pytest tests/
+	python3.12 -m pytest tests/
+```
+
+### CR-H24: A Fake Answers The Way The Real Dependency Does
+A violation is a test whose fake returns a value, error, status code, or message that the real dependency never produces for the same case, so the test passes through a branch production can't reach. The rule is followed when the fake's answer is copied from the real dependency, from its source or a captured response, or when a second test drives the same case through the real component, such as the real decoder or error mapping. Why: the test passes against the stand-in, the fix ships, and the branch it covers never runs.
+
+Bad:
+`urllib` reports a rate limit as `HTTPError` with code 429, never as `RateLimitError`, so the retry this fake tests never runs in production:
+```python
+class FakeClient:
+    def get(self, url):
+        raise RateLimitError(url)
+```
+
+Good:
+```python
+class FakeClient:
+    def get(self, url):
+        raise urllib.error.HTTPError(url, 429, "Too Many Requests", hdrs=None, fp=None)
+```
+
 ## CR-I: Security
 
 ### CR-I1: Secrets Off The Command Line
@@ -2426,6 +2703,188 @@ Good:
 spend_usd = float(body["spend_usd"])
 if not math.isfinite(spend_usd) or not 0 <= spend_usd <= MAX_SPEND_USD:
     raise BadRequest(f"spend_usd must be between 0 and {MAX_SPEND_USD}, got {body['spend_usd']!r}")
+```
+
+### CR-I21: Verify A File Against Something It Didn't Bring
+A violation is code that trusts a downloaded, cached, or restored file because of a checksum, signature, or key that came from the same place as the file, or because the file is encrypted. The rule is followed when the expected digest or public key is pinned where the file's source can't change it, such as the repo or the installed client, and the check runs before the file is used, moved into place, or allowed to delete anything. Encrypting to a public key proves nothing about who made the file; a signature does. Why: whoever can replace the file can replace a checksum or key that travels with it, so the check passes for exactly the attacker it exists to stop.
+
+Bad:
+Whoever can replace the tarball on the mirror can replace the `.sha256` file next to it:
+```python
+tarball = download(f"{MIRROR}/tool-1.4.tar.gz")
+expected = download(f"{MIRROR}/tool-1.4.tar.gz.sha256").decode().split()[0]
+if hashlib.sha256(tarball).hexdigest() != expected:
+    sys.exit("ERROR: tool-1.4.tar.gz does not match its checksum; delete it and download again")
+```
+
+Good:
+```python
+# From the upstream release page for tool 1.4.
+TOOL_SHA256 = "<SHA256_FROM_RELEASE_PAGE>"
+
+tarball = download(f"{MIRROR}/tool-1.4.tar.gz")
+if hashlib.sha256(tarball).hexdigest() != TOOL_SHA256:
+    sys.exit("ERROR: tool-1.4.tar.gz does not match the pinned checksum; the mirror copy may be tampered with")
+```
+
+### CR-I22: Allow Known Good, Don't Block Known Bad
+A violation is a check meant to keep a value inside a set of good values that instead refuses a list of bad ones, such as rejecting URLs that contain one public host when only internal mirrors are allowed. The rule is followed when the check names what is allowed, such as an exact list of hosts, refuses everything else, and compares in the form the consumer will use, such as the parsed, lowercased host (CR-I17). CR-I19 applies this to a child's environment. Why: a list of bad values is never complete, and every spelling it misses, such as another case or another host, goes straight through.
+
+Bad:
+`https://GitHub.com/...` and every other public host get through:
+```python
+def is_allowed(url):
+    return "github.com" not in url
+```
+
+Good:
+```python
+ALLOWED_HOSTS = {"mirror.example.org"}
+
+def is_allowed(url):
+    return (urlsplit(url).hostname or "") in ALLOWED_HOSTS
+```
+
+### CR-I23: Name Refs In Full When A Check Depends On Them
+A violation is a check that resolves a short ref name, such as `origin/main` or `main`, when a branch, tag, or replace ref with that name could exist, or that passes when the ref or the merge base can't be found. The rule is followed when the check uses the full ref (`refs/remotes/origin/main`), sets `GIT_NO_REPLACE_OBJECTS=1`, and fails with a message when the ref or the merge base is missing. Why: git resolves a short name through several namespaces in order, so anyone who can create a branch can choose what the check compares against.
+
+Bad:
+After `git branch origin/main HEAD`, git resolves `origin/main` to the local branch, and the gate sees no changed files:
+```bash
+merge_base="$(git merge-base origin/main HEAD)"
+git diff --name-only "$merge_base" HEAD
+```
+
+Good:
+```bash
+export GIT_NO_REPLACE_OBJECTS=1
+if ! merge_base="$(git merge-base refs/remotes/origin/main HEAD)"; then
+    echo "ERROR: no merge base with refs/remotes/origin/main; run git fetch origin main and retry" >&2
+    exit 1
+fi
+git diff --name-only "$merge_base" HEAD
+```
+
+### CR-I24: Send A Credential Only To The Host That Reads It
+A violation is code that attaches a token, password, or signed header to a request because the host passes a fetch allowlist, such as any host under an internal domain, when only one service reads that credential. The rule is followed when the credential is added only when the parsed, lowercased host equals the one service that issued it, such as the CI server for a CI job token, no credential is sent when that host is unknown, and a test shows another allowed host gets the request without the credential. Code that sends no credentials follows the rule. Why: every other host on the allowlist gets a working credential, and the one that leaks it is usually a box nobody thought of as part of the check.
+
+Bad:
+Every internal host, including a mirror anyone can run a server on, gets the CI job token:
+```python
+def request_headers(url):
+    host = urlsplit(url).hostname or ""
+    if host.endswith(".corp.example.org"):
+        return {"JOB-TOKEN": os.environ["CI_JOB_TOKEN"]}
+    return {}
+```
+
+Good:
+```python
+CI_SERVER_HOST = urlsplit(os.environ["CI_SERVER_URL"]).hostname
+
+def request_headers(url):
+    if urlsplit(url).hostname == CI_SERVER_HOST:
+        return {"JOB-TOKEN": os.environ["CI_JOB_TOKEN"]}
+    return {}
+```
+
+### CR-I25: A Permission On A Request's Name Can't Limit What Its Body Asks For
+A violation is a limit enforced by allowing or denying request names, such as message subjects, URL paths, or RPC method names, when a field in the request body can change what the request does, such as a durable flag, a replica count, or a target id. The rule is followed when the caller is denied the request altogether and a trusted service makes it, or when the server checks the body field itself, and a test sends the allowed name with the forbidden body and expects a refusal. Code with no name-based permissions follows the rule. Why: denying the name a client usually uses leaves the same effect one body field away, and the permission list still reads as if the limit holds.
+
+Bad:
+`consumer.create` with `{"durable": true}` makes the same durable consumer, and it is allowed:
+```python
+DENIED_SUBJECTS = {"consumer.create_durable"}
+
+def is_allowed(subject, body):
+    return subject not in DENIED_SUBJECTS
+```
+
+Good:
+```python
+CREATE_SUBJECTS = {"consumer.create", "consumer.create_durable"}
+
+def is_allowed(subject, body):
+    if subject in CREATE_SUBJECTS:
+        return not body.get("durable")
+    return True
+```
+
+### CR-I26: Identity Calls Are Tested On Every Kind Of Handle
+A violation is code that takes an identity from an operating system or library call, such as a peer uid from a socket option, a client certificate's subject, or a token's subject, and trusts it because the call returned success, with tests only on a handle that has an identity. The rule is followed when the code checks that the answer is a credential before reading a field from it, such as the exact length the kernel wrote, a version field, a value no account has, or that the socket is connected and not listening, and a test feeds each other kind of handle it can be given and expects an error: a file, a socket of another family, an unconnected socket, a listening socket. Why: these calls often succeed on handles outside their contract and fill the answer with something else, such as uid 0, uid -1, or the caller's own uid, so code that checks only the return code turns a wrong handle into a forged identity.
+
+Bad:
+On Linux this returns -1 for a TCP, UDP, or unconnected socket, and the server's own uid for a listening socket:
+```python
+def peer_uid(sock):
+    creds = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+    _pid, uid, _gid = struct.unpack("3i", creds)
+    return uid
+```
+
+Good:
+```python
+def peer_uid(sock):
+    if sock.family != socket.AF_UNIX or sock.type != socket.SOCK_STREAM:
+        raise ValueError(f"peer_uid needs an AF_UNIX stream socket, got {sock.family!r} {sock.type!r}")
+    # A listening or unconnected socket raises here; a listener would otherwise report its own uid.
+    sock.getpeername()
+    creds = sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+    pid, uid, _gid = struct.unpack("3i", creds)
+    if pid <= 0 or uid < 0:
+        raise ValueError(f"peer_uid: the socket has no peer credentials (pid {pid}, uid {uid})")
+    return uid
+```
+
+### CR-I27: Check Every Directory Above A File That Grants Access
+A violation is code that reads a file that decides access or identity, such as a public key, an allow list, or a binding of one identity to another, and checks the owner and mode of the file and at most its immediate directory. The rule is followed when every directory from `/` down to the file is checked without following links, each owned by root or the reader and not writable by group or other unless it is root-owned and sticky, the path is absolute with no `..`, and the file is then read from the same handle that was checked (CR-I11). Code that reads no such file follows the rule. Why: whoever can write any directory on the way can rename the next one aside and put their own file in its place, which forges access as surely as writing the file itself.
+
+Tests of the walk own every directory they check. The rule for one directory is a function of plain values (owner, mode, the trusted owners) tested with made-up values, and the walk is tested under a root whose ancestors are known, such as `/tmp` after the test checks it is root-owned and sticky, never under `$TMPDIR` or the current directory. Why: a walk over every ancestor makes the host's whole directory tree part of the test's input, so the test passes on one machine and fails on another.
+
+Bad:
+Anyone who can write `shared/` can move `keys/` aside and put their own `key.pub` in its place, and this still accepts it:
+```python
+def check_key_file(key_file):
+    for path in (key_file, key_file.parent):
+        info = path.stat()
+        if info.st_uid not in TRUSTED_OWNERS or info.st_mode & 0o022:
+            raise PermissionError(f"{path} must be owned by you or root and not writable by others")
+```
+
+Good:
+```python
+def check_key_file(key_file):
+    if not key_file.is_absolute() or ".." in key_file.parts:
+        raise PermissionError(f"{key_file} must be an absolute path with no '..'")
+    for path in (*reversed(key_file.parents), key_file):
+        info = os.lstat(path)
+        sticky_root_dir = info.st_uid == 0 and info.st_mode & stat.S_ISVTX
+        writable_by_others = info.st_mode & 0o022 and not sticky_root_dir
+        if stat.S_ISLNK(info.st_mode) or info.st_uid not in TRUSTED_OWNERS or writable_by_others:
+            raise PermissionError(f"{path} must be a real directory owned by you or root and not writable by others")
+```
+
+### CR-I28: An Exception To A Security Check Is Reviewed By Someone Else
+A violation is an exception to a security check, such as an allow-list entry for a known vulnerability, a suppressed scanner finding, or a skipped audit, that names the person who added it as its reviewer, or that has no reviewer or no expiry date. The rule is followed when the entry names a reviewer other than its author, states why the finding can't be fixed now, and carries a date after which the check fails again. Why: an exception approved by the person who needed it is the check switched off with a note attached, and with no expiry date it stays switched off after the fix becomes available.
+
+Bad:
+The author approved their own waiver, and it never expires:
+```toml
+[[waiver]]
+id = "<ADVISORY_ID>"
+reason = "not reachable"
+author = "alice"
+reviewer = "alice"
+```
+
+Good:
+```toml
+[[waiver]]
+id = "<ADVISORY_ID>"
+reason = "the vulnerable parser is never called; the fixed release needs the 2.x API, tracked in <ISSUE>"
+author = "alice"
+reviewer = "bob"
+expires = "2027-02-28"
 ```
 
 ## CR-J: Files
