@@ -874,7 +874,7 @@ def get_output_dir(settings):
 A violation is an unused import, variable, or function, a commented-out block of code, a condition that guards nothing, or leftover debug scaffolding. The rule is followed when everything in the code is used. A condition is dead when removing it changes no result, because nothing reads what it guards: delete it instead of writing a test for it. Within a diff, this applies only to code the change touches (CR-E3).
 
 ### CR-E2: Reachable Features
-A violation is a new branch for a value that the argument parser or enumeration does not allow, so the branch can never run. The rule is followed when the allowed values are updated in the same change as the new branch.
+A violation is a new branch for a value that the argument parser or enumeration does not allow, so the branch can never run, or a new function, type, or option that only tests call, in a change whose description, docs, or comments say the feature works, such as "revoked sessions are dropped" or "the key set refreshes hourly". The rule is followed when the allowed values are updated in the same change as the new branch, and a non-test caller in the same change runs each new entry point, or the description and the doc say it is library-only and name the change that will wire it in. Changes that add no branches or entry points follow the rule. Why: the tests pass and the diff reads well, so readers take the feature as live while nothing in the shipped program ever runs it.
 
 Bad:
 `--format yaml` exits with "invalid choice", so the new branch is dead code:
@@ -935,8 +935,8 @@ def upload_report(report_file):
     ...
 ```
 
-### CR-E6: Renames Update Every Reference
-A violation is a change that renames or moves a file, function, flag, or setting and leaves a reference to the old name behind, such as a default argument, a README, a help string, or a test fixture. The rule is followed when a search for the old name finds nothing the change should have updated, or only references that must keep the old name, each listed with its reason in the commit message. Changes that rename nothing follow the rule. Why: a stale reference fails far from the rename, in a default nobody passes or a doc that sends the reader to a file that no longer exists.
+### CR-E6: Changes Update Every Reference
+A violation is a change that renames or moves a file, function, flag, setting, or stored state, or rewords text a user or another program sees, and leaves a reference to the old version behind, such as a default argument, a README, a help string, a test fixture, a golden or expected-output file in another package, a `file:line` citation of code that moved, or a reader that still computes a stored key from the old name. The rule is followed when a search of the whole repo for the old name, text, or cited range finds nothing the change should have updated, or only references that must keep the old version, each listed with its reason in the commit message. A reviewer who suggests new wording runs the same search and names the hits. For moved stored state, every reader maps its key through the same function the move used, and a test moves the state and then runs each reader. A repo that cites line numbers in more than a few places is better served by a CI check that each cited line still holds a named anchor. Changes that rename, move, and reword nothing follow the rule. Why: a stale reference fails far from the change, in a default nobody passes, a test in another package that breaks only in CI, a citation that sends the reader to unrelated code, or a reader that finds an empty store instead of an error.
 
 Bad:
 The script was renamed, but the default still points at the old name:
@@ -990,7 +990,7 @@ handler = HANDLERS[job.kind]
 ```
 
 ### CR-E9: Design Notes Change With The Code
-A violation is a change that makes the code behave differently from a README or design note that describes it, such as a different id format or a check moved to another place, while the note stays as it was. The rule is followed when the same change updates the note, or cuts the note down to point at the code. CR-E6 covers renames, and this covers behavior. Why: readers trust the note over the code, so the next reviewer reports the drift as a bug or builds on the wrong behavior.
+A violation is a change that makes the code behave differently from a README or design note that describes it, such as a different id format or a check moved to another place, while the note stays as it was. The rule is followed when the same change updates the note, or cuts the note down to point at the code. CR-E6 covers renames and reworded text, and this covers behavior. Why: readers trust the note over the code, so the next reviewer reports the drift as a bug or builds on the wrong behavior.
 
 Bad:
 The README says the cache key is the URL. The change adds the user id to the key, and the README is left as it was:
@@ -1275,7 +1275,7 @@ if updated.rowcount == 0:
 ```
 
 ### CR-F11: Say The Side Effect Happened
-A violation is a step after an irreversible action, such as posting, sending, or deploying, whose failure makes the program report that the whole operation failed. The rule is followed when any failure after the action says the action already happened and how to finish by hand, or when nothing that can fail runs after it. Code with no irreversible action follows the rule. Why: a caller told "failed" retries, and the retry repeats the action.
+A violation is a step after an irreversible action, such as posting, sending, or deploying, whose failure makes the program report that the whole operation failed, or a timeout or dropped connection on the action itself that the program treats as "not done". The rule is followed when any failure after the action says the action already happened and how to finish by hand, or when nothing that can fail runs after it. Before redoing an action whose last attempt got no answer, the code checks whether it happened, such as listing recent posts for an identical body, and records it if so; the call has a timeout (CR-F9), and its error says the action may have happened and how to check. Code with no irreversible action follows the rule. Why: a caller told "failed" retries, and the retry repeats the action; a lost reply is the one case where the server may have acted and the client can't tell.
 
 Bad:
 A full disk raises after the post, so the caller sees an error and posts again:
@@ -1403,7 +1403,7 @@ seen = {report_id: seen_at for report_id, seen_at in seen.items() if seen_at > c
 ```
 
 ### CR-F17: Advance After Success
-A violation is recording that work is done before the work has succeeded. That includes saving a "done up to here" marker, such as the id of the last message handled, and removing an item from a saved queue. The rule is followed when the marker is saved, or the item removed, only after every step it stands for has succeeded, so a failed step is tried again later. Why: once the message is marked done or the item is gone, nothing goes back for the work that failed.
+A violation is recording that work is done before the work has succeeded. That includes saving a "done up to here" marker, such as the id of the last message handled, and removing an item from a saved queue. It also includes a record of finished steps that names each step by its position in the input, such as `line:3`. The rule is followed when the marker is saved, or the item removed, only after every step it stands for has succeeded, so a failed step is tried again later, and each step is named by something that moves with it, such as a hash of its payload or a file name. Why: once the message is marked done or the item is gone, nothing goes back for the work that failed. The input is most often edited right after a partial failure, and that shifts every position, so a finished step runs again or an unfinished one is skipped.
 
 Bad:
 If `send_email` fails, the message is already marked as sent and is never retried:
@@ -1932,8 +1932,8 @@ def test_upgrade_from_v1(tmp_path):
     assert "email" in get_column_names(db, "users")
 ```
 
-### CR-H15: Test Runners Find Tests By Pattern
-A violation is a test target, such as a Makefile rule or a CI step, that names each test file it runs. The rule is followed when the target runs every file matching the naming pattern, such as `tests/test_*.py`, so a new test file runs without anyone editing the target. Repos with no test target follow the rule. Why: a list of names silently skips every test file added after it, and the suite keeps passing while new tests never run.
+### CR-H15: Every Test Runs In Some Job
+A violation is a test target, such as a Makefile rule or a CI step, that names each test file it runs, or a test the default run skips, such as a Rust `#[ignore]`, a skip unless an environment variable is set, or a marker the default run deselects, that no CI job runs. The rule is followed when the target runs every file matching the naming pattern, such as `tests/test_*.py`, so a new test file runs without anyone editing the target, and a CI job, even a scheduled one, runs every off-by-default test by selecting its marker and fails when it selects none. Until that job exists, the change's description says the behavior was checked only by hand, and names the host, the date, and the command. Repos with no test target follow the rule. Why: a list of names silently skips every test file added after it, and an off-by-default test can start failing while every pipeline stays green, so the suite keeps passing while tests never run.
 
 Bad:
 `test_upload.py` was added later and never runs:
@@ -2019,6 +2019,30 @@ Each test asks the OS for a free port, so nothing is shared:
 def test_server_starts():
     server = start_server(port=0)
     ...
+```
+
+### CR-H20: A Test Gate Reads Results The Tests Can't Write
+A violation is a gate that accepts a test run on its exit code, on a report file the test process can write, such as a junit XML or a coverage file, or on how many tests were collected, passed, or skipped. The rule is followed when the gate captures the runner's output itself, requires the runner's own final summary line, compares the set of test ids that passed with the set at the merge base and fails for each missing id, allows a moved or renamed test only through a documented mapping, and writes any report to a path the tests aren't told about. Gates that run no tests follow the rule. Why: code under test runs in the runner's process, so it can end the run early with exit 0 or write the report itself, and a count stays the same when broken tests are hidden and the same number of empty ones are added.
+
+Bad:
+A test that calls `os._exit(0)`, or a failing test swapped for an empty one, passes this gate:
+```python
+result = subprocess.run([sys.executable, "-m", "pytest", "tests/"], check=False)
+if result.returncode != 0:
+    sys.exit("ERROR: tests failed; run pytest tests/ to see which")
+```
+
+Good:
+```python
+# ===== 3 passed, 1 skipped in 0.12s =====
+SUMMARY_LINE = re.compile(r"^=+ .* in [0-9.]+s.* =+$")
+
+result = subprocess.run([sys.executable, "-m", "pytest", "-rA", "tests/"], capture_output=True, text=True, check=False)
+lines = result.stdout.splitlines()
+passed = {line.split()[1] for line in lines if line.startswith("PASSED ")}
+missing = sorted(expected_test_ids - passed)
+if result.returncode != 0 or not lines or not SUMMARY_LINE.match(lines[-1]) or missing:
+    sys.exit(f"ERROR: test gate exit {result.returncode}, missing {missing}; run pytest -rA tests/ and restore them")
 ```
 
 ## CR-I: Security
@@ -2128,7 +2152,7 @@ def run_report(query):
 ```
 
 ### CR-I7: Secrets Out Of Output
-A violation is printing a password, token, or other secret to the terminal or a log, including in error messages and debug output. The rule is followed when the output names the account or where the secret is kept but never contains the secret itself; code that prints no secrets follows the rule. Why: terminal scrollback, screen shares, recordings, and CI logs keep whatever was printed, long after the run ends.
+A violation is printing a password, token, or other secret to the terminal or a log, including in error messages and debug output. That includes hiding it by searching for its value and replacing it, such as `line.replace(password, "***")`, and hiding it in one type's debug output while other structs, environment lists, or generated types the value is copied into still print it. The rule is followed when the output names the account or where the secret is kept but never contains the secret itself, the message is built only from fields known to be safe or whole fields are replaced by name before formatting, and every type the secret is copied into hides it, or a test formats each of those types and checks that the secret doesn't appear. Code that prints no secrets follows the rule. Why: terminal scrollback, screen shares, recordings, and CI logs keep whatever was printed, long after the run ends. Replacing by value mangles every other match of a short secret, which reveals its characters, and misses encoded forms, and the copy that still prints the secret is the one that ends up in a log.
 
 Bad:
 ```python
@@ -2330,8 +2354,8 @@ def request_account(body):
     add_to_review_queue(body["username"])
 ```
 
-### CR-I17: Validate The Decoded Form
-A violation is a check on a path, URL, or identifier that runs on the raw string when a later step decodes percent escapes, backslashes, or path parts before it uses the value. The rule is followed when the check decodes the input the same way that later step will and validates the decoded form, or refuses any input that holds an escape. Input that no later step decodes follows the rule. Why: a check that `/api/v1/items%2f..%2fadmin` has no `..` part passes, and a server that decodes `%2f` before routing then sends the request to `/api/v1/admin`.
+### CR-I17: Check Input The Way Its Consumer Reads It
+A violation is a check on text that a later step or another program will decode or parse, such as a path, URL, identifier, config file, permission subject, or source code, that matches less than that consumer accepts. That includes a check on the raw string when the consumer decodes percent escapes, backslashes, or path parts first, and a check that misses a spelling the consumer accepts: another separator, another case, a quoted form, several statements on one line, a comment or string, or a wildcard where the check compares a prefix. The rule is followed when the check decodes and parses the input the way the consumer will, with the consumer's own parser or documented grammar, such as Python's `tokenize` or `ast` or a TOML library for source and config, or refuses any input that holds an escape, and a test feeds it every equivalent spelling of what it guards against. Input that no later step decodes or parses follows the rule. Why: a check that `/api/v1/items%2f..%2fadmin` has no `..` part passes, and a server that decodes `%2f` before routing then sends the request to `/api/v1/admin`; a guard that misses one spelling looks in place while it does nothing.
 
 Bad:
 ```python
