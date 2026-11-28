@@ -145,6 +145,7 @@ Apply defaults and conversions at the lookup site, not deferred to a later guard
 
 - Never expose secrets (API tokens, passwords, etc.) in command arguments; they are visible in `ps -ef`. Use environment variables, `stdin`, or config files instead.
 - Never write directly to `/tmp`. Use `tempfile.mkdtemp()` or `tempfile.NamedTemporaryFile()` and clean up with a `try/finally` or context manager.
+- Before `urllib.request.urlopen`, check that the URL's scheme is `http` or `https`; `urlopen` also opens `file://` and other schemes.
 
 ## Docstring Examples and Names
 
