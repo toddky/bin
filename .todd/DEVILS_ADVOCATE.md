@@ -127,7 +127,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 ### Lower priority
 
 19. **Cost of change:** If requirements shift a little, how much has to be rewritten?
-20. **Fit:** Does it match the surrounding code's idioms, naming, and conventions, or bring in a new pattern? Read CODE_REVIEW.md and the guide for each language in the change (BASH.md, GO.md, PYTHON.md, RUBY.md, JAVASCRIPT.md). Report each broken rule with its id, marked blocks merge.
+20. **Fit:** Does it match the surrounding code's idioms, naming, and conventions, or bring in a new pattern? Read CODE_REVIEW.md and the guide for each language in the change (BASH.md, GO.md, PYTHON.md, RUBY.md, RUST.md, JAVASCRIPT.md). Report each broken rule with its id, marked blocks merge.
 
 ## Output
 

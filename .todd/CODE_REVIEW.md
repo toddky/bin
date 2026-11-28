@@ -15,7 +15,7 @@ Rules are grouped by letter:
 | CR-I | Security |
 | CR-J | Files |
 
-Per-language mechanics live in BASH.md, PYTHON.md, GO.md, RUBY.md, and JAVASCRIPT.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
+Per-language mechanics live in BASH.md, PYTHON.md, GO.md, RUBY.md, RUST.md, and JAVASCRIPT.md. This file covers the review decisions that apply regardless of language. Python examples assume 3.9 or newer.
 
 Each rule is written for a reviewer reading one file or one diff. The first sentence says exactly what counts as a violation. The second says when the rule is followed, including when the code has nothing the rule applies to. Then comes why, and the Bad and Good examples. The Bad and Good examples do the same job, are code someone would write, and were run to show what the rule claims. A Good example uses the library's function, not a hand-written one (CR-D3).
 

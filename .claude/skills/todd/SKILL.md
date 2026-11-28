@@ -80,6 +80,7 @@ Open questions:
 | `PYTHON.md` | Writing, editing, or reviewing Python |
 | `GO.md` | Writing, editing, or reviewing Go |
 | `RUBY.md` | Writing, editing, or reviewing Ruby |
+| `RUST.md` | Writing, editing, or reviewing Rust |
 | `JAVASCRIPT.md` | Writing, editing, or reviewing JavaScript |
 | `DEVILS_ADVOCATE.md` | Doing a devil's advocate pass on an implementation, design, or plan |
 | `HUMAN.md` | Writing anything people read: commit messages, Slack, PR comments, email, docs |
