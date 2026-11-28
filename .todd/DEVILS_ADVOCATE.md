@@ -16,6 +16,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 1. Identify the subject: the most recent implementation, design, or plan in the conversation, or the file, diff, or text the user points at.
    If there is more than one candidate, ask which one.
    If the change is built on another unmerged change, review only its own commits, and say which commits you reviewed.
+   List the change's own commits with `git log --first-parent --no-merges <base>..<head>`, and check each merge's conflict resolution with `git show --remerge-diff <merge>`. A merge can break the change without any of its own commits changing, so rerun the change's checks after one. If the diff carries commits that belong to another change, ask for a retarget or rebase before reviewing them.
 2. Ask what the change is for and what evidence shows the need: an incident, a user request, a measured cost, or a failing case.
    If the stated goal is a means to another goal (an XY problem), judge the change against the real goal instead.
    If nothing shows the need, say so in the verdict; a change with no shown need is a candidate for Drop.
@@ -43,6 +44,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
 ### Every review
 
 1. **Problem fit:** Does it solve the problem that was asked, all of it, and not a nearby easier one?
+   Check each claim in the description against the diff and the tracker: an issue it says it closes has every part done, the rollout steps match what the code needs, and anything it says was tested has evidence.
 2. **Reversibility and speed:** Classify the change as one-way (a data migration, a schema drop, a public API, sent messages, money moved) or two-way (code behind a flag, a config value, a revert of one commit).
    For one-way changes, ask for a tested rollback or a dry run on a copy of real data first. "We can revert the commit" does not undo data that was already written or actions that already happened.
    For two-way changes, push back on extra process. Fast iteration with a quick undo can beat getting every detail right up front.
@@ -54,6 +56,7 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
    A limit held only by a doc line or a prompt, such as "never run X", is a finding even if nothing breaks it today; propose the code that would hold it.
    For each guard the change adds (a refusal, a limit, a safety check), find its override or escape hatch. Check that using it prints a warning to stderr that names the override and what it skipped, every time it takes effect, so the logs show the guard was bypassed on purpose. A silent override is a 🟡 finding. If the guard protects shared infrastructure, it is 🔴.
    For a changed default of a shared function, endpoint, or flag, list every caller and check the change for each.
+   If the change only works together with another unmerged change, or a deploy in another repo, name that change, say what breaks if this one lands or deploys first, and ask for something that enforces the order, such as Draft status until the other merges, or a startup check that refuses to run without it.
    For an agent or automated pipeline, check whether each step sees only the tools it needs. An agent with every tool available at every step will sometimes pick the wrong one.
    For an agent's tool set, ask whether each tool beats doing the same thing in the shell. A tool earns its place when it does several steps in one call, returns something text cannot, such as a screenshot, or limits what an agent that reads outside text can do, as a search-only tool does where `find` can run commands. One that only wraps a single command costs prompt space and is one more wrong choice.
    For an agent, check three things: can it read private data, can it read text an outsider controls (a web page, an email, an issue, a chat message, a tool result, a tool's description), and can it send anything out (an HTTP request, a post, a link or image it renders).
@@ -104,8 +107,11 @@ Checks that need edits (items 9 and 13) run in a throwaway copy, never in the us
     Verify blank, whitespace, or missing credentials cannot bypass checks, auto-initialize accounts, or trigger permissive fallbacks.
     Auxiliary features in security paths (password feedback asterisks, redraws, audit hooks) must not write to input buffers or mutate auth state.
 12. **Private data:** For data only some users may see, check every path that can return it, such as search results, caches, exports, notifications, and counts, not just the main page. Check that access ends when someone loses it, and that access is checked when the data is read, not only when it was saved.
+    If the list that grants access is reloaded from a file or a service, check what a failed reload does. Keeping the old list means a removal never takes effect; a failed reload should refuse, or at least alert, never keep the old list silently.
+    For a fix to a leak or a missed check, ask what the bug already wrote, granted, or exposed, and whether the fix needs a one-time cleanup, a migration, or at least a tracked issue for that data.
 13. **Requests at the same time:** Find code that checks a limit before it acts, such as allowing 5 failed logins a minute. Send 40 wrong passwords at once to a throwaway copy. If the code checks more than 5, the limit breaks when requests arrive together. If a run rewrites records another run may also write, check whether two runs at once can bring back a record that was already used or deleted.
 14. **Fix of a finding:** If the change fixes an earlier review finding, does the fix open a new hole of the same kind nearby? Ask for a test that covers that whole kind of bug, not just the input that was reported.
+    If two rounds in a row find new spellings of a kind already reported, stop listing spellings. Ask for a rule on structure instead, such as "any change to this kind of file needs approval", or for the kind to move out of scope with a named layer that catches it.
 
 ### When it runs at scale, repeatedly, or keeps state
 
